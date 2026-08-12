@@ -1,0 +1,65 @@
+name: Experiment proposal
+description: Propose a reproducible correctness or performance experiment
+labels: [experiment, benchmark]
+title: "experiment: "
+body:
+  - type: input
+    id: task
+    attributes:
+      label: Task identifier
+      placeholder: P1-T01
+    validations:
+      required: true
+  - type: input
+    id: claim
+    attributes:
+      label: Claim identifiers
+      placeholder: CLM-004
+    validations:
+      required: true
+  - type: textarea
+    id: hypothesis
+    attributes:
+      label: Falsifiable hypothesis
+    validations:
+      required: true
+  - type: textarea
+    id: variables
+    attributes:
+      label: Baseline, candidate and controlled variables
+      description: Include model revision, precision, workload, scheduler, hardware, software and cache state.
+    validations:
+      required: true
+  - type: textarea
+    id: correctness
+    attributes:
+      label: Correctness oracle and error budget
+    validations:
+      required: true
+  - type: textarea
+    id: protocol
+    attributes:
+      label: Commands and measurement protocol
+      description: Include warm-up, repetitions, randomization/interleaving and raw artifact paths.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Decision rule
+      description: Define valid, invalid and inconclusive outcomes before running.
+    validations:
+      required: true
+  - type: checkboxes
+    id: comparability
+    attributes:
+      label: Comparability gate
+      options:
+        - label: Baseline and candidate commits will be immutable and clean.
+          required: true
+        - label: Every raw sample and exclusion will be preserved.
+          required: true
+        - label: Hardware, software, model and workload manifests will be hashed.
+          required: true
+        - label: No global performance claim will be inferred from a scoped experiment.
+          required: true

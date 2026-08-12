@@ -1,0 +1,51 @@
+schema_version: "1.0"
+generated_at: "2026-08-12"
+queries:
+  - id: Q-SERVING-SCHEDULER
+    purpose: Discover serving schedulers, batching and SLO-aware systems
+    arxiv: '("large language model" OR LLM) AND (serving OR inference) AND (scheduler OR batching OR goodput)'
+    github: 'LLM inference serving scheduler continuous batching'
+    gitlab: 'LLM inference serving scheduler'
+    freshness: 180_days_plus_citation_chain
+  - id: Q-KV-MEMORY
+    purpose: KV cache paging, compression, tiering and eviction
+    arxiv: '(LLM OR transformer) AND (KV cache OR key-value cache) AND (paging OR compression OR memory OR eviction)'
+    github: 'KV cache paged attention prefix cache offload'
+    gitlab: 'KV cache attention offload'
+    freshness: 180_days_plus_foundational
+  - id: Q-DISAGGREGATION
+    purpose: Prefill/decode separation and distributed cache transfer
+    arxiv: 'LLM AND (prefill decode disaggregation OR phase splitting OR KV transfer)'
+    github: 'disaggregated prefill decode KV transfer LLM'
+    gitlab: 'prefill decode disaggregation'
+    freshness: 180_days
+  - id: Q-KERNELS
+    purpose: Attention, GEMM and MoE kernel systems
+    arxiv: '(LLM OR transformer) AND (attention kernel OR GEMM OR MoE kernel OR tensor core)'
+    github: 'LLM attention GEMM MoE kernel CUDA HIP Triton CUTLASS'
+    gitlab: 'attention kernel CUDA HIP'
+    freshness: 180_days_plus_foundational
+  - id: Q-QUANTIZATION
+    purpose: Weight, activation and KV quantization
+    arxiv: 'LLM AND quantization AND (serving OR inference OR kernel OR KV cache)'
+    github: 'LLM quantization GPTQ AWQ SmoothQuant W4A8 KV cache'
+    gitlab: 'LLM quantization inference'
+    freshness: 365_days_plus_foundational
+  - id: Q-SPECULATION
+    purpose: Speculative and multi-token decoding
+    arxiv: 'LLM AND (speculative decoding OR speculative sampling OR multi-token prediction)'
+    github: 'speculative decoding EAGLE Medusa draft model'
+    gitlab: 'speculative decoding LLM'
+    freshness: 365_days_plus_foundational
+  - id: Q-HETEROGENEOUS
+    purpose: CPU GPU storage and mixed-vendor inference
+    arxiv: 'LLM inference AND (heterogeneous OR CPU GPU offload OR NVMe OR mixed GPU)'
+    github: 'heterogeneous LLM inference CPU GPU offload AMD NVIDIA'
+    gitlab: 'heterogeneous LLM inference GPU offload'
+    freshness: 365_days
+  - id: Q-RUST-RUNTIME
+    purpose: Rust ML runtimes, GPU abstractions and serving systems
+    arxiv: 'Rust AND (machine learning runtime OR GPU compiler OR inference)'
+    github: 'language:Rust LLM inference runtime GPU CUDA HIP'
+    gitlab: 'Rust LLM inference runtime'
+    freshness: 180_days

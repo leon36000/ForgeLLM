@@ -1,0 +1,58 @@
+name: Engineering task
+description: Define one bounded, independently reviewable implementation task
+labels: [engineering]
+title: "task: "
+body:
+  - type: input
+    id: task
+    attributes:
+      label: Task identifier
+      placeholder: P2-T01
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal and charter mapping
+    validations:
+      required: true
+  - type: textarea
+    id: interfaces
+    attributes:
+      label: Inputs, outputs and interfaces
+      description: State exact types, files or protocol boundaries consumed and produced.
+    validations:
+      required: true
+  - type: textarea
+    id: paths
+    attributes:
+      label: Allowed files and paths
+    validations:
+      required: true
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals and forbidden changes
+    validations:
+      required: true
+  - type: textarea
+    id: tests
+    attributes:
+      label: Failing test or executable oracle
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria and verification commands
+    validations:
+      required: true
+  - type: checkboxes
+    id: decisions
+    attributes:
+      label: Decision gates
+      options:
+        - label: Any ABI, dependency, numerical behavior or benchmark-method change will receive an ADR or explicit authorization.
+          required: true
+        - label: State, risks and handoff records will be updated in the same pull request when changed.
+          required: true

@@ -1,0 +1,23 @@
+stages: [verify]
+
+default:
+  tags: [forgellm-unprivileged]
+  interruptible: true
+  before_script:
+    - python3 -m venv .venv
+    - .venv/bin/python -m pip install -e '.[dev]'
+
+variables:
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  PYTHONPATH: "src"
+
+phase0-verify:
+  stage: verify
+  script:
+    - make PYTHON=.venv/bin/python ci
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+# GPU jobs are deliberately absent. Add them only on a protected, private,
+# locked runner after applying docs/tooling/GITHUB_GITLAB_OPERATIONS.md.

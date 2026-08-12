@@ -1,0 +1,71 @@
+name: Research review
+description: Review a paper, repository, specification or architectural claim
+labels: [research, evidence]
+title: "research: "
+body:
+  - type: input
+    id: task
+    attributes:
+      label: Task identifier
+      description: Existing ForgeLLM task, for example P0-T05
+      placeholder: P0-T05
+    validations:
+      required: true
+  - type: input
+    id: claims
+    attributes:
+      label: Claim identifiers
+      description: Comma-separated existing or proposed CLM identifiers
+      placeholder: CLM-004, CLM-005
+    validations:
+      required: true
+  - type: dropdown
+    id: source_kind
+    attributes:
+      label: Source kind
+      options: [Peer-reviewed paper, Official preprint, Official repository, Official documentation or specification, Dataset, Other primary source]
+    validations:
+      required: true
+  - type: input
+    id: canonical
+    attributes:
+      label: Canonical source
+      description: HTTPS canonical URL plus immutable revision, DOI, arXiv ID or commit
+    validations:
+      required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: Research question
+      description: State one falsifiable question and why it matters to the charter.
+    validations:
+      required: true
+  - type: textarea
+    id: extraction
+    attributes:
+      label: Required extraction
+      description: Architecture, assumptions, methods, limitations, licenses, test conditions and claims to reproduce.
+    validations:
+      required: true
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Name exact files to update and review checks.
+    validations:
+      required: true
+  - type: checkboxes
+    id: integrity
+    attributes:
+      label: Evidence integrity
+      options:
+        - label: Performance statements will remain external_unreproduced until a ForgeLLM experiment is reviewed.
+          required: true
+        - label: Secondary summaries will not replace the primary source.
+          required: true

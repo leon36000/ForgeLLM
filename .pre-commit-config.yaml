@@ -1,0 +1,19 @@
+minimum_pre_commit_version: "4.0.0"
+repos:
+  - repo: local
+    hooks:
+      - id: forgellm-lint
+        name: ForgeLLM Python lint
+        entry: python -m ruff check src scripts tests
+        language: system
+        pass_filenames: false
+      - id: forgellm-validate
+        name: ForgeLLM structural validation
+        entry: python scripts/validate_project_state.py --root .
+        language: system
+        pass_filenames: false
+      - id: forgellm-tests
+        name: ForgeLLM unit tests
+        entry: python -m pytest -q
+        language: system
+        pass_filenames: false

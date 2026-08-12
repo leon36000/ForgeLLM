@@ -1,0 +1,57 @@
+name: Bug report
+description: Report a reproducible correctness, reliability or tooling defect
+labels: [bug]
+title: "bug: "
+body:
+  - type: input
+    id: revision
+    attributes:
+      label: ForgeLLM commit
+      description: Full immutable commit SHA
+    validations:
+      required: true
+  - type: dropdown
+    id: class
+    attributes:
+      label: Defect class
+      options: [Correctness, Crash or hang, Memory safety, Concurrency, Build or CI, Benchmark integrity, Security-sensitive, Documentation]
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior or oracle
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction and exact commands
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Redacted environment manifest
+      description: Do not include credentials, private prompts, model tokens, hostnames or device UUIDs.
+    validations:
+      required: true
+  - type: textarea
+    id: artifacts
+    attributes:
+      label: Logs, hashes and artifact locations
+    validations:
+      required: true
+  - type: checkboxes
+    id: security
+    attributes:
+      label: Disclosure check
+      options:
+        - label: This report does not contain a secret or privately exploitable vulnerability; those are reported through a private advisory.
+          required: true

@@ -1,0 +1,51 @@
+name: Architecture decision proposal
+description: Propose a durable change to architecture, ABI, format, dependency policy or benchmark method
+labels: [architecture, adr]
+title: "adr: "
+body:
+  - type: input
+    id: task
+    attributes:
+      label: Related task identifier
+      placeholder: P2-T01
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context and decision pressure
+      description: State the observed problem, constraints and evidence; avoid solution-first framing.
+    validations:
+      required: true
+  - type: textarea
+    id: options
+    attributes:
+      label: Options considered
+      description: Include at least two credible options plus the status quo, with trade-offs.
+    validations:
+      required: true
+  - type: textarea
+    id: decision
+    attributes:
+      label: Proposed decision and scope
+    validations:
+      required: true
+  - type: textarea
+    id: consequences
+    attributes:
+      label: Positive, negative and irreversible consequences
+    validations:
+      required: true
+  - type: textarea
+    id: proof
+    attributes:
+      label: Validation or experiment plan
+      description: Define what would confirm, reject or revisit the decision.
+    validations:
+      required: true
+  - type: textarea
+    id: migration
+    attributes:
+      label: Migration and rollback
+    validations:
+      required: true

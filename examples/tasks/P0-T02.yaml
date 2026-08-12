@@ -1,0 +1,54 @@
+schema_version: "1.0"
+task_id: P0-T02
+title: Initialize the private ForgeLLM repository and mobile project
+phase: P0
+status: ready
+charter_goals:
+  - Preserve canonical project state in version control.
+  - Make agent handoffs independently verifiable.
+goal: Initialize a private remote repository, install the five-file mobile context, and record immutable repository identity without changing architecture.
+non_goals:
+  - Implement inference runtime code.
+  - Install or modify GPU drivers.
+  - Select a public project license.
+inputs:
+  - Verified ForgeLLM Phase 0 archive.
+  - Owner-selected GitHub or GitLab account and private repository namespace.
+outputs:
+  - Private remote with protected main branch.
+  - Mobile project containing exactly the five approved context files.
+  - Updated current state and handoff records with remote identity.
+allowed_paths:
+  - docs/state/
+  - chatgpt/mobile-core/
+  - artifacts/
+  - .github/
+  - .gitlab/
+forbidden_actions:
+  - Make the repository public.
+  - Weaken required review or status checks.
+  - Add secrets or private hardware identifiers to Git.
+  - Run unreviewed fork code on self-hosted runners.
+acceptance_criteria:
+  - make ci exits successfully from a clean checkout.
+  - The remote repository visibility is confirmed private.
+  - The five mobile files match the repository SHA-256 manifest.
+  - CURRENT_STATE.md and HANDOFF.md identify the remote and exact commit.
+verification_commands:
+  - make ci
+  - git status --short
+  - git rev-parse HEAD
+  - gh repo view --json nameWithOwner,visibility,defaultBranchRef
+  - sha256sum chatgpt/mobile-core/*
+evidence_requirements:
+  - Save command outputs with secrets and stable device identifiers redacted.
+  - Record the exact commit and remote repository identifier.
+  - Record branch-protection settings or an owner-approved exception.
+dependencies:
+  - P0-T01
+owner_role: Project owner
+reviewer_role: Independent repository reviewer
+risk_ids:
+  - R-001
+claim_ids:
+  - CLM-010

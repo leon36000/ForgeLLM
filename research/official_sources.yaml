@@ -1,0 +1,18 @@
+schema_version: "1.0"
+generated_at: "2026-08-12"
+sources:
+  - id: OFF-RUST-OWNERSHIP
+    kind: official_documentation
+    title: The Rust Programming Language — Understanding Ownership
+    canonical_url: https://doc.rust-lang.org/book/ch04-00-understanding-ownership.html
+    immutable_ref: null
+    authors_or_owner: The Rust Project
+    published_at: null
+    accessed_at: "2026-08-12"
+    license_spdx: MIT OR Apache-2.0
+    evidence_level: E1
+    review_status: reviewed
+    reproduction_status: not_applicable
+    limitations:
+      - Language guarantees do not automatically improve accelerator-kernel performance.
+    notes: Supports host-side ownership and lifetime reasoning only.

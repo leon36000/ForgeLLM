@@ -1,0 +1,29 @@
+schema_version: "1.0"
+generated_at: "2026-08-12"
+tools:
+  - {id: git, tier: 0, required_phase: P0, purpose: source control and worktrees, install_policy: system_package}
+  - {id: git-lfs, tier: 0, required_phase: P0, purpose: approved large artifacts, install_policy: system_package}
+  - {id: gh, tier: 0, required_phase: P0, purpose: GitHub CLI, install_policy: official_package}
+  - {id: glab, tier: 0, required_phase: P0, purpose: GitLab CLI, install_policy: official_package}
+  - {id: python, tier: 1, required_phase: P0, purpose: governance tooling, install_policy: version_managed}
+  - {id: uv, tier: 1, required_phase: P0, purpose: Python environment and lock management, install_policy: official_installer_reviewed}
+  - {id: rustup, tier: 1, required_phase: P2, purpose: Rust toolchain management, install_policy: official_installer_reviewed}
+  - {id: clang, tier: 1, required_phase: P2, purpose: C/C++ and sanitizer toolchain, install_policy: system_or_vendor_package}
+  - {id: cmake, tier: 1, required_phase: P2, purpose: native build generation, install_policy: pinned_package}
+  - {id: ninja, tier: 1, required_phase: P2, purpose: native build execution, install_policy: system_package}
+  - {id: sccache, tier: 1, required_phase: P2, purpose: compiler cache, install_policy: pinned_binary_or_cargo}
+  - {id: cargo-nextest, tier: 3, required_phase: P2, purpose: Rust test runner, install_policy: cargo_locked}
+  - {id: cargo-fuzz, tier: 3, required_phase: P2, purpose: Rust fuzzing, install_policy: cargo_locked}
+  - {id: miri, tier: 3, required_phase: P2, purpose: Rust undefined-behavior checks, install_policy: rustup_component}
+  - {id: cuda, tier: 2, required_phase: P3, purpose: NVIDIA development runtime, install_policy: lab_operator_only}
+  - {id: nsight-systems, tier: 4, required_phase: P3, purpose: system timeline profiling, install_policy: lab_operator_only}
+  - {id: nsight-compute, tier: 4, required_phase: P3, purpose: NVIDIA kernel profiling, install_policy: lab_operator_only}
+  - {id: compute-sanitizer, tier: 3, required_phase: P3, purpose: NVIDIA correctness checks, install_policy: lab_operator_only}
+  - {id: rocm, tier: 2, required_phase: P4, purpose: AMD development runtime, install_policy: lab_operator_only}
+  - {id: rocprofiler-sdk, tier: 4, required_phase: P4, purpose: AMD profiling, install_policy: lab_operator_only}
+  - {id: codeql, tier: 3, required_phase: P2, purpose: static security analysis, install_policy: hosted_or_pinned_cli}
+  - {id: gitleaks, tier: 3, required_phase: P0, purpose: secret detection, install_policy: pinned_binary}
+  - {id: syft, tier: 3, required_phase: P7, purpose: SBOM generation, install_policy: pinned_binary}
+  - {id: cosign, tier: 3, required_phase: P7, purpose: signing and provenance, install_policy: pinned_binary}
+  - {id: prometheus, tier: 4, required_phase: P5, purpose: metrics storage, install_policy: pinned_container}
+  - {id: opentelemetry, tier: 4, required_phase: P5, purpose: traces and metrics, install_policy: locked_dependency}

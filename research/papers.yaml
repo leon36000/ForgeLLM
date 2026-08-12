@@ -1,0 +1,449 @@
+schema_version: '1.0'
+generated_at: '2026-08-12'
+policy: Author-reported performance remains external_unreproduced until a ForgeLLM
+  experiment is reviewed.
+papers:
+- id: PAP-PAGEDATTENTION
+  title: Efficient Memory Management for Large Language Model Serving with PagedAttention
+  canonical_url: https://arxiv.org/abs/2309.06180
+  arxiv_id: '2309.06180'
+  year: 2023
+  category:
+  - kv_cache
+  - serving
+  - scheduling
+  review_status: high_priority
+  evidence_level: E3
+  reproduction_status: not_started
+  claims:
+  - CLM-004
+  - CLM-005
+  accessed_at: '2026-08-12'
+- id: PAP-ORCA
+  title: 'Orca: A Distributed Serving System for Transformer-Based Generative Models'
+  canonical_url: https://www.usenix.org/conference/osdi22/presentation/yu
+  year: 2022
+  category:
+  - serving
+  - scheduling
+  - batching
+  review_status: high_priority
+  evidence_level: E3
+  reproduction_status: not_started
+  claims:
+  - CLM-006
+  accessed_at: '2026-08-12'
+- id: PAP-SGLANG
+  title: 'SGLang: Efficient Execution of Structured Language Model Programs'
+  canonical_url: https://arxiv.org/abs/2312.07104
+  arxiv_id: '2312.07104'
+  year: 2023
+  category:
+  - prefix_cache
+  - scheduling
+  - structured_output
+  review_status: high_priority
+  evidence_level: E2
+  reproduction_status: not_started
+  claims:
+  - CLM-009
+  - CLM-011
+  accessed_at: '2026-08-12'
+- id: PAP-SARATHI
+  title: 'SARATHI: Efficient LLM Inference by Piggybacking Decodes with Chunked Prefills'
+  canonical_url: https://arxiv.org/abs/2308.16369
+  arxiv_id: '2308.16369'
+  year: 2023
+  category:
+  - prefill
+  - decode
+  - scheduling
+  review_status: high_priority
+  evidence_level: E2
+  reproduction_status: not_started
+  claims:
+  - CLM-030
+  accessed_at: '2026-08-12'
+- id: PAP-DISTSERVE
+  title: 'DistServe: Disaggregating Prefill and Decoding for Goodput-optimized Large
+    Language Model Serving'
+  canonical_url: https://arxiv.org/abs/2401.09670
+  arxiv_id: '2401.09670'
+  year: 2024
+  category:
+  - disaggregation
+  - scheduling
+  - distributed
+  review_status: high_priority
+  evidence_level: E3
+  reproduction_status: not_started
+  claims:
+  - CLM-031
+  accessed_at: '2026-08-12'
+- id: PAP-SPLITWISE
+  title: 'Splitwise: Efficient Generative LLM Inference Using Phase Splitting'
+  canonical_url: https://arxiv.org/abs/2311.18677
+  arxiv_id: '2311.18677'
+  year: 2023
+  category:
+  - disaggregation
+  - serving
+  review_status: high_priority
+  evidence_level: E2
+  reproduction_status: not_started
+  claims:
+  - CLM-031
+  accessed_at: '2026-08-12'
+- id: PAP-MOONCAKE
+  title: 'Mooncake: A KVCache-centric Disaggregated Architecture for LLM Serving'
+  canonical_url: https://arxiv.org/abs/2407.00079
+  arxiv_id: '2407.00079'
+  year: 2024
+  category:
+  - kv_cache
+  - disaggregation
+  - storage
+  review_status: high_priority
+  evidence_level: E3
+  reproduction_status: not_started
+  claims:
+  - CLM-032
+  accessed_at: '2026-08-12'
+- id: PAP-VATTENTION
+  title: 'vAttention: Dynamic Memory Management for Serving LLMs without PagedAttention'
+  canonical_url: https://arxiv.org/abs/2405.04437
+  arxiv_id: '2405.04437'
+  year: 2024
+  category:
+  - kv_cache
+  - virtual_memory
+  review_status: high_priority
+  evidence_level: E2
+  reproduction_status: not_started
+  claims:
+  - CLM-033
+  accessed_at: '2026-08-12'
+- id: PAP-NANOFLOW
+  title: 'NanoFlow: Towards Optimal Large Language Model Serving Throughput'
+  canonical_url: https://www.usenix.org/conference/osdi25/presentation/zhu
+  year: 2025
+  category:
+  - serving
+  - overlap
+  - scheduling
+  review_status: high_priority
+  evidence_level: E3
+  reproduction_status: not_started
+  claims:
+  - CLM-034
+  accessed_at: '2026-08-12'
+- id: PAP-JENGA
+  title: 'Jenga: Effective Memory Management for Serving LLM with Heterogeneity'
+  canonical_url: https://arxiv.org/abs/2503.18292
+  arxiv_id: '2503.18292'
+  year: 2025
+  category:
+  - memory
+  - heterogeneous_models
+  - kv_cache
+  review_status: high_priority
+  evidence_level: E2
+  reproduction_status: not_started
+  claims:
+  - CLM-035
+  accessed_at: '2026-08-12'
+- id: PAP-ELLM
+  title: 'eLLM: Elastic Memory Management Framework for Efficient LLM Serving'
+  canonical_url: https://arxiv.org/abs/2506.15155
+  arxiv_id: '2506.15155'
+  year: 2025
+  category:
+  - memory
+  - virtual_tensors
+  - offload
+  review_status: high_priority
+  evidence_level: E2
+  reproduction_status: not_started
+  claims:
+  - CLM-036
+  accessed_at: '2026-08-12'
+- id: PAP-SOLIDATTENTION
+  title: 'SolidAttention: Low-Latency SSD-based Serving on Memory-Constrained PCs'
+  canonical_url: https://www.usenix.org/conference/fast26/presentation/zheng
+  year: 2026
+  category:
+  - ssd
+  - kv_cache
+  - sparse_attention
+  review_status: high_priority
+  evidence_level: E3
+  reproduction_status: not_started
+  claims:
+  - CLM-037
+  accessed_at: '2026-08-12'
+- id: PAP-PAGEDWEIGHT
+  title: 'PagedWeight: Efficient MoE LLM Serving with Dynamic Quality-Aware Weight
+    Quantization'
+  canonical_url: https://arxiv.org/abs/2607.16184
+  arxiv_id: '2607.16184'
+  year: 2026
+  category:
+  - moe
+  - weight_paging
+  - quantization
+  review_status: emerging
+  evidence_level: E2
+  reproduction_status: not_started
+  claims:
+  - CLM-038
+  accessed_at: '2026-08-12'
+- id: PAP-FLASHATTENTION
+  title: 'FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness'
+  canonical_url: https://arxiv.org/abs/2205.14135
+  arxiv_id: '2205.14135'
+  year: 2022
+  category:
+  - attention
+  - kernels
+  - io_awareness
+  review_status: high_priority
+  evidence_level: E3
+  reproduction_status: not_started
+  claims:
+  - CLM-039
+  accessed_at: '2026-08-12'
+- id: PAP-FLASHATTENTION2
+  title: 'FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning'
+  canonical_url: https://arxiv.org/abs/2307.08691
+  arxiv_id: '2307.08691'
+  year: 2023
+  category:
+  - attention
+  - kernels
+  review_status: high_priority
+  evidence_level: E3
+  reproduction_status: not_started
+  claims:
+  - CLM-039
+  accessed_at: '2026-08-12'
+- id: PAP-FLASHATTENTION3
+  title: 'FlashAttention-3: Fast and Accurate Attention with Asynchrony and Low-precision'
+  canonical_url: https://arxiv.org/abs/2407.08608
+  arxiv_id: '2407.08608'
+  year: 2024
+  category:
+  - attention
+  - hopper
+  - fp8
+  review_status: high_priority
+  evidence_level: E2
+  reproduction_status: not_started
+  claims:
+  - CLM-040
+  accessed_at: '2026-08-12'
+- id: PAP-FLASHINFER
+  title: 'FlashInfer: Efficient and Customizable Attention Engine for LLM Inference
+    Serving'
+  canonical_url: https://arxiv.org/abs/2501.01005
+  arxiv_id: '2501.01005'
+  year: 2025
+  category:
+  - attention
+  - inference
+  - kernels
+  review_status: high_priority
+  evidence_level: E2
+  reproduction_status: not_started
+  claims:
+  - CLM-019
+  accessed_at: '2026-08-12'
+- id: PAP-GPTQ
+  title: 'GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers'
+  canonical_url: https://arxiv.org/abs/2210.17323
+  arxiv_id: '2210.17323'
+  year: 2022
+  category:
+  - quantization
+  - weights
+  review_status: high_priority
+  evidence_level: E3
+  reproduction_status: not_started
+  claims:
+  - CLM-041
+  accessed_at: '2026-08-12'
+- id: PAP-SMOOTHQUANT
+  title: 'SmoothQuant: Accurate and Efficient Post-Training Quantization for Large
+    Language Models'
+  canonical_url: https://arxiv.org/abs/2211.10438
+  arxiv_id: '2211.10438'
+  year: 2022
+  category:
+  - quantization
+  - activations
+  - weights
+  review_status: high_priority
+  evidence_level: E3
+  reproduction_status: not_started
+  claims:
+  - CLM-042
+  accessed_at: '2026-08-12'
+- id: PAP-AWQ
+  title: 'AWQ: Activation-aware Weight Quantization for LLM Compression and Acceleration'
+  canonical_url: https://arxiv.org/abs/2306.00978
+  arxiv_id: '2306.00978'
+  year: 2023
+  category:
+  - quantization
+  - weights
+  review_status: high_priority
+  evidence_level: E3
+  reproduction_status: not_started
+  claims:
+  - CLM-043
+  accessed_at: '2026-08-12'
+- id: PAP-QSERVE
+  title: 'QServe: W4A8KV4 Quantization and System Co-design for Efficient LLM Serving'
+  canonical_url: https://arxiv.org/abs/2405.04532
+  arxiv_id: '2405.04532'
+  year: 2024
+  category:
+  - quantization
+  - serving
+  - kv_cache
+  review_status: high_priority
+  evidence_level: E2
+  reproduction_status: not_started
+  claims:
+  - CLM-044
+  accessed_at: '2026-08-12'
+- id: PAP-SPINQUANT
+  title: 'SpinQuant: LLM Quantization with Learned Rotations'
+  canonical_url: https://arxiv.org/abs/2405.16406
+  arxiv_id: '2405.16406'
+  year: 2024
+  category:
+  - quantization
+  - rotations
+  review_status: medium_priority
+  evidence_level: E2
+  reproduction_status: not_started
+  claims:
+  - CLM-045
+  accessed_at: '2026-08-12'
+- id: PAP-MARLIN
+  title: 'MARLIN: Mixed-Precision Auto-Regressive Parallel Inference on Large Language
+    Models'
+  canonical_url: https://arxiv.org/abs/2408.11743
+  arxiv_id: '2408.11743'
+  year: 2024
+  category:
+  - quantization
+  - kernels
+  - inference
+  review_status: medium_priority
+  evidence_level: E2
+  reproduction_status: not_started
+  claims:
+  - CLM-046
+  accessed_at: '2026-08-12'
+- id: PAP-SPECDEC
+  title: Fast Inference from Transformers via Speculative Decoding
+  canonical_url: https://arxiv.org/abs/2211.17192
+  arxiv_id: '2211.17192'
+  year: 2022
+  category:
+  - speculative_decoding
+  review_status: high_priority
+  evidence_level: E3
+  reproduction_status: not_started
+  claims:
+  - CLM-047
+  accessed_at: '2026-08-12'
+- id: PAP-SPECSAMPLING
+  title: Accelerating Large Language Model Decoding with Speculative Sampling
+  canonical_url: https://arxiv.org/abs/2302.01318
+  arxiv_id: '2302.01318'
+  year: 2023
+  category:
+  - speculative_decoding
+  review_status: high_priority
+  evidence_level: E3
+  reproduction_status: not_started
+  claims:
+  - CLM-047
+  accessed_at: '2026-08-12'
+- id: PAP-MEDUSA
+  title: 'Medusa: Simple LLM Inference Acceleration Framework with Multiple Decoding
+    Heads'
+  canonical_url: https://arxiv.org/abs/2401.10774
+  arxiv_id: '2401.10774'
+  year: 2024
+  category:
+  - speculative_decoding
+  - multi_token
+  review_status: high_priority
+  evidence_level: E2
+  reproduction_status: not_started
+  claims:
+  - CLM-048
+  accessed_at: '2026-08-12'
+- id: PAP-EAGLE
+  title: 'EAGLE: Speculative Sampling Requires Rethinking Feature Uncertainty'
+  canonical_url: https://arxiv.org/abs/2401.15077
+  arxiv_id: '2401.15077'
+  year: 2024
+  category:
+  - speculative_decoding
+  - features
+  review_status: high_priority
+  evidence_level: E2
+  reproduction_status: not_started
+  claims:
+  - CLM-049
+  accessed_at: '2026-08-12'
+- id: PAP-EAGLE2
+  title: 'EAGLE-2: Faster Inference of Language Models with Dynamic Draft Trees'
+  canonical_url: https://arxiv.org/abs/2406.16858
+  arxiv_id: '2406.16858'
+  year: 2024
+  category:
+  - speculative_decoding
+  - dynamic_tree
+  review_status: high_priority
+  evidence_level: E2
+  reproduction_status: not_started
+  claims:
+  - CLM-050
+  accessed_at: '2026-08-12'
+- id: PAP-FLEXLLM
+  title: 'FlexLLM: Token-Level Co-Serving of LLM Inference and Finetuning with SLO
+    Guarantees'
+  canonical_url: https://www.usenix.org/conference/nsdi26/presentation/oliaro
+  year: 2026
+  category:
+  - serving
+  - co_serving
+  - finetuning
+  - scheduling
+  review_status: high_priority
+  evidence_level: E3
+  reproduction_status: not_started
+  claims:
+  - CLM-051
+  accessed_at: '2026-08-12'
+- id: PAP-LIBRA
+  title: 'Libra: Flexible Request Partitioning and Scheduling for Serving Unbalanced
+    and Dynamic LLM Workloads'
+  canonical_url: https://www.usenix.org/conference/nsdi26/presentation/ruan-libra
+  year: 2026
+  category:
+  - serving
+  - scheduling
+  - request_partitioning
+  - kv_transfer
+  review_status: high_priority
+  evidence_level: E3
+  reproduction_status: not_started
+  claims:
+  - CLM-052
+  accessed_at: '2026-08-12'

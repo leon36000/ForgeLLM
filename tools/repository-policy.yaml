@@ -1,0 +1,55 @@
+schema_version: "1.0"
+policy_date: "2026-08-12"
+github:
+  visibility: private
+  default_branch: main
+  repository_features:
+    issues: true
+    projects: true
+    wiki: false
+    discussions: false
+  pull_requests:
+    required_approvals: 1
+    high_risk_required_approvals: 2
+    dismiss_stale_approvals: true
+    require_code_owner_review_after_team_creation: true
+    require_conversation_resolution: true
+  branch_or_ruleset:
+    required_checks:
+      - Validate and test
+    conditional_required_checks:
+      codeql:
+        enabled_by_repository_variable: FORGELLM_ENABLE_CODEQL
+        required_check: CodeQL / analyze-python
+      dependency_review:
+        enabled_by_repository_variable: FORGELLM_ENABLE_DEPENDENCY_REVIEW
+        required_check: Dependency review / dependency-review
+    strict_up_to_date_branch: true
+    prevent_force_push: true
+    prevent_deletion: true
+    require_linear_history: true
+    merge_queue_after_merge_group_check_is_observed: true
+  actions:
+    default_workflow_permissions: read
+    allow_actions: selected
+    require_full_sha_pins: true
+  security:
+    secret_scanning: required_when_supported
+    push_protection: required_when_supported
+    dependency_graph: required
+    dependency_review: required_when_supported
+    private_vulnerability_reporting: required
+    code_scanning: required_when_supported
+  self_hosted_runners:
+    repository_must_be_private: true
+    untrusted_forks_forbidden: true
+    environment_approval: gpu-lab
+    preferred_lifecycle: ephemeral
+    required_labels: [self-hosted, linux, x64, forgellm-gpu]
+gitlab:
+  visibility: private
+  protected_default_branch: true
+  merge_request_approval_count: 1
+  protected_variables: true
+  protected_runner_tags: true
+  fork_code_on_privileged_runner_forbidden: true
