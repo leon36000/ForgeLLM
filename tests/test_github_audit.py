@@ -43,6 +43,30 @@ def test_unprotected_repository_and_inaccessible_admin_controls_are_not_a_pass()
     assert checks["code-scanning-visibility"]["status"] == "unknown"
 
 
+def test_unrelated_or_disabled_ruleset_cannot_fake_main_protection() -> None:
+    snapshots = {
+        "repository": _ok({"visibility": "public", "default_branch": "main"}),
+        "branch": _ok({"protected": False}),
+        "branch_protection": _unavailable(),
+        "rulesets": _ok(
+            [
+                {
+                    "name": "tag-only-rule",
+                    "target": "tag",
+                    "enforcement": "active",
+                }
+            ]
+        ),
+        "actions_permissions": _ok(
+            {"default_workflow_permissions": "read", "can_approve_pull_request_reviews": False}
+        ),
+        "code_scanning": _ok([]),
+    }
+    checks = {check["id"]: check for check in check_report(snapshots, expected_visibility="public")}
+    assert checks["main-protection"]["status"] == "fail"
+    assert "rulesets_observed=1" in checks["main-protection"]["detail"]
+
+
 def test_solo_branch_protection_requires_pr_and_ci_without_fake_human_approval() -> None:
     payload = build_payload(required_check="Validate and test", human_approvals=0)
     assert payload["enforce_admins"] is True
