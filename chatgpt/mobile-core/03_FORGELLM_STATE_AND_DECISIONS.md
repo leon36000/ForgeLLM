@@ -1,95 +1,114 @@
 # ForgeLLM — état, décisions et continuité
 
 **Mise à jour :** 2026-08-13  
-**Version d’état :** S-0002  
+**Version d’état :** S-0003  
 **Phase :** P0 — gouvernance, mémoire durable et laboratoire de preuve  
-**Statut global :** P0-T02 en revue finale; dépôt GitHub privé et PR #1 actifs, CI hébergée verte sur la tête d’implémentation, politique de revue solo formalisée; rapport final, CI finale, décision de fusion et protection de `main` restantes
+**Statut global :** P0-T02 terminé; fondation Phase 0 fusionnée dans le dépôt GitHub privé et vérifiée après fusion; P0-T03 de durcissement GitHub est actif
 
 ## Objectif invariant
 
 Concevoir et construire un moteur d’inférence LLM hétérogène dont la correction, la performance, la sécurité et la reproductibilité sont démontrées par des artefacts versionnés.
 
-## Dépôt canonique
+## Dépôt canonique vérifié
 
-- dépôt : `leon36000/ForgeLLM`;
-- visibilité : privée, vérifiée le 2026-08-13;
+- dépôt privé : `leon36000/ForgeLLM`;
 - branche par défaut : `main`;
-- commit d’amorçage : `fb4cd533ef11c08fd31c74716e2dc2bb4ca4b4a9`;
-- branche active : `agent/p0-t02-initialize-repository`;
-- PR : brouillon #1;
-- tête d’implémentation revue : `1f2fdee1fa098e6540eb0b3366203302de56402d`.
+- PR Phase 0 : #1, fusionnée par squash;
+- tête finale revue : `aa978989a5f6ad3524618eda5cd8b650288c7a67`;
+- commit de fusion : `20bc5fa061aa039d32c2702d47eeba07dd353363`;
+- arbre de fusion : `c75bc10c17744cba0bf0c5a284cd40f4285a2e10`.
 
-## Preuve CI observée
+## Preuves de P0-T02
 
-GitHub Actions run `31676341783`, job `94371625460` :
+### CI finale de la PR
+
+- run : `31676559801`;
+- job : `94372299029`;
+- résultat : succès.
+
+### CI après fusion sur `main`
+
+- run : `31676680397`;
+- job : `94372665642`;
+- résultat : succès.
+
+Le journal post-fusion observé montre :
 
 - Ruff 0.16.2 réussi;
 - validation projet, recherche, benchmark et paquet de tâche réussie;
-- vérification de cinq fichiers mobiles et émission SHA-256 réussie;
+- vérification déterministe de cinq fichiers mobiles réussie;
 - **13 tests réussis**;
-- bootstrap Ubuntu en dry-run réussi.
+- bootstrap Ubuntu en dry-run réussi;
+- permissions du jeton limitées à la lecture des métadonnées et du contenu.
 
-CodeQL et Dependency Review ont été ignorés par leurs garde-fous de dépôt privé. Ils ne sont pas déclarés exécutés.
+## Hachages mobiles vérifiés sur le commit fusionné
 
-## Travail ajouté pendant P0-T02
+```text
+8a189b9dab3f60fe370099504c39d2196872ebc1977a5c91e34423a124766fbe  00_FORGELLM_CORE_CONTEXT.md
+e76b7813eae0d8003bd5941d9dc07c28894c8acd0d835545a1b7b12bf865b26b  01_FORGELLM_AGENT_OPERATING_SYSTEM.md
+10830969febb4234a61b0c36857be561d5185a0b64b7b9015fe055b6a0790801  02_FORGELLM_RESEARCH_AND_EVIDENCE.md
+9315d61b2a8c4b4f8ab19e2fb23fbe2367a1089f293c41c7882b94f4cdab853c  03_FORGELLM_STATE_AND_DECISIONS.md
+9697f7b35aa1924bdd9c07cf259fad41209d6e174cd7b2ecec3f65ab71932ff9  04_FORGELLM_PROMPTS_AND_WORKFLOWS.md
+```
 
-- politique de revue pour projet solo;
-- interdiction d’utiliser un second compte contrôlé par la même personne comme faux réviseur;
-- revue par agent/contexte distinct + CI exacte + décision finale du propriétaire;
-- séparation explicite entre identité Git vivante et manifeste SHA-256 d’un paquet figé;
-- script déterministe de hachage des cinq fichiers mobiles;
-- tests négatifs contre un sixième fichier mobile.
+Le présent fichier S-0003 remplace le quatrième hachage; la CI du PR de clôture doit produire sa nouvelle valeur.
 
 ## Décisions acceptées
 
-### D-0001 — Mémoire durable externe
+### D-0001 — Dépôt Git canonique
 
-Le dépôt Git, les ADR, l’état, les preuves et les handoffs sont canoniques. La mémoire de conversation sert d’aide, jamais d’unique registre.
+Les ADR, l’état, les preuves, les tâches et les handoffs versionnés sont la mémoire durable. La conversation est auxiliaire.
 
-### D-0002 — Architecture de langages
+### D-0002 — Architecture hybride
 
-Rust possède le plan de contrôle sûr. Les kernels restent dans les environnements natifs les plus performants. Une ABI C versionnée sépare les couches. Python reste hors du chemin par token sauf preuve contraire.
+Rust possède le plan de contrôle; les kernels utilisent les piles natives CUDA/HIP/CPU/DSL qui gagnent sous mesure; une ABI C versionnée sépare les couches.
 
 ### D-0003 — Remplacement progressif
 
-Ne pas porter intégralement un moteur existant. Encapsuler, mesurer et remplacer une brique à la fois lorsque correction et gain sont démontrés.
+Les moteurs existants sont des baselines et adaptateurs. Une brique n’est remplacée qu’après correction et avantage mesuré.
 
 ### D-0004 — Preuve avant revendication
 
-Toute affirmation de performance exige baseline, environnement, données brutes, exactitude, répétitions, statistiques, hachages et portée explicite.
+Toute performance exige baseline comparable, environnement, données brutes, exactitude, répétitions, statistiques, hachages et portée.
 
-### D-0005 — Agents séparés
+### D-0005 — Revue du projet solo
 
-L’implémentation et la vérification sont confiées à des contextes/agents distincts pour les changements importants. En mode solo, le propriétaire prend la décision finale; un second compte lui appartenant n’est pas une revue indépendante.
+Un agent ou contexte distinct vérifie le travail, la CI valide la tête exacte et le propriétaire autorise la fusion. Un second compte contrôlé par le même propriétaire n’est pas indépendant.
 
-### D-0006 — Runners GPU protégés
+### D-0006 — Runners GPU interdits sans protection prouvée
 
-Aucun runner GPU auto-hébergé avant preuve directe de la protection de `main`, du dépôt privé et des garde-fous contre le code non approuvé.
+Aucun runner auto-hébergé n’est enregistré avant preuve directe du dépôt privé, de la protection de `main` et de l’isolation du code non approuvé.
 
 ### D-0007 — Profils avant optimisation
 
-La Phase 1 définit modèles, charges, SLO et fonctions objectif avant toute affirmation de « meilleur moteur ».
+Les modèles, charges, SLO et fonctions objectif de Phase 1 précèdent toute affirmation de « meilleur moteur ».
 
-## Risques principaux
+## Limites de la preuve
 
-| ID | Risque | Gravité | Contre-mesure |
-|---|---|---:|---|
-| R-001 | dérive vers un moteur trop large avant baseline | critique | phases et task packets petits |
-| R-002 | benchmarks incomparables ou optimistes | critique | schéma obligatoire, données brutes, vérificateur |
-| R-003 | fragmentation Rust/C++/CUDA/HIP/Python | élevée | ABI étroite, ownership explicite, tests contractuels |
-| R-005 | runners GPU compromis | critique | protection vérifiée avant enregistrement |
-| R-007 | mémoire de chat contradictoire | élevée | état versionné et projection mobile régénérée |
-| R-008 | objectifs « le plus puissant » non mesurables | élevée | profils de charge et objectifs séparés en P1 |
+La Phase 0 prouve la structure du projet, ses validateurs, sa CI et son contexte mobile. Elle ne prouve aucun moteur, kernel, résultat numérique, support matériel ou gain de performance ForgeLLM. CodeQL et Dependency Review ont été ignorés par leurs garde-fous privés et ne sont pas déclarés actifs.
 
-## Limite de preuve
+## Tâche active
 
-Aucun moteur, kernel ou benchmark LLM ForgeLLM n’existe encore. Les résultats externes restent non reproduits. La racine `MANIFEST.sha256` décrit le paquet Phase 0 initial, pas tous les commits ultérieurs.
+**P0-T03 — durcir et vérifier directement le plan de contrôle GitHub.**
 
-## Prochaine action autorisée
+Paquet : `tasks/open/P0-T03-repository-hardening.yaml`.
 
-1. ajouter le rapport de revue agentique indépendante;
-2. vérifier la CI de la tête finale;
-3. mettre à jour la PR et quitter le mode brouillon si le verdict est `ACCEPT`;
-4. décision de fusion par le propriétaire;
-5. interdire tout runner GPU tant que la protection de `main` n’est pas prouvée;
-6. produire S-0003 après fusion.
+Objectifs immédiats :
+
+1. capturer l’état réel de la protection/ruleset de `main`;
+2. vérifier les permissions GitHub Actions;
+3. activer CodeQL et Dependency Review seulement s’ils sont supportés et réussissent avant d’être requis;
+4. conserver les commandes administratives et leurs rollbacks;
+5. exécuter CI exacte et revue indépendante.
+
+## Blocage explicite
+
+L’intégration GitHub a retourné `403 Resource not accessible by integration` pour l’endpoint de protection de branche. Cela signifie **état inconnu**, pas protection active ou inactive. Par conséquent P0-T04 et tout runner auto-hébergé restent bloqués.
+
+## Prochain ordre d’exécution
+
+1. P0-T03 : protection et sécurité du dépôt;
+2. P0-T04 : inventaire matériel/topologique seulement après protection vérifiée;
+3. P0-T05 : profils de charge et objectifs;
+4. P0-T06 : plan du laboratoire de baselines;
+5. aucun code moteur avant ces gates.
