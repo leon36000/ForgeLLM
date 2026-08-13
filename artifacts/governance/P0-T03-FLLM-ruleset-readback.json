@@ -1,0 +1,59 @@
+{
+  "schema_version": "1.0",
+  "captured_at": "2026-08-13T22:12:12Z",
+  "repository": "leon36000/ForgeLLM",
+  "main_before_state_closeout": "c1ec3db1613d9bc6a9a4cd0cd7a1c7e4eabaaa7f",
+  "branch_readback": {
+    "name": "main",
+    "protected": true
+  },
+  "ruleset": {
+    "id": 20820530,
+    "name": "FLLM",
+    "target": "branch",
+    "source_type": "Repository",
+    "source": "leon36000/ForgeLLM",
+    "enforcement": "active",
+    "conditions": {
+      "ref_name": {
+        "exclude": [],
+        "include": ["refs/heads/main"]
+      }
+    },
+    "bypass_actors": [],
+    "current_user_can_bypass": "never",
+    "rules": [
+      {"type": "deletion"},
+      {"type": "non_fast_forward"},
+      {"type": "required_linear_history"},
+      {
+        "type": "pull_request",
+        "parameters": {
+          "required_approving_review_count": 0,
+          "dismiss_stale_reviews_on_push": true,
+          "require_code_owner_review": false,
+          "require_last_push_approval": false,
+          "required_review_thread_resolution": true,
+          "allowed_merge_methods": ["squash"]
+        }
+      },
+      {
+        "type": "required_status_checks",
+        "parameters": {
+          "strict_required_status_checks_policy": true,
+          "do_not_enforce_on_create": false,
+          "required_status_checks": [
+            {
+              "context": "Validate and test",
+              "integration_id": 15368
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "source_endpoints": [
+    "https://api.github.com/repos/leon36000/ForgeLLM/rulesets/20820530",
+    "https://api.github.com/repos/leon36000/ForgeLLM/branches/main"
+  ]
+}
