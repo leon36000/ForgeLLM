@@ -2,7 +2,7 @@ schema_version: "1.0"
 task_id: P0-T03
 title: Harden and directly verify the ForgeLLM GitHub control plane
 phase: P0
-status: ready
+status: in_progress
 charter_goals:
   - Preserve canonical project state in version control.
   - Prevent unverified or privileged execution from bypassing project gates.
@@ -18,10 +18,11 @@ inputs:
   - S-0003 state and merged Phase 0 commit 20bc5fa061aa039d32c2702d47eeba07dd353363.
   - GitHub repository leon36000/ForgeLLM.
   - Successful post-merge Phase 0 run 31676680397 and job 94372665642.
+  - Successful CodeQL run 31677360037 and job 94374758365 on PR #4 head 113b0e8cf86fa40c2f05e2742a635de17cef5afd.
 outputs:
   - Direct evidence of main branch protection or ruleset configuration, including exact API/CLI output and limitations.
   - Read-only repository security and Actions-permission audit artifact.
-  - Verified decision on whether CodeQL and Dependency Review are supported and enabled.
+  - Verified decision on CodeQL alert state and whether Dependency Review is supported and enabled.
   - Updated repository policy, state, risk register, mobile projection, review report, and handoff.
 allowed_paths:
   - .github/
@@ -43,12 +44,14 @@ forbidden_actions:
   - Enable a conditionally skipped check as required.
   - Invent CODEOWNERS identities or a second human reviewer.
   - Bypass unsupported GitHub plan features by disabling existing safety rules.
+  - Interpret a successful CodeQL workflow as evidence of zero alerts without inspecting the uploaded results.
 acceptance_criteria:
   - The repository remains private and main remains the default branch.
   - The exact main protection or ruleset state is captured by a direct GitHub API or gh CLI response; access denial is recorded as a blocker rather than interpreted as protection.
   - When supported, main rejects force pushes and deletion, requires pull requests, conversation resolution, and the stable Validate and test check.
   - GitHub Actions default workflow permissions are read-only unless a documented workflow requires more.
-  - CodeQL and Dependency Review are either successfully executed and evidenced before becoming required, or remain explicitly disabled/skipped with the reason recorded.
+  - CodeQL execution, SARIF upload and processing are evidenced, and alert count/severity is directly inspected or remains explicitly unknown.
+  - Dependency Review is either successfully executed and evidenced before becoming required, or remains explicitly disabled/skipped with the reason recorded.
   - No self-hosted runner exists or is registered by this task.
   - make ci succeeds on the exact final pull-request head.
   - A fresh agent/context review report records findings and verdict.
@@ -59,12 +62,19 @@ verification_commands:
   - gh api repos/leon36000/ForgeLLM/actions/permissions/workflow
   - gh api repos/leon36000/ForgeLLM/actions/permissions/selected-actions
   - gh api repos/leon36000/ForgeLLM/rulesets
+  - gh api 'repos/leon36000/ForgeLLM/code-scanning/alerts?state=open&per_page=100'
   - python scripts/github/audit_repository.py --repo leon36000/ForgeLLM --output artifacts/governance/github-audit-s0004.json
 evidence_requirements:
   - Preserve redacted command output, timestamps, repository identity, exact commits, workflow run IDs, job IDs, and API status codes.
-  - Distinguish unsupported, inaccessible, disabled, skipped, enabled, and passing states.
+  - Distinguish unsupported, inaccessible, disabled, skipped, enabled, executed, uploaded, processed, passing, and clean states.
   - Record every repository-admin write and its rollback command.
   - Preserve a fresh-context review report and owner disposition.
+progress_evidence:
+  - CodeQL Action 4.37.6 and CLI 2.26.2 executed 52 security-extended queries over 61 extracted Python modules.
+  - CodeQL run 31677360037 and job 94374758365 succeeded; SARIF upload and processing completed.
+  - Code-scanning alerts endpoint returned 403 Resource not accessible by integration, so alert details remain unknown.
+  - Dependency Review run 31677360127 was skipped by the private-repository feature guard.
+  - Branch-protection endpoint returned 403 Resource not accessible by integration, so protection remains unknown.
 dependencies:
   - P0-T02
 owner_role: Project owner and repository administrator
