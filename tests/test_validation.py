@@ -64,7 +64,7 @@ def test_repository_automation_is_pinned_and_well_formed() -> None:
     assert validate_repository_automation(ROOT) == []
 
 
-def test_private_feature_workflow_guard_is_required(tmp_path: Path) -> None:
+def test_dependency_review_opt_in_guard_is_required(tmp_path: Path) -> None:
     shutil.copytree(ROOT / "schemas", tmp_path / "schemas")
     shutil.copytree(ROOT / ".github", tmp_path / ".github")
     shutil.copy2(ROOT / "pyproject.toml", tmp_path / "pyproject.toml")
@@ -72,7 +72,9 @@ def test_private_feature_workflow_guard_is_required(tmp_path: Path) -> None:
 
     workflow = tmp_path / ".github/workflows/dependency-review.yml"
     text = workflow.read_text(encoding="utf-8")
-    workflow.write_text(text.replace("vars.FORGELLM_ENABLE_DEPENDENCY_REVIEW == 'true' && ", ""), encoding="utf-8")
+    marker = "vars.FORGELLM_ENABLE_DEPENDENCY_REVIEW == 'true'"
+    assert marker in text
+    workflow.write_text(text.replace(marker, "false"), encoding="utf-8")
 
     issues = validate_repository_automation(tmp_path)
     assert any("FORGELLM_ENABLE_DEPENDENCY_REVIEW" in issue.message for issue in issues)

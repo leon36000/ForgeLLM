@@ -12,6 +12,8 @@ ForgeLLM vise un moteur d’inférence LLM hétérogène, mesurable et progressi
 
 Ce dépôt ne contient pas encore le moteur. Il constitue le **système d’exploitation du projet** : mémoire durable, garde-fous anti-dérive, protocole de recherche, schémas de preuves, tâches pour agents, CI et laboratoire de reproductibilité.
 
+> **Dépôt public, projet non encore licencié.** Tout contenu Git est public. Ne soumettez aucun secret, poids restreint, dataset privé, prompt confidentiel, identifiant matériel stable ou trace non expurgée. La visibilité publique ne constitue pas une licence d'utilisation ou de redistribution. Voir `docs/architecture/ADR-0003-public-repository-and-private-assets.md`.
+
 ## Source de vérité
 
 L’ordre d’autorité est :
@@ -24,7 +26,13 @@ L’ordre d’autorité est :
 6. `AGENTS.md`, puis instructions locales plus spécifiques ;
 7. conversation courante.
 
-La mémoire implicite d’un assistant n’est jamais la source de vérité. Les décisions, expériences et changements d’état doivent être écrits dans Git.
+La mémoire implicite d’un assistant n’est jamais la source de vérité. Les décisions, expériences et changements d’état doivent être écrits dans Git. Un RAG externe ou une base Neon éventuelle reste un index dérivé et reconstruisible.
+
+## Dépôt public et actifs privés
+
+Le code, les ADR, la recherche publique et les preuves expurgées vivent ici. Les futurs poids, datasets, prompts, inventaires sensibles et traces privées doivent utiliser un plan d’actifs privé séparé et n’être référencés que par identifiant, révision et hash.
+
+Aucun runner auto-hébergé n’est autorisé tant que `main` n’est pas directement protégée et que les workflows de forks, secrets, environnements et isolation éphémère ne sont pas validés.
 
 ## Démarrage local
 
@@ -35,16 +43,6 @@ python -m pip install --upgrade pip
 python -m pip install -e '.[dev]'
 make ci
 ```
-
-Créer ensuite un dépôt privé avant de connecter des runners GPU :
-
-```bash
-git init -b main
-git add .
-git commit -m "chore: bootstrap ForgeLLM phase 0"
-```
-
-La publication GitHub ou GitLab est volontairement laissée au propriétaire, car le compte, l’organisation, la visibilité et la licence n’ont pas encore été choisis.
 
 ## Utilisation avec ChatGPT mobile
 
@@ -62,7 +60,7 @@ make test              # tests unitaires
 make lint              # Ruff sur src/, scripts/ et tests/
 make verify            # validate + test
 make ci                # lint + verify; gate complet de PR
-make inventory         # inventaire matériel local dans artifacts/
+make inventory         # inventaire matériel local redacted dans artifacts/
 make snapshot          # instantané de continuité dans artifacts/
 ```
 
@@ -71,13 +69,14 @@ make snapshot          # instantané de continuité dans artifacts/
 - Aucun chiffre de performance n’est présenté comme reproduit.
 - Aucun backend n’est déclaré gagnant sans benchmark ForgeLLM.
 - Aucune installation de pilote GPU n’est automatisée.
-- Aucun runner auto-hébergé n’accepte du code non approuvé provenant de forks.
+- Aucun runner auto-hébergé n’exécute du code non approuvé provenant de forks.
 - Aucun choix définitif de licence ou de structure juridique n’est supposé.
 
 Lire ensuite :
 
 - `AGENTS.md`
 - `docs/architecture/PROJECT_CHARTER.md`
+- `docs/governance/PUBLIC_REPOSITORY_POLICY.md`
 - `docs/research/RESEARCH_PROTOCOL.md`
 - `docs/benchmarks/BENCHMARK_STANDARD.md`
 - `docs/roadmap/PHASES.md`

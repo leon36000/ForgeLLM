@@ -9,16 +9,34 @@ dist/
 .coverage
 htmlcov/
 
+# Environment, credentials and key material
+.env
+.env.*
+!.env.example
+secrets/
+credentials/
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.kdbx
+
 # Local or potentially sensitive laboratory outputs
 artifacts/hardware-*.json
 artifacts/session-snapshot.md
 artifacts/research/
 artifacts/raw/
 artifacts/traces/
+artifacts/private/
+private/
+restricted/
 
-# Model and dataset payloads
+# Model, dataset and cache payloads
 models/
 datasets/
+.huggingface/
+.cache/huggingface/
 *.safetensors
 *.gguf
 *.bin

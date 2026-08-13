@@ -1,17 +1,24 @@
 # Contributing to ForgeLLM
 
-ForgeLLM currently operates as a private research and engineering project. Contributions must be traceable to an issue or task packet.
+ForgeLLM is a publicly visible research and engineering project. It is not yet distributed under an open-source license. Public visibility does not grant permission to reuse or redistribute the repository.
+
+Issue discussion and primary-source corrections are welcome. Code pull requests require an owner-linked issue or task packet and explicit handling of inbound licensing until a project license and contributor policy are accepted.
+
+## Public-data rule
+
+Do not submit credentials, restricted model files, private datasets/prompts, customer data, hostnames, private IP addresses, full hardware UUIDs or unredacted traces. Assume every contribution and CI log is permanent and public.
 
 ## Workflow
 
-1. Read `AGENTS.md` and the project charter.
-2. Create one branch and preferably one worktree per task.
-3. Run `make validate` before editing.
-4. Write an executable oracle or failing test first where feasible.
-5. Keep the change within the issue acceptance criteria.
-6. Run `make ci` and all task-specific checks.
-7. Open a pull request using the repository template.
-8. Obtain independent review before merge.
+1. Read `AGENTS.md`, the project charter and ADR-0003.
+2. Obtain or create one bounded issue/task packet.
+3. Create one branch and preferably one worktree per task.
+4. Run `make validate` before editing.
+5. Write an executable oracle or failing test first where feasible.
+6. Keep the change within issue acceptance criteria.
+7. Run `make ci` and all task-specific checks.
+8. Open a pull request using the repository template.
+9. Obtain fresh-context independent review before merge.
 
 ## Commit policy
 

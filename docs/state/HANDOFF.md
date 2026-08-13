@@ -1,111 +1,91 @@
 # ForgeLLM Handoff
 
-**From state:** S-0003  
-**To task:** P0-T03 — GitHub control-plane hardening  
+**From state:** S-0004  
+**To task:** P0-T03 owner-admin completion  
 **Generated:** 2026-08-13
 
-## Verified canonical state
+## Canonical decision
 
-- Repository: private GitHub repository `leon36000/ForgeLLM`.
-- Default branch: `main`.
-- Phase 0 bootstrap PR #1: merged by squash.
-- Final PR #1 head: `aa978989a5f6ad3524618eda5cd8b650288c7a67`.
-- PR #1 merge commit: `20bc5fa061aa039d32c2702d47eeba07dd353363`.
-- PR #1 merge tree: `c75bc10c17744cba0bf0c5a284cd40f4285a2e10`.
-- Final PR #1 CI: run `31676559801`, job `94372299029`, success.
-- Post-merge `main` CI: run `31676680397`, job `94372665642`, success.
-- Both decoded jobs showed Ruff passing, all then-active Phase 0 validators passing, deterministic five-file mobile hashing, 13 tests passing and the Ubuntu bootstrap dry-run passing.
+The owner intentionally keeps `leon36000/ForgeLLM` public. Issue #8 and ADR-0003 supersede every prior private-visibility assumption.
 
-## P0-T02 disposition
+The public repository contains source, governance, public research metadata and sanitized evidence only. Restricted weights, datasets, prompts, traces, operational identifiers and secrets remain outside Git. Git is canonical; any RAG or external app is a derived service.
 
-`P0-T02` is complete for its private-bootstrap scope.
+## Direct repository state
 
-Completed outputs:
+- visibility: public;
+- default branch: main;
+- main before P0-T03: `843f8127f76a0c7f2ef9863853dccaddeff90aa8`;
+- `main.protected=false`;
+- required-status-check enforcement off;
+- rulesets: none;
+- protection, Actions-permission and code-alert admin endpoints: integration `403`.
 
-- canonical private remote;
-- merged Phase 0 foundation;
-- source-of-truth hierarchy and accepted architecture ADRs;
-- five-file mobile context and deterministic hash command;
-- solo-project review policy;
-- independent fresh-context review report;
-- successful PR-head and post-merge CI evidence;
-- explicit evidence limits and GPU-runner prohibition while protection is unknown.
+## Reviewed implementation evidence
 
-## S-0003 closeout evidence
+Head `9d3b47365aa017f37b16a6f8c7e307677a7526cf`:
 
-On PR #4 head `113b0e8cf86fa40c2f05e2742a635de17cef5afd`:
+- Phase 0 run `31681837631`, job `94388820133`: success; Ruff, all active validators, five mobile hashes, **17 tests** and bootstrap dry-run passed;
+- CodeQL run `31681837665`, job `94388813356`: success; 62 modules, 52 queries, SARIF uploaded/processed; alert details unknown;
+- Dependency Review run `31681837651`: skipped by opt-in;
+- earlier Dependency Review probe `31681032967` / `94386280488`: failed because Dependency Graph is disabled, with no dependency result.
 
-- `Phase 0 verification` run `31677360240`, job `94374759191`: success;
-- Ruff, project/research/benchmark validation, P0-T02 and P0-T03 task validation, five mobile hashes, 13 tests and bootstrap dry-run all succeeded;
-- `CodeQL` run `31677360037`, job `94374758365`: success;
-- CodeQL Action 4.37.6 / CLI 2.26.2 extracted 61 Python modules, ran 52 `security-extended` queries, uploaded SARIF and reached processing-complete status;
-- `Dependency review` run `31677360127`: skipped.
+Fresh review: `docs/reviews/P0-T03-PUBLIC-REPOSITORY-REVIEW.md`, verdict `ACCEPT` for the PR while P0-T03 remains blocked.
 
-The code-scanning alerts API returned `403 Resource not accessible by integration`. CodeQL execution is proven; alert count, severity and triage remain unknown. Do not convert the successful job conclusion into a “zero alerts” claim.
+The review discovered and fixed a security false positive: an unrelated or disabled ruleset no longer counts as protection for `main`; the branch endpoint must report `protected=true`.
 
-The state and mobile amendments after head `113b0e8c…` require a new final exact-head gate before PR #4 is merged.
+## Implemented on PR #9
 
-## Active task
+- ADR-0003 and public repository policy;
+- public security reporting entry point;
+- public-data, private-asset and no-license notices;
+- typed read-only audit with pass/fail/unknown states;
+- solo branch-protection payload with zero fabricated human approvals;
+- tests for inaccessible controls, unrelated rulesets and protection payload;
+- S-0004 state, decisions, risks, roadmap and mobile projection;
+- explicit failed Dependency Review capability probe.
 
-`tasks/open/P0-T03-repository-hardening.yaml`
+## Remaining owner-admin checkpoint
 
-Status: `in_progress`.
+### Protect `main`
 
-P0-T03 must directly inspect and, where authorized and supported, configure:
+From an owner-authenticated workstation with GitHub CLI:
 
-- branch protection or repository rulesets for `main`;
-- stable required check `Validate and test`;
-- pull-request, conversation-resolution, force-push and deletion controls;
-- GitHub Actions default and selected-action permissions;
-- CodeQL alert visibility and triage after its successful execution;
-- Dependency Review support and opt-in configuration;
-- read-only audit artifacts and rollback instructions.
+```bash
+python scripts/github/apply_branch_protection.py \
+  --repo leon36000/ForgeLLM \
+  --human-approvals 0
 
-## Known blockers
+FORGELLM_CONFIRM_GITHUB_ADMIN_WRITE=YES \
+python scripts/github/apply_branch_protection.py \
+  --repo leon36000/ForgeLLM \
+  --human-approvals 0 \
+  --apply
+```
 
-### Branch protection
+Then verify:
 
-The connected GitHub integration returned `403 Resource not accessible by integration` for `repos/leon36000/ForgeLLM/branches/main/protection`. This means the protection state is **unknown**. It is not evidence that protection is absent or present.
+```bash
+python scripts/github/audit_repository.py \
+  --repo leon36000/ForgeLLM \
+  --expected-visibility public \
+  --output artifacts/governance/github-audit-s0004.json \
+  --strict
+```
 
-### CodeQL result visibility
+If classic protection rejects zero approvals, configure an equivalent repository ruleset that requires PRs and checks without inventing another identity. Preserve the exact write, response and rollback.
 
-The CodeQL workflow executed, uploaded SARIF and completed successfully, but the alerts endpoint also returned `403`. The scan’s detailed findings are therefore unknown to this agent context.
+### Optional Dependency Review
 
-Consequences:
+Enable **Dependency graph** in repository security settings. Then set `FORGELLM_ENABLE_DEPENDENCY_REVIEW=true`, open an internal PR and observe a successful run before considering the check required.
 
-- no self-hosted runner may be registered;
-- no privileged hardware workflow may be activated;
-- P0-T04 remains blocked until protection and runner isolation are directly evidenced;
-- CodeQL must not be described as clean or made required solely from workflow success;
-- Dependency Review must not be made required while skipped.
+### CodeQL triage
 
-The next operator may use an authenticated `gh` CLI or owner GitHub settings UI, but must preserve exact redacted output and every administrative write/rollback command.
+Inspect code-scanning alerts through an owner-authorized UI or `gh` session. Do not infer zero alerts from the successful workflow.
 
-## Security feature status
+## Hard blocker
 
-- `Phase 0 verification`: active and repeatedly passing.
-- CodeQL: execution supported and successful on PR #4 head `113b0e8c…`; SARIF uploaded; alert details inaccessible.
-- Dependency Review: workflow present but skipped by the private-repository feature guard; not active evidence.
-- Dependabot: configured; every generated change requires normal review and CI.
-- Active CODEOWNERS: none; do not invent a second owner or team.
-- Self-hosted runners: none registered or authorized by this handoff.
+No self-hosted runner, secret-bearing workflow, P0-T04 hardware inventory or inference work may start until direct evidence reports `main` protected or an enforced equivalent ruleset.
 
-## Evidence limits
+## Tool routing
 
-No inference runtime, kernel, model benchmark, hardware inventory, driver/toolkit installation, distributed deployment, external benchmark reproduction, license decision or public release has occurred.
-
-## Next operator sequence
-
-1. Read S-0003 and the P0-T03 task packet.
-2. Run the repository audit read-only before any administrative write.
-3. Capture repository visibility, default branch, Actions permissions, rulesets and branch-protection responses.
-4. Inspect CodeQL alerts through an owner-authorized UI or CLI before recording a security verdict.
-5. Determine whether Dependency Review can run successfully on the private repository.
-6. Apply only owner-authorized, reversible controls supported by the current GitHub plan.
-7. Keep all self-hosted runner work blocked.
-8. Update state, risks, repository policy and mobile projection.
-9. Obtain fresh-context review and exact-head CI before P0-T03 merge.
-
-## Continuity checksum
-
-The next state must preserve decisions D-0001 through D-0007 and unresolved risks R-001, R-002, R-005, R-007 and R-008. A missing reference is a continuity warning, not evidence that an item disappeared.
+Use GitHub/CodeQL and Codex Engineering Guardrails for this task. SonarQube requires a reachable configured server. Fallow is not applicable to the current languages. Consensus, Neon, Temporal and NVIDIA/AMD skills require separate bounded tasks and must not expand P0-T03.
