@@ -1,0 +1,114 @@
+name: Temporary verify adversarial ruleset tests
+
+on:
+  push:
+    branches:
+      - agent/p0-t03-main-ruleset-cli
+
+permissions:
+  contents: write
+
+concurrency:
+  group: temporary-verify-adversarial-ruleset-tests
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: >-
+      github.repository == 'leon36000/ForgeLLM' &&
+      github.event.repository.private == true &&
+      github.event.head_commit.message == 'chore(ci): verify adversarial ruleset tests'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out stacked task branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: agent/p0-t03-main-ruleset-cli
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@8549b9f8f590ad24eab7482f36f6e1e24d34597b
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install locked Phase 0 dependencies
+        run: python -m pip install -e '.[dev]'
+
+      - name: Refresh new stable manifest entry
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from __future__ import annotations
+
+          import hashlib
+          from pathlib import Path
+
+          manifest = Path('MANIFEST.sha256')
+          entries: dict[str, str] = {}
+          for line in manifest.read_text(encoding='utf-8').splitlines():
+              if not line.strip():
+                  continue
+              digest, relative = line.split('  ', 1)
+              entries[relative] = digest
+          relative = 'tests/test_github_ruleset_adversarial.py'
+          entries[relative] = hashlib.sha256(Path(relative).read_bytes()).hexdigest()
+          manifest.write_text(
+              ''.join(f'{entries[path]}  {path}\n' for path in sorted(entries)),
+              encoding='utf-8',
+          )
+          PY
+
+      - name: Run complete adversarial verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e .github/workflows/temporary-verify-ruleset-cli.yml
+          test ! -e .github/workflows/temporary-record-p0-t03-cli-evidence.yml
+          make ci | tee /tmp/p0-t03-adversarial-ci.log
+          sha256sum -c MANIFEST.sha256
+          python scripts/github/apply_main_ruleset.py \
+            --repo leon36000/ForgeLLM \
+            --payload tasks/open/P0-T03-main-ruleset-payload.json \
+            | tee /tmp/p0-t03-adversarial-dry-run.log
+          git diff --check
+
+      - name: Update automated evidence without granting a verdict
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from __future__ import annotations
+
+          import os
+          from pathlib import Path
+
+          path = Path('docs/governance/reviews/P0-T03-ruleset-cli-review.md')
+          text = path.read_text(encoding='utf-8')
+          marker = '## Verifier context\n'
+          evidence = f'''## Automated evidence\n\n- **Source head:** `{os.environ["SOURCE_SHA"]}`\n- **Workflow run:** `{os.environ["RUN_ID"]}`\n- **Ruff and complete `make ci`:** `PASS`\n- **Nominal and adversarial ruleset tests:** `PASS`\n- **Stable manifest verification:** `PASS`\n- **Ruleset CLI dry-run:** `PASS`\n- **Prior temporary workflows absent:** `PASS`\n- **Administrative write performed:** `false`\n\n'''
+          if '## Automated evidence\n' in text:
+              start = text.index('## Automated evidence\n')
+              end = text.index(marker, start)
+              text = text[:start] + evidence + text[end:]
+          else:
+              text = text.replace(marker, evidence + marker)
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Remove temporary workflow and commit verified result
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/temporary-verify-adversarial-ruleset-tests.yml
+          git config user.name 'ForgeLLM CI Evidence'
+          git config user.email '216249790+leon36000@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'test(governance): verify adversarial ruleset behavior'
+          git push origin HEAD:agent/p0-t03-main-ruleset-cli
