@@ -72,17 +72,21 @@ def check_report(snapshots: dict[str, Any], *, expected_visibility: str) -> list
         and branch["data"].get("protected") is True
     )
     rulesets = snapshots["rulesets"]
-    ruleset_count = len(rulesets.get("data", [])) if rulesets["status"] == "ok" and isinstance(rulesets.get("data"), list) else 0
+    ruleset_count = (
+        len(rulesets.get("data", []))
+        if rulesets["status"] == "ok" and isinstance(rulesets.get("data"), list)
+        else 0
+    )
     protection = snapshots["branch_protection"]
-    if branch_protected or ruleset_count > 0:
-        detail = f"branch.protected={branch_protected}; rulesets={ruleset_count}; protection_endpoint={protection['status']}"
-        checks.append(_result("main-protection", "pass", detail))
-    else:
-        detail = (
-            f"branch.protected={branch_protected}; rulesets={ruleset_count}; "
-            f"protection_endpoint={protection['status']}; http={protection.get('http_status')}"
-        )
-        checks.append(_result("main-protection", "fail", detail))
+    # The branch endpoint is the authoritative aggregate for whether this exact
+    # branch is protected by classic protection or a matching ruleset. Merely
+    # observing any repository ruleset is insufficient: it may be disabled or
+    # target another ref.
+    detail = (
+        f"branch.protected={branch_protected}; rulesets_observed={ruleset_count}; "
+        f"protection_endpoint={protection['status']}; http={protection.get('http_status')}"
+    )
+    checks.append(_result("main-protection", "pass" if branch_protected else "fail", detail))
 
     actions = snapshots["actions_permissions"]
     if actions["status"] == "ok" and isinstance(actions.get("data"), dict):
