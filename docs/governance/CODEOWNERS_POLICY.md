@@ -1,10 +1,17 @@
 # CODEOWNERS Activation Policy
 
-No active `.github/CODEOWNERS` file is included because the owner, organization and teams do not yet exist in canonical state. A fabricated team name would create a false control.
+No active `.github/CODEOWNERS` file is included while ForgeLLM has only one human maintainer. A fabricated team name or a second account controlled by the same person would create a false control rather than independent review.
 
-After P0-T02 establishes the private remote:
+The active solo-project review model is defined in `docs/governance/SOLO_PROJECT_REVIEW_POLICY.md`:
 
-1. create at least `architecture`, `runtime`, `accelerators`, `security`, `benchmarks` and `governance` maintainer groups or named owners;
+- a distinct agent or fresh context reviews the task, diff and evidence;
+- GitHub Actions validates the exact head commit;
+- the owner makes the final merge decision;
+- the review report is preserved in Git or on the pull request.
+
+After a second real human collaborator exists:
+
+1. create appropriate `architecture`, `runtime`, `accelerators`, `security`, `benchmarks` and `governance` maintainer groups or named owners;
 2. verify every referenced user/team has repository access;
 3. add `.github/CODEOWNERS` with the narrowest useful paths;
 4. enable required code-owner review through the repository ruleset;
@@ -26,4 +33,4 @@ Suggested ownership domains:
 /backends/cpu/                                 CPU backend owners
 ```
 
-Do not enable code-owner enforcement until the file resolves to real reviewers; otherwise merges may become either falsely trusted or permanently blocked.
+Do not enable code-owner enforcement until the file resolves to real independent reviewers; otherwise merges may become either falsely trusted or permanently blocked.
