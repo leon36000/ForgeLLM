@@ -2,7 +2,7 @@ schema_version: "1.0"
 task_id: P0-T02
 title: Initialize the private ForgeLLM repository and mobile project
 phase: P0
-status: in_progress
+status: complete
 charter_goals:
   - Preserve canonical project state in version control.
   - Make agent handoffs independently verifiable.
@@ -18,7 +18,7 @@ outputs:
   - Private remote containing the Phase 0 foundation.
   - Mobile project containing exactly the five approved context files.
   - Updated current state, review report and handoff records with remote identity.
-  - Protected main branch before any self-hosted GPU runner is registered.
+  - Explicit prohibition on self-hosted runners until main protection is directly verified.
 allowed_paths:
   - docs/state/
   - docs/governance/
@@ -41,10 +41,10 @@ acceptance_criteria:
   - make ci exits successfully on the exact pull-request head commit.
   - The remote repository visibility is confirmed private.
   - Exactly five mobile Markdown files exist and deterministic SHA-256 records are emitted by scripts/hash_mobile_context.py.
-  - CURRENT_STATE.md and HANDOFF.md identify the remote, branch and verified CI run.
+  - CURRENT_STATE.md and HANDOFF.md identify the remote, merge commit and verified CI runs.
   - A fresh agent/context review report records findings, evidence, limitations and verdict.
   - The owner makes the final merge decision under docs/governance/SOLO_PROJECT_REVIEW_POLICY.md.
-  - Main protection is configured before any self-hosted GPU runner is registered, or the lack of protection remains an explicit blocker.
+  - Main protection is configured before any self-hosted GPU runner is registered, or the lack of direct evidence remains an explicit downstream blocker.
 verification_commands:
   - make ci
   - git status --short
@@ -54,7 +54,7 @@ verification_commands:
 evidence_requirements:
   - Save command outputs with secrets and stable device identifiers redacted.
   - Record the exact commit and remote repository identifier.
-  - Record the GitHub Actions run and job identifiers for the final head.
+  - Record the GitHub Actions run and job identifiers for the final PR head and post-merge main.
   - Preserve the independent-agent review report.
   - Record branch-protection settings or keep GPU-runner registration blocked.
 dependencies:
@@ -67,3 +67,17 @@ risk_ids:
   - R-007
 claim_ids:
   - CLM-010
+completion_evidence:
+  repository: leon36000/ForgeLLM
+  visibility: private
+  pull_request: 1
+  final_pr_head: aa978989a5f6ad3524618eda5cd8b650288c7a67
+  merge_commit: 20bc5fa061aa039d32c2702d47eeba07dd353363
+  final_pr_run: 31676559801
+  final_pr_job: 94372299029
+  post_merge_run: 31676680397
+  post_merge_job: 94372665642
+  tests_passed: 13
+  review_report: docs/reviews/P0-T02-INDEPENDENT-AGENT-REVIEW.md
+  review_verdict: ACCEPT
+  unresolved_control: main branch protection is not directly evidenced; self-hosted runners remain forbidden
