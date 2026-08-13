@@ -3,7 +3,10 @@ from __future__ import annotations
 import json
 from collections.abc import Sequence
 
+import pytest
+
 from forgellm_governance.hardware import CommandResult, collect_hardware_inventory
+from scripts import hardware_inventory as publication
 from scripts.hardware_inventory import sanitize_inventory
 
 
@@ -96,3 +99,14 @@ def test_published_inventory_fails_closed_on_unparsed_structured_probes() -> Non
         assert probe["data"] is None
         assert probe["stderr"] == ""
     assert "REMOVE-ME" not in json.dumps(inventory)
+
+
+def test_inventory_output_cannot_escape_artifacts(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(publication, "_PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(publication, "_ARTIFACTS_ROOT", (tmp_path / "artifacts").resolve())
+    monkeypatch.setattr(publication, "collect_hardware_inventory", lambda: {"probes": {}})
+
+    outside = tmp_path / "outside.json"
+    with pytest.raises(ValueError, match="artifacts"):
+        publication.write_sanitized_inventory(outside)
+    assert not outside.exists()
