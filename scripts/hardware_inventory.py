@@ -9,6 +9,8 @@ from typing import Any
 
 from forgellm_governance.hardware import collect_hardware_inventory
 
+_PROJECT_ROOT = Path(__file__).resolve().parents[1]
+_ARTIFACTS_ROOT = (_PROJECT_ROOT / "artifacts").resolve()
 _NETWORK_PUBLIC_FIELDS = frozenset(
     {
         "ifindex",
@@ -75,11 +77,20 @@ def sanitize_inventory(inventory: dict[str, Any]) -> dict[str, Any]:
     return published
 
 
+def _validated_output_path(path: Path) -> Path:
+    candidate = path if path.is_absolute() else _PROJECT_ROOT / path
+    resolved = candidate.resolve(strict=False)
+    if _ARTIFACTS_ROOT not in resolved.parents:
+        raise ValueError("inventory output must be a file inside the repository artifacts directory")
+    return resolved
+
+
 def write_sanitized_inventory(path: Path) -> Path:
+    output = _validated_output_path(path)
     inventory = sanitize_inventory(collect_hardware_inventory())
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(inventory, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    return path
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(inventory, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return output
 
 
 def main() -> int:
