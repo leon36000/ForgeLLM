@@ -69,12 +69,8 @@ evidence_requirements:
   - Distinguish unsupported, inaccessible, disabled, skipped, enabled, executed, uploaded, processed, passing, and clean states.
   - Record every repository-admin write and its rollback command.
   - Preserve a fresh-context review report and owner disposition.
-progress_evidence:
-  - CodeQL Action 4.37.6 and CLI 2.26.2 executed 52 security-extended queries over 61 extracted Python modules.
-  - CodeQL run 31677360037 and job 94374758365 succeeded; SARIF upload and processing completed.
-  - Code-scanning alerts endpoint returned 403 Resource not accessible by integration, so alert details remain unknown.
-  - Dependency Review run 31677360127 was skipped by the private-repository feature guard.
-  - Branch-protection endpoint returned 403 Resource not accessible by integration, so protection remains unknown.
+  - Preserve CodeQL run 31677360037 and job 94374758365 as successful execution evidence while keeping alert details unknown after the 403 alerts response.
+  - Preserve Dependency Review run 31677360127 as skipped and branch-protection access as unknown after the 403 response.
 dependencies:
   - P0-T02
 owner_role: Project owner and repository administrator
