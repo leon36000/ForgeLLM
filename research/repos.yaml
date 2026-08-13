@@ -1,0 +1,614 @@
+schema_version: '1.0'
+generated_at: '2026-08-12'
+selection_note: The primary set contains ten large, mature, technically relevant open-source
+  reference stacks. It is not a permanent star ranking. Adoption metrics must be refreshed
+  from the hosting APIs before use and are never treated as performance evidence.
+repositories:
+- id: REP-PYTORCH
+  tier: primary
+  slug: pytorch/pytorch
+  canonical_url: https://github.com/pytorch/pytorch
+  role: Tensor semantics, model oracle, compiler and accelerator baseline
+  languages:
+  - Python
+  - C++
+  - CUDA
+  - HIP
+  license_spdx: BSD-3-Clause
+  inspection_status: queued
+  evidence_level: E1
+  required_analysis:
+  - dispatcher
+  - allocator
+  - compile stack
+  - custom operators
+  - testing
+  - benchmarks
+  claims_to_test:
+  - CLM-020
+  accessed_at: '2026-08-12'
+  inspected_ref: null
+- id: REP-TRANSFORMERS
+  tier: primary
+  slug: huggingface/transformers
+  canonical_url: https://github.com/huggingface/transformers
+  role: Model definitions, configurations, tokenizers and import compatibility
+  languages:
+  - Python
+  - Rust
+  - C++
+  license_spdx: Apache-2.0
+  inspection_status: queued
+  evidence_level: E1
+  required_analysis:
+  - model registry
+  - generation semantics
+  - cache APIs
+  - safetensors integration
+  claims_to_test:
+  - CLM-021
+  accessed_at: '2026-08-12'
+  inspected_ref: null
+- id: REP-VLLM
+  tier: primary
+  slug: vllm-project/vllm
+  canonical_url: https://github.com/vllm-project/vllm
+  role: High-throughput serving baseline and KV/scheduler reference
+  languages:
+  - Python
+  - CUDA
+  - C++
+  - Rust
+  license_spdx: Apache-2.0
+  inspection_status: triaged
+  evidence_level: E1
+  required_analysis:
+  - block manager
+  - scheduler
+  - attention backends
+  - distributed runtime
+  - benchmarks
+  - CI
+  claims_to_test:
+  - CLM-004
+  - CLM-005
+  - CLM-006
+  accessed_at: '2026-08-12'
+  inspected_ref: null
+- id: REP-LLAMACPP
+  tier: primary
+  slug: ggml-org/llama.cpp
+  canonical_url: https://github.com/ggml-org/llama.cpp
+  role: Local, CPU, quantized and broad-backend baseline
+  languages:
+  - C
+  - C++
+  - CUDA
+  - HIP
+  - Metal
+  - Vulkan
+  - SYCL
+  license_spdx: MIT
+  inspection_status: triaged
+  evidence_level: E1
+  required_analysis:
+  - GGUF
+  - quantization
+  - CPU kernels
+  - backend abstraction
+  - hybrid offload
+  - tests
+  claims_to_test:
+  - CLM-007
+  - CLM-008
+  accessed_at: '2026-08-12'
+  inspected_ref: null
+- id: REP-SGLANG
+  tier: primary
+  slug: sgl-project/sglang
+  canonical_url: https://github.com/sgl-project/sglang
+  role: Prefix-heavy, structured and high-throughput serving baseline
+  languages:
+  - Python
+  - CUDA
+  - C++
+  license_spdx: Apache-2.0
+  inspection_status: triaged
+  evidence_level: E1
+  required_analysis:
+  - RadixAttention
+  - scheduling
+  - structured decoding
+  - speculation
+  - distributed serving
+  claims_to_test:
+  - CLM-009
+  - CLM-011
+  accessed_at: '2026-08-12'
+  inspected_ref: null
+- id: REP-DEEPSPEED
+  tier: primary
+  slug: microsoft/DeepSpeed
+  canonical_url: https://github.com/microsoft/DeepSpeed
+  role: Distributed execution, inference and kernel reference
+  languages:
+  - Python
+  - C++
+  - CUDA
+  license_spdx: Apache-2.0
+  inspection_status: queued
+  evidence_level: E1
+  required_analysis:
+  - inference engine
+  - communication
+  - quantization
+  - kernels
+  - build and test strategy
+  claims_to_test:
+  - CLM-022
+  accessed_at: '2026-08-12'
+  inspected_ref: null
+- id: REP-TRTLLM
+  tier: primary
+  slug: NVIDIA/TensorRT-LLM
+  canonical_url: https://github.com/NVIDIA/TensorRT-LLM
+  role: NVIDIA-specialized performance ceiling
+  languages:
+  - Python
+  - C++
+  - CUDA
+  license_spdx: Apache-2.0
+  inspection_status: triaged
+  evidence_level: E1
+  required_analysis:
+  - runtime
+  - engine builder
+  - plugins
+  - batching
+  - quantization
+  - speculation
+  - disaggregation
+  claims_to_test:
+  - CLM-012
+  accessed_at: '2026-08-12'
+  inspected_ref: null
+- id: REP-MLCLLM
+  tier: primary
+  slug: mlc-ai/mlc-llm
+  canonical_url: https://github.com/mlc-ai/mlc-llm
+  role: Compiler-based multi-target deployment reference
+  languages:
+  - Python
+  - C++
+  - TVM
+  - CUDA
+  - Metal
+  - Vulkan
+  - WebGPU
+  license_spdx: Apache-2.0
+  inspection_status: triaged
+  evidence_level: E1
+  required_analysis:
+  - IR lowering
+  - code generation
+  - target abstraction
+  - runtime packaging
+  - mobile/web
+  claims_to_test:
+  - CLM-013
+  accessed_at: '2026-08-12'
+  inspected_ref: null
+- id: REP-CUTLASS
+  tier: primary
+  slug: NVIDIA/cutlass
+  canonical_url: https://github.com/NVIDIA/cutlass
+  role: NVIDIA GEMM/attention primitives and layout/type-system reference
+  languages:
+  - C++
+  - CUDA
+  - Python
+  license_spdx: BSD-3-Clause
+  inspection_status: triaged
+  evidence_level: E1
+  required_analysis:
+  - CuTe
+  - architecture support
+  - profiler
+  - examples
+  - kernel generation
+  - build integration
+  claims_to_test:
+  - CLM-014
+  accessed_at: '2026-08-12'
+  inspected_ref: null
+- id: REP-DEEPEP
+  tier: primary
+  slug: deepseek-ai/DeepEP
+  canonical_url: https://github.com/deepseek-ai/DeepEP
+  role: Expert-parallel communication reference
+  languages:
+  - C++
+  - CUDA
+  - Python
+  license_spdx: MIT
+  inspection_status: triaged
+  evidence_level: E1
+  required_analysis:
+  - all-to-all modes
+  - overlap
+  - buffer ownership
+  - FP8
+  - topology assumptions
+  claims_to_test:
+  - CLM-015
+  accessed_at: '2026-08-12'
+  inspected_ref: null
+- id: REP-DYNAMO
+  tier: specialist
+  slug: ai-dynamo/dynamo
+  canonical_url: https://github.com/ai-dynamo/dynamo
+  role: Rust-oriented distributed inference orchestration and routing reference
+  languages:
+  - Rust
+  - Python
+  - C++
+  license_spdx: Apache-2.0
+  inspection_status: triaged
+  evidence_level: E1
+  required_analysis:
+  - router
+  - KV awareness
+  - disaggregation
+  - engine adapters
+  - observability
+  claims_to_test:
+  - CLM-016
+  accessed_at: '2026-08-12'
+  inspected_ref: null
+- id: REP-NIXL
+  tier: specialist
+  slug: ai-dynamo/nixl
+  canonical_url: https://github.com/ai-dynamo/nixl
+  role: Heterogeneous inference data movement reference
+  languages:
+  - C++
+  - Python
+  license_spdx: Apache-2.0
+  inspection_status: triaged
+  evidence_level: E1
+  required_analysis:
+  - plugin transports
+  - memory registration
+  - async API
+  - GPU/CPU/storage paths
+  claims_to_test:
+  - CLM-017
+  accessed_at: '2026-08-12'
+  inspected_ref: null
+- id: REP-TRITON
+  tier: specialist
+  slug: triton-lang/triton
+  canonical_url: https://github.com/triton-lang/triton
+  role: Kernel DSL and autotuning research path
+  languages:
+  - Python
+  - MLIR
+  - C++
+  license_spdx: MIT
+  inspection_status: triaged
+  evidence_level: E1
+  required_analysis:
+  - compiler pipeline
+  - NVIDIA/AMD coverage
+  - autotuner
+  - generated code
+  - debugging
+  claims_to_test:
+  - CLM-018
+  accessed_at: '2026-08-12'
+  inspected_ref: null
+- id: REP-FLASHINFER
+  tier: specialist
+  slug: flashinfer-ai/flashinfer
+  canonical_url: https://github.com/flashinfer-ai/flashinfer
+  role: Inference attention/GEMM/MoE component reference
+  languages:
+  - Python
+  - C++
+  - CUDA
+  license_spdx: Apache-2.0
+  inspection_status: triaged
+  evidence_level: E1
+  required_analysis:
+  - attention API
+  - planning
+  - workspace
+  - backend dispatch
+  - JIT/AOT
+  - tests
+  claims_to_test:
+  - CLM-019
+  accessed_at: '2026-08-12'
+  inspected_ref: null
+- id: REP-KTRANSFORMERS
+  tier: specialist
+  slug: kvcache-ai/ktransformers
+  canonical_url: https://github.com/kvcache-ai/ktransformers
+  role: Heterogeneous CPU-GPU and MoE offload reference
+  languages:
+  - Python
+  - C++
+  - CUDA
+  - HIP
+  license_spdx: Apache-2.0
+  inspection_status: triaged
+  evidence_level: E1
+  required_analysis:
+  - CPU kernels
+  - AMX/AVX
+  - NUMA
+  - offload planner
+  - ROCm path
+  - serving integration
+  claims_to_test:
+  - CLM-023
+  accessed_at: '2026-08-12'
+  inspected_ref: null
+- id: REP-MISTRALRS
+  tier: specialist
+  slug: EricLBuehler/mistral.rs
+  canonical_url: https://github.com/EricLBuehler/mistral.rs
+  role: Rust-native inference engine architecture reference
+  languages:
+  - Rust
+  - CUDA
+  - Metal
+  license_spdx: MIT
+  inspection_status: triaged
+  evidence_level: E1
+  required_analysis:
+  - scheduler
+  - paged attention
+  - quantization
+  - FFI
+  - multi-GPU
+  - benchmarks
+  claims_to_test:
+  - CLM-024
+  accessed_at: '2026-08-12'
+  inspected_ref: null
+- id: REP-CANDLE
+  tier: specialist
+  slug: huggingface/candle
+  canonical_url: https://github.com/huggingface/candle
+  role: Lightweight Rust tensor/model reference path
+  languages:
+  - Rust
+  - CUDA
+  - Metal
+  license_spdx: Apache-2.0
+  inspection_status: triaged
+  evidence_level: E1
+  required_analysis:
+  - tensor semantics
+  - model loaders
+  - custom kernels
+  - CUDA/NCCL
+  - testing
+  claims_to_test:
+  - CLM-025
+  accessed_at: '2026-08-12'
+  inspected_ref: null
+- id: REP-CUBECL
+  tier: specialist
+  slug: tracel-ai/cubecl
+  canonical_url: https://github.com/tracel-ai/cubecl
+  role: Portable Rust compute language and runtime experiment
+  languages:
+  - Rust
+  - CUDA
+  - HIP
+  - Metal
+  - SPIR-V
+  - WGSL
+  license_spdx: MIT OR Apache-2.0
+  inspection_status: triaged
+  evidence_level: E1
+  required_analysis:
+  - frontend
+  - codegen
+  - runtime
+  - autotune
+  - backend maturity
+  - generated code quality
+  claims_to_test:
+  - CLM-026
+  accessed_at: '2026-08-12'
+  inspected_ref: null
+- id: REP-BURN
+  tier: specialist
+  slug: tracel-ai/burn
+  canonical_url: https://github.com/tracel-ai/burn
+  role: Rust ML ecosystem and CubeCL integration reference
+  languages:
+  - Rust
+  license_spdx: MIT OR Apache-2.0
+  inspection_status: queued
+  evidence_level: E1
+  required_analysis:
+  - backend abstraction
+  - model import
+  - graph/fusion
+  - release stability
+  claims_to_test:
+  - CLM-027
+  accessed_at: '2026-08-12'
+  inspected_ref: null
+- id: REP-TILELANG
+  tier: specialist
+  slug: tile-ai/tilelang
+  canonical_url: https://github.com/tile-ai/tilelang
+  role: Emerging tile-level kernel DSL experiment
+  languages:
+  - Python
+  - C++
+  - TVM
+  - CUDA
+  - HIP
+  license_spdx: Apache-2.0
+  inspection_status: triaged
+  evidence_level: E1
+  required_analysis:
+  - IR
+  - scheduler
+  - autotune
+  - target support
+  - verification hooks
+  - runtime
+  claims_to_test:
+  - CLM-028
+  accessed_at: '2026-08-12'
+  inspected_ref: null
+- id: REP-TGI
+  tier: historical
+  slug: huggingface/text-generation-inference
+  canonical_url: https://github.com/huggingface/text-generation-inference
+  role: Rust/Python/gRPC serving architecture study
+  languages:
+  - Rust
+  - Python
+  - CUDA
+  license_spdx: Apache-2.0
+  inspection_status: triaged
+  evidence_level: E1
+  required_analysis:
+  - router
+  - batching
+  - deployment
+  - maintenance lessons
+  claims_to_test:
+  - CLM-029
+  accessed_at: '2026-08-12'
+  inspected_ref: null
+- id: REP-LMDEPLOY
+  tier: specialist
+  slug: InternLM/lmdeploy
+  canonical_url: https://github.com/InternLM/lmdeploy
+  role: Persistent batching, blocked KV cache, quantization and TurboMind serving
+    baseline
+  languages:
+  - Python
+  - C++
+  - CUDA
+  license_spdx: Apache-2.0
+  inspection_status: triaged
+  evidence_level: E1
+  required_analysis:
+  - TurboMind runtime
+  - persistent batching
+  - blocked KV cache
+  - quantization
+  - model support
+  - benchmarks
+  claims_to_test:
+  - CLM-053
+  accessed_at: '2026-08-12'
+  inspected_ref: null
+- id: REP-ROCM
+  tier: specialist
+  slug: ROCm/ROCm
+  canonical_url: https://github.com/ROCm/ROCm
+  role: Canonical AMD software-stack map and compatibility/release entry point
+  languages:
+  - C++
+  - C
+  - Python
+  - HIP
+  license_spdx: MIT
+  inspection_status: triaged
+  evidence_level: E1
+  required_analysis:
+  - compatibility matrix
+  - component versions
+  - HIP
+  - math libraries
+  - profilers
+  - release process
+  claims_to_test:
+  - CLM-054
+  accessed_at: '2026-08-12'
+  inspected_ref: null
+- id: REP-ROCM-LIBRARIES
+  tier: specialist
+  slug: ROCm/rocm-libraries
+  canonical_url: https://github.com/ROCm/rocm-libraries
+  role: Current ROCm libraries monorepo including the maintained Composable Kernel
+    source path
+  languages:
+  - C++
+  - HIP
+  - CMake
+  - Python
+  license_spdx: NOASSERTION
+  inspection_status: triaged
+  evidence_level: E1
+  required_analysis:
+  - Composable Kernel path
+  - library boundaries
+  - build matrix
+  - target architectures
+  - licenses by component
+  - tests
+  claims_to_test:
+  - CLM-054
+  accessed_at: '2026-08-12'
+  inspected_ref: null
+- id: REP-AITER
+  tier: specialist
+  slug: ROCm/aiter
+  canonical_url: https://github.com/ROCm/aiter
+  role: AMD inference and training operator portfolio using CK, Triton and hand-tuned
+    assembly
+  languages:
+  - Python
+  - C++
+  - HIP
+  - Triton
+  - Assembly
+  license_spdx: MIT
+  inspection_status: triaged
+  evidence_level: E1
+  required_analysis:
+  - operator registry
+  - kernel backends
+  - accuracy tests
+  - architecture tuning
+  - vLLM/SGLang integration
+  - release stability
+  claims_to_test:
+  - CLM-055
+  accessed_at: '2026-08-12'
+  inspected_ref: null
+- id: REP-UCX
+  tier: specialist
+  slug: openucx/ucx
+  canonical_url: https://github.com/openucx/ucx
+  role: Portable high-performance communication substrate for RDMA, TCP, shared memory
+    and GPU-aware paths
+  languages:
+  - C
+  - C++
+  license_spdx: BSD-3-Clause
+  inspection_status: queued
+  evidence_level: E1
+  required_analysis:
+  - transport abstraction
+  - GPU memory support
+  - RDMA
+  - progress model
+  - thread safety
+  - benchmarks
+  claims_to_test:
+  - CLM-017
+  accessed_at: '2026-08-12'
+  inspected_ref: null

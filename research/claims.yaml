@@ -1,0 +1,537 @@
+schema_version: '1.0'
+generated_at: '2026-08-12'
+claims:
+- id: CLM-001
+  statement: Rust ownership and type-system constraints can reduce classes of host-side
+    memory-lifecycle defects compared with unchecked manual ownership.
+  class: inference
+  status: externally_supported
+  scope: ForgeLLM Phase 0
+  sources:
+  - OFF-RUST-OWNERSHIP
+  required_experiment: Compare defect classes and runtime overhead in equivalent control-plane
+    prototypes.
+- id: CLM-002
+  statement: A narrow C ABI can preserve cross-language compatibility while keeping
+    accelerator implementations native.
+  class: decision
+  status: accepted
+  scope: ForgeLLM Phase 0
+  sources:
+  - ADR-0001
+  required_experiment: Prototype version negotiation, ownership and coarse execution-plan
+    calls.
+- id: CLM-003
+  statement: No single kernel language or backend should be assumed best across NVIDIA,
+    AMD, CPU and portable targets.
+  class: hypothesis
+  status: proposed
+  scope: ForgeLLM Phase 0
+  sources:
+  - REP-CUTLASS
+  - REP-TRITON
+  - REP-CUBECL
+  required_experiment: Benchmark matched operations across the first declared hardware
+    matrix.
+- id: CLM-004
+  statement: Paged KV-cache allocation reduces fragmentation compared with naive contiguous
+    per-request reservation within the paper’s evaluated domain.
+  class: fact
+  status: externally_supported
+  scope: ForgeLLM Phase 0
+  sources:
+  - PAP-PAGEDATTENTION
+  required_experiment: Reproduce block-allocation waste and throughput on one selected
+    model/workload.
+- id: CLM-005
+  statement: Block-level KV sharing can reduce duplicate cache storage for shared
+    prefixes or branches.
+  class: fact
+  status: externally_supported
+  scope: ForgeLLM Phase 0
+  sources:
+  - PAP-PAGEDATTENTION
+  required_experiment: Measure copy-on-write and prefix-sharing memory savings.
+- id: CLM-006
+  statement: Iteration-level or continuous batching can improve accelerator utilization
+    for autoregressive serving.
+  class: fact
+  status: externally_supported
+  scope: ForgeLLM Phase 0
+  sources:
+  - PAP-ORCA
+  - REP-VLLM
+  required_experiment: Compare static request batching with iteration-level scheduling
+    under matched SLOs.
+- id: CLM-007
+  statement: llama.cpp provides a valuable CPU and quantized inference baseline for
+    ForgeLLM.
+  class: decision
+  status: accepted
+  scope: ForgeLLM Phase 0
+  sources:
+  - REP-LLAMACPP
+  required_experiment: Run correctness and performance baselines after model/profile
+    selection.
+- id: CLM-008
+  statement: A line-by-line Rust port of llama.cpp is not the preferred initial strategy.
+  class: decision
+  status: accepted
+  scope: ForgeLLM Phase 0
+  sources:
+  - ADR-0001
+  required_experiment: Reconsider only if component-level reuse is impossible and
+    a scoped port has measured value.
+- id: CLM-009
+  statement: Radix-tree prefix indexing can improve reuse for prefix-heavy workloads.
+  class: fact
+  status: externally_supported
+  scope: ForgeLLM Phase 0
+  sources:
+  - PAP-SGLANG
+  - REP-SGLANG
+  required_experiment: Reproduce cache hit rate and latency on a declared prefix distribution.
+- id: CLM-010
+  statement: Git-tracked state is more auditable and portable across agents than relying
+    solely on implicit chat memory.
+  class: decision
+  status: accepted
+  scope: ForgeLLM Phase 0
+  sources:
+  - ADR-0002
+  required_experiment: Validate continuity through repeated clean-agent handoffs.
+- id: CLM-011
+  statement: Structured-output optimizations should be benchmarked separately from
+    unconstrained token generation.
+  class: inference
+  status: externally_supported
+  scope: ForgeLLM Phase 0
+  sources:
+  - PAP-SGLANG
+  required_experiment: Compare matched JSON/grammar workloads and unconstrained decode.
+- id: CLM-012
+  statement: TensorRT-LLM is an important NVIDIA-specific performance baseline, not
+    a universal architecture definition.
+  class: decision
+  status: accepted
+  scope: ForgeLLM Phase 0
+  sources:
+  - REP-TRTLLM
+  required_experiment: Benchmark selected NVIDIA paths under exact version and workload
+    parity.
+- id: CLM-013
+  statement: Compiler-driven multi-target deployment is a useful portability reference
+    but does not imply equal performance on all targets.
+  class: inference
+  status: proposed
+  scope: ForgeLLM Phase 0
+  sources:
+  - REP-MLCLLM
+  required_experiment: Compare generated kernels and runtime overhead on at least
+    two target families.
+- id: CLM-014
+  statement: CUTLASS/CuTe should be evaluated for NVIDIA production kernels and layout
+    abstractions.
+  class: decision
+  status: accepted
+  scope: ForgeLLM Phase 0
+  sources:
+  - REP-CUTLASS
+  required_experiment: Build targeted GEMM/attention microbenchmarks on first NVIDIA
+    target.
+- id: CLM-015
+  statement: Specialized expert-parallel communication may outperform generic collectives
+    for MoE traffic patterns.
+  class: hypothesis
+  status: proposed
+  scope: ForgeLLM Phase 0
+  sources:
+  - REP-DEEPEP
+  required_experiment: Compare DeepEP and generic collective implementations on matched
+    topology.
+- id: CLM-016
+  statement: Rust-based distributed orchestration patterns in Dynamo are relevant
+    to ForgeLLM’s control plane.
+  class: inference
+  status: proposed
+  scope: ForgeLLM Phase 0
+  sources:
+  - REP-DYNAMO
+  required_experiment: Inspect boundaries and prototype one router or worker-lifecycle
+    concept.
+- id: CLM-017
+  statement: Inference-specific data-movement libraries may simplify asynchronous
+    GPU/CPU/storage transfers.
+  class: hypothesis
+  status: proposed
+  scope: ForgeLLM Phase 0
+  sources:
+  - REP-NIXL
+  required_experiment: Measure setup overhead, throughput and concurrency against
+    direct transport APIs.
+- id: CLM-018
+  statement: Triton can accelerate kernel research and autotuning, with architecture-dependent
+    generated-code quality.
+  class: inference
+  status: externally_supported
+  scope: ForgeLLM Phase 0
+  sources:
+  - REP-TRITON
+  required_experiment: Inspect code generation and benchmark selected kernels on NVIDIA
+    and AMD.
+- id: CLM-019
+  statement: FlashInfer is a candidate component for inference attention, GEMM and
+    MoE operations.
+  class: decision
+  status: proposed
+  scope: ForgeLLM Phase 0
+  sources:
+  - REP-FLASHINFER
+  - PAP-FLASHINFER
+  required_experiment: Run conformance and performance tests before integration.
+- id: CLM-020
+  statement: PyTorch is the initial tensor-semantics and numerical oracle for supported
+    model paths.
+  class: decision
+  status: accepted
+  scope: ForgeLLM Phase 0
+  sources:
+  - REP-PYTORCH
+  required_experiment: Pin model/operator revisions and construct differential tests.
+- id: CLM-021
+  statement: Transformers is the initial reference for model configuration, generation
+    semantics and safetensors import.
+  class: decision
+  status: accepted
+  scope: ForgeLLM Phase 0
+  sources:
+  - REP-TRANSFORMERS
+  required_experiment: Select model families and pin immutable revisions.
+- id: CLM-022
+  statement: DeepSpeed provides distributed and kernel concepts worth comparing, without
+    being the assumed runtime base.
+  class: decision
+  status: proposed
+  scope: ForgeLLM Phase 0
+  sources:
+  - REP-DEEPSPEED
+  required_experiment: Select only components tied to a Phase 1 question.
+- id: CLM-023
+  statement: Heterogeneous CPU-GPU execution can increase feasible model size, but
+    synchronization and transfer costs may dominate.
+  class: hypothesis
+  status: proposed
+  scope: ForgeLLM Phase 0
+  sources:
+  - REP-KTRANSFORMERS
+  required_experiment: Measure layer/expert offload across actual NUMA and PCIe topology.
+- id: CLM-024
+  statement: mistral.rs is a high-value architecture study for Rust-native inference.
+  class: decision
+  status: accepted
+  scope: ForgeLLM Phase 0
+  sources:
+  - REP-MISTRALRS
+  required_experiment: Inspect control plane, FFI and benchmark methodology at a pinned
+    commit.
+- id: CLM-025
+  statement: Candle is a candidate substrate for reference execution and model loading,
+    not an assumed production scheduler.
+  class: decision
+  status: proposed
+  scope: ForgeLLM Phase 0
+  sources:
+  - REP-CANDLE
+  required_experiment: Prototype one small reference model path.
+- id: CLM-026
+  statement: CubeCL may provide a portable Rust kernel path, but maturity and per-target
+    performance require proof.
+  class: hypothesis
+  status: proposed
+  scope: ForgeLLM Phase 0
+  sources:
+  - REP-CUBECL
+  required_experiment: Compile and benchmark representative kernels on supported targets.
+- id: CLM-027
+  statement: Burn is relevant mainly as a Rust ML ecosystem and CubeCL integration
+    study during early phases.
+  class: decision
+  status: proposed
+  scope: ForgeLLM Phase 0
+  sources:
+  - REP-BURN
+  required_experiment: Review only when it answers a concrete importer or backend
+    question.
+- id: CLM-028
+  statement: TileLang/TileRT concepts merit controlled experiments but remain experimental
+    dependencies.
+  class: decision
+  status: accepted
+  scope: ForgeLLM Phase 0
+  sources:
+  - REP-TILELANG
+  required_experiment: Prototype without placing them on the critical production path.
+- id: CLM-029
+  statement: Text Generation Inference remains an architectural reference even if
+    it is not selected as ForgeLLM’s base.
+  class: decision
+  status: accepted
+  scope: ForgeLLM Phase 0
+  sources:
+  - REP-TGI
+  required_experiment: Extract documented lessons from router and deployment architecture.
+- id: CLM-030
+  statement: Chunked prefill can reduce prefill/decode interference in appropriate
+    workloads.
+  class: fact
+  status: externally_supported
+  scope: ForgeLLM Phase 0
+  sources:
+  - PAP-SARATHI
+  required_experiment: Sweep chunk size and concurrency while measuring TTFT, TPOT
+    and throughput.
+- id: CLM-031
+  statement: Prefill/decode disaggregation can improve goodput under SLOs when transfer
+    and placement costs are favorable.
+  class: fact
+  status: externally_supported
+  scope: ForgeLLM Phase 0
+  sources:
+  - PAP-DISTSERVE
+  - PAP-SPLITWISE
+  required_experiment: Measure KV transfer and compute overlap on actual network topology.
+- id: CLM-032
+  statement: A KV-cache-centric disaggregated architecture can exploit tiered memory
+    and independent resource pools.
+  class: fact
+  status: externally_supported
+  scope: ForgeLLM Phase 0
+  sources:
+  - PAP-MOONCAKE
+  required_experiment: Reproduce a minimal tiered cache path and measure transfer
+    bottlenecks.
+- id: CLM-033
+  statement: Virtual-memory-based KV allocation is a viable alternative to explicit
+    paging on supported platforms.
+  class: fact
+  status: externally_supported
+  scope: ForgeLLM Phase 0
+  sources:
+  - PAP-VATTENTION
+  required_experiment: Compare allocation latency, fragmentation and kernel compatibility.
+- id: CLM-034
+  statement: Fine-grained overlap and nano-batching may raise serving throughput by
+    reducing pipeline bubbles.
+  class: fact
+  status: externally_supported
+  scope: ForgeLLM Phase 0
+  sources:
+  - PAP-NANOFLOW
+  required_experiment: Reproduce operation overlap on one accelerator with trace evidence.
+- id: CLM-035
+  statement: Heterogeneous embedding sizes and access patterns can require allocator
+    policies beyond uniform KV pages.
+  class: fact
+  status: externally_supported
+  scope: ForgeLLM Phase 0
+  sources:
+  - PAP-JENGA
+  required_experiment: Measure fragmentation on selected heterogeneous model architectures.
+- id: CLM-036
+  statement: Unified elastic management of activation and KV memory may improve utilization
+    under dynamic workloads.
+  class: fact
+  status: externally_supported
+  scope: ForgeLLM Phase 0
+  sources:
+  - PAP-ELLM
+  required_experiment: Prototype virtual tensor/pool concepts and compare under long-context
+    load.
+- id: CLM-037
+  statement: Co-designing sparse attention with SSD I/O can enable long-context inference
+    on memory-constrained hosts.
+  class: fact
+  status: externally_supported
+  scope: ForgeLLM Phase 0
+  sources:
+  - PAP-SOLIDATTENTION
+  required_experiment: Reproduce only on a declared consumer-PC profile with correctness
+    checks.
+- id: CLM-038
+  statement: Dynamic quality-aware weight paging/quantization for MoE is promising
+    but too recent for architectural commitment.
+  class: decision
+  status: accepted
+  scope: ForgeLLM Phase 0
+  sources:
+  - PAP-PAGEDWEIGHT
+  required_experiment: Track artifacts and design a reproduction only after peer/implementation
+    review.
+- id: CLM-039
+  statement: IO-aware exact attention kernels can reduce memory traffic and improve
+    attention performance.
+  class: fact
+  status: externally_supported
+  scope: ForgeLLM Phase 0
+  sources:
+  - PAP-FLASHATTENTION
+  - PAP-FLASHATTENTION2
+  required_experiment: Compare against vendor/library baselines on supported shapes.
+- id: CLM-040
+  statement: Hopper-specific asynchrony and FP8 techniques can improve attention performance
+    within their hardware and accuracy scope.
+  class: fact
+  status: externally_supported
+  scope: ForgeLLM Phase 0
+  sources:
+  - PAP-FLASHATTENTION3
+  required_experiment: Reproduce only on compatible hardware with numerical-error
+    reporting.
+- id: CLM-041
+  statement: GPTQ is a relevant weight-only post-training quantization baseline.
+  class: decision
+  status: accepted
+  scope: ForgeLLM Phase 0
+  sources:
+  - PAP-GPTQ
+  required_experiment: Evaluate accuracy, calibration cost, memory and kernel availability.
+- id: CLM-042
+  statement: SmoothQuant is a relevant activation/weight quantization baseline.
+  class: decision
+  status: accepted
+  scope: ForgeLLM Phase 0
+  sources:
+  - PAP-SMOOTHQUANT
+  required_experiment: Evaluate model quality and target-kernel performance.
+- id: CLM-043
+  statement: AWQ is a relevant activation-aware weight-quantization baseline.
+  class: decision
+  status: accepted
+  scope: ForgeLLM Phase 0
+  sources:
+  - PAP-AWQ
+  required_experiment: Evaluate quality and performance across selected model layers.
+- id: CLM-044
+  statement: Joint W4A8KV4-style quantization can reduce memory/compute costs but
+    requires end-to-end co-design and quality validation.
+  class: fact
+  status: externally_supported
+  scope: ForgeLLM Phase 0
+  sources:
+  - PAP-QSERVE
+  required_experiment: Reproduce on supported hardware and compare against simpler
+    formats.
+- id: CLM-045
+  statement: Learned rotations may improve low-bit quantization quality for some models.
+  class: fact
+  status: externally_supported
+  scope: ForgeLLM Phase 0
+  sources:
+  - PAP-SPINQUANT
+  required_experiment: Evaluate calibration/training cost and generalization across
+    model families.
+- id: CLM-046
+  statement: Mixed-precision autoregressive kernels can improve low-batch quantized
+    inference when shapes and hardware match.
+  class: hypothesis
+  status: externally_supported
+  scope: ForgeLLM Phase 0
+  sources:
+  - PAP-MARLIN
+  required_experiment: Benchmark exact supported shapes against alternative kernels.
+- id: CLM-047
+  statement: Speculative decoding can preserve the target distribution while reducing
+    wall-clock decode time when acceptance is high enough.
+  class: fact
+  status: externally_supported
+  scope: ForgeLLM Phase 0
+  sources:
+  - PAP-SPECDEC
+  - PAP-SPECSAMPLING
+  required_experiment: Measure proposer cost, acceptance, verification cost and net
+    latency.
+- id: CLM-048
+  statement: Multiple decoding heads can provide a practical speculative path for
+    compatible models.
+  class: fact
+  status: externally_supported
+  scope: ForgeLLM Phase 0
+  sources:
+  - PAP-MEDUSA
+  required_experiment: Evaluate model modification cost, quality and net speedup.
+- id: CLM-049
+  statement: Feature-level speculative prediction is a candidate when token-level
+    draft uncertainty limits acceptance.
+  class: fact
+  status: externally_supported
+  scope: ForgeLLM Phase 0
+  sources:
+  - PAP-EAGLE
+  required_experiment: Reproduce acceptance and net speedup on selected target models.
+- id: CLM-050
+  statement: Dynamic draft trees can improve speculative efficiency relative to static
+    trees in some workloads.
+  class: fact
+  status: externally_supported
+  scope: ForgeLLM Phase 0
+  sources:
+  - PAP-EAGLE2
+  required_experiment: Compare under identical proposer, target, output length and
+    sampling settings.
+- id: CLM-051
+  statement: Token-level co-scheduling of inference and parameter-efficient finetuning
+    can improve shared-GPU utilization while meeting declared SLOs within the FlexLLM
+    evaluation domain.
+  class: fact
+  status: externally_supported
+  scope: ForgeLLM Phase 0 discovery; inference-plus-finetuning profiles only
+  sources:
+  - PAP-FLEXLLM
+  required_experiment: Consider only after ForgeLLM defines a co-serving profile;
+    reproduce SLO compliance, interference and memory behavior against isolated clusters.
+- id: CLM-052
+  statement: Flexible request partitioning at token boundaries is a candidate mechanism
+    for unbalanced and dynamic serving workloads, but its KV-transfer and coordination
+    costs are topology dependent.
+  class: inference
+  status: externally_supported
+  scope: ForgeLLM Phase 0 serving research
+  sources:
+  - PAP-LIBRA
+  required_experiment: Simulate and then reproduce micro-request partitioning under
+    matched traces, SLOs, GPU topology and KV-transfer bandwidth.
+- id: CLM-053
+  statement: LMDeploy is a relevant specialist baseline for persistent batching, blocked
+    KV cache, quantization and TurboMind execution; its published performance remains
+    external and unreproduced.
+  class: decision
+  status: accepted
+  scope: ForgeLLM Phase 0 repository landscape
+  sources:
+  - REP-LMDEPLOY
+  required_experiment: Add a Phase 1 adapter only when a selected workload and compatible
+    NVIDIA environment make the comparison decision-relevant.
+- id: CLM-054
+  statement: ForgeLLM should track current ROCm release metadata and the ROCm/rocm-libraries
+    monorepo rather than treat the deprecated standalone Composable Kernel repository
+    as canonical.
+  class: decision
+  status: accepted
+  scope: ForgeLLM AMD source tracking as of 2026-08-12
+  sources:
+  - REP-ROCM
+  - REP-ROCM-LIBRARIES
+  required_experiment: Before AMD implementation, pin a supported ROCm release and
+    verify exact component source revisions, licenses and target-GPU compatibility.
+- id: CLM-055
+  statement: AITER is a candidate AMD operator source because it combines Composable
+    Kernel, Triton and hand-tuned assembly backends, but operation coverage and accuracy
+    must be verified per GPU architecture.
+  class: inference
+  status: externally_supported
+  scope: ForgeLLM Phase 0 AMD kernel landscape
+  sources:
+  - REP-AITER
+  required_experiment: Inspect a pinned revision and benchmark only the operations
+    and architectures required by the first AMD profile, with differential accuracy
+    tests.

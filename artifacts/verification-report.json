@@ -1,0 +1,74 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-08-12T08:45:05.286268Z",
+  "project": "ForgeLLM",
+  "delivery": "Phase 0 operating-system scaffold",
+  "environment": {
+    "python": "3.13.5",
+    "platform": "Linux-6.18.35-x86_64-with-glibc2.41"
+  },
+  "catalog_counts": {
+    "repositories": 26,
+    "primary_repositories": 10,
+    "papers": 30,
+    "claims": 55,
+    "repository_reviews": 18,
+    "paper_syntheses": 6,
+    "total_review_tasks": 24
+  },
+  "checks": [
+    {
+      "id": "make-verify",
+      "status": "pass",
+      "command": "make verify",
+      "evidence": "11 pytest tests passed; project, research, benchmark, task, workflow, schema, secret and shell checks passed."
+    },
+    {
+      "id": "python-compileall",
+      "status": "pass",
+      "command": "python3 -m compileall -q src scripts tests",
+      "evidence": "All Python modules compiled successfully before cache cleanup."
+    },
+    {
+      "id": "fallback-static-check",
+      "status": "pass",
+      "command": "AST/import/whitespace fallback checker",
+      "evidence": "Python AST parse, likely-unused import, trailing-whitespace and tab checks passed."
+    },
+    {
+      "id": "wheel-build-install",
+      "status": "pass",
+      "command": "pip wheel --no-build-isolation --no-deps .; install wheel in a clean venv",
+      "evidence": "forgellm_governance-0.1.0 built and its validate-project and validate-research console commands passed with host-supplied locked runtime dependencies."
+    },
+    {
+      "id": "github-write-guards",
+      "status": "pass",
+      "command": "bootstrap_labels.py and apply_branch_protection.py without --apply",
+      "evidence": "Both scripts remained read-only and printed their explicit second confirmation gates."
+    },
+    {
+      "id": "ruff-local",
+      "status": "not_run",
+      "command": "make lint",
+      "evidence": "Ruff 0.16.2 is pinned and make ci runs it in GitHub/GitLab CI, but this sandbox lacked Ruff and blocked outbound package/binary downloads."
+    },
+    {
+      "id": "gpu-benchmarks",
+      "status": "not_run",
+      "command": null,
+      "evidence": "No owner GPU lab was connected; the included benchmark record is explicitly synthetic and validates schema only."
+    },
+    {
+      "id": "remote-repository-mutations",
+      "status": "not_run",
+      "command": null,
+      "evidence": "No GitHub/GitLab repository, setting, runner, credential or branch was created or modified."
+    }
+  ],
+  "evidence_boundary": [
+    "This report proves the structural consistency and packaging readiness of the Phase 0 scaffold, not LLM inference performance.",
+    "Third-party performance claims remain external_unreproduced until a ForgeLLM experiment satisfies the benchmark schema.",
+    "No inference runtime, kernel, driver or owner hardware configuration is included in Phase 0."
+  ]
+}

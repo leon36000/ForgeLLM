@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forgellm.local/schemas/source-record.schema.json",
+  "title": "ForgeLLM Source Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "kind", "title", "canonical_url", "evidence_level", "review_status", "accessed_at"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^(REP|PAP|OFF)-[A-Z0-9][A-Z0-9-]*$"},
+    "kind": {"enum": ["repository", "paper", "official_documentation", "specification", "dataset"]},
+    "title": {"type": "string", "minLength": 3},
+    "canonical_url": {"type": "string", "format": "uri", "pattern": "^https://"},
+    "immutable_ref": {"type": ["string", "null"]},
+    "authors_or_owner": {"type": ["string", "null"]},
+    "published_at": {"type": ["string", "null"]},
+    "accessed_at": {"type": "string", "format": "date"},
+    "license_spdx": {"type": ["string", "null"]},
+    "evidence_level": {"enum": ["E0", "E1", "E2", "E3", "E4", "E5"]},
+    "review_status": {"enum": ["queued", "triaged", "reviewed", "superseded", "rejected"]},
+    "reproduction_status": {"enum": ["not_applicable", "not_started", "planned", "partial", "reproduced", "failed", "inconclusive"]},
+    "limitations": {"type": "array", "items": {"type": "string", "minLength": 3}, "uniqueItems": true},
+    "notes": {"type": "string"}
+  }
+}

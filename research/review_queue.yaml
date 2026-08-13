@@ -1,0 +1,371 @@
+schema_version: '1.0'
+generated_at: '2026-08-12'
+policy: Every review pins immutable source identity and produces decision-relevant
+  evidence. Status reviewed means an independent reviewer accepted the source notes;
+  it does not mean performance was reproduced.
+repository_reviews:
+- id: REV-REP-PYTORCH
+  source_ids:
+  - REP-PYTORCH
+  priority: 1
+  status: queued
+  decision_question: Which tensor, operator and generation semantics should define
+    ForgeLLM's first numerical oracle?
+  required_paths_or_topics:
+  - dispatcher
+  - ATen
+  - allocator
+  - custom operators
+  - CUDA and HIP integration
+  - tests
+  - benchmarks
+  output: docs/research/reviews/REP-PYTORCH.md
+- id: REV-REP-TRANSFORMERS
+  source_ids:
+  - REP-TRANSFORMERS
+  priority: 1
+  status: queued
+  decision_question: Which first model families and immutable import/generation contracts
+    should ForgeLLM support?
+  required_paths_or_topics:
+  - configuration registry
+  - model implementations
+  - generation
+  - cache APIs
+  - tokenizers
+  - safetensors
+  output: docs/research/reviews/REP-TRANSFORMERS.md
+- id: REV-REP-VLLM
+  source_ids:
+  - REP-VLLM
+  priority: 1
+  status: queued
+  decision_question: Which scheduler, KV and worker abstractions should become ForgeLLM
+    experiments rather than copied assumptions?
+  required_paths_or_topics:
+  - scheduler
+  - block manager
+  - attention backends
+  - workers
+  - distributed execution
+  - tests
+  - benchmarks
+  output: docs/research/reviews/REP-VLLM.md
+- id: REV-REP-LLAMACPP
+  source_ids:
+  - REP-LLAMACPP
+  priority: 1
+  status: queued
+  decision_question: Which GGUF, quantization, CPU and hybrid-offload capabilities
+    should be wrapped first?
+  required_paths_or_topics:
+  - GGML tensors and graph
+  - GGUF
+  - quantization
+  - SIMD
+  - backend abstraction
+  - offload
+  - tests
+  output: docs/research/reviews/REP-LLAMACPP.md
+- id: REV-REP-SGLANG
+  source_ids:
+  - REP-SGLANG
+  priority: 1
+  status: queued
+  decision_question: How should prefix-heavy and structured-generation profiles change
+    cache and scheduling requirements?
+  required_paths_or_topics:
+  - radix cache
+  - scheduler
+  - structured decoding
+  - speculation
+  - distributed serving
+  - benchmarks
+  output: docs/research/reviews/REP-SGLANG.md
+- id: REV-REP-DEEPSPEED
+  source_ids:
+  - REP-DEEPSPEED
+  priority: 2
+  status: queued
+  decision_question: Which distributed inference components are useful without adopting
+    the whole runtime?
+  required_paths_or_topics:
+  - inference engine
+  - collectives
+  - kernels
+  - quantization
+  - build
+  - CI
+  output: docs/research/reviews/REP-DEEPSPEED.md
+- id: REV-REP-TRTLLM
+  source_ids:
+  - REP-TRTLLM
+  priority: 1
+  status: queued
+  decision_question: What NVIDIA-specific baseline and integration boundaries should
+    Phase 1 reproduce?
+  required_paths_or_topics:
+  - engine build
+  - runtime
+  - batching
+  - attention
+  - quantization
+  - KV cache
+  - disaggregation
+  output: docs/research/reviews/REP-TRTLLM.md
+- id: REV-REP-MLCLLM
+  source_ids:
+  - REP-MLCLLM
+  priority: 2
+  status: queued
+  decision_question: Which compiler/runtime separation improves target portability
+    without preventing specialized kernels?
+  required_paths_or_topics:
+  - IR
+  - scheduling
+  - code generation
+  - runtime
+  - model compiler
+  - target plugins
+  output: docs/research/reviews/REP-MLCLLM.md
+- id: REV-REP-CUTLASS
+  source_ids:
+  - REP-CUTLASS
+  priority: 1
+  status: queued
+  decision_question: Which CuTe/CUTLASS abstractions fit the first NVIDIA kernel portfolio?
+  required_paths_or_topics:
+  - layouts
+  - tensors
+  - collectives
+  - GEMM
+  - attention
+  - architecture specialization
+  - profiler
+  output: docs/research/reviews/REP-CUTLASS.md
+- id: REV-REP-DEEPEP
+  source_ids:
+  - REP-DEEPEP
+  priority: 2
+  status: queued
+  decision_question: Under which MoE topology and latency regime should specialized
+    expert communication be tested?
+  required_paths_or_topics:
+  - dispatch
+  - combine
+  - buffers
+  - low-latency mode
+  - high-throughput mode
+  - overlap
+  - tests
+  output: docs/research/reviews/REP-DEEPEP.md
+- id: REV-REP-DYNAMO-NIXL
+  source_ids:
+  - REP-DYNAMO
+  - REP-NIXL
+  priority: 2
+  status: queued
+  decision_question: Which Rust orchestration and inference-data-movement boundaries
+    can inform ForgeLLM's distributed layer?
+  required_paths_or_topics:
+  - router
+  - worker lifecycle
+  - KV routing
+  - transfer APIs
+  - ownership
+  - failure handling
+  output: docs/research/reviews/REP-DYNAMO-NIXL.md
+- id: REV-REP-KERNEL-DSLS
+  source_ids:
+  - REP-TRITON
+  - REP-TILELANG
+  - REP-CUBECL
+  priority: 2
+  status: queued
+  decision_question: Which DSLs merit Phase 3 or Phase 4 prototypes by target architecture
+    and operation?
+  required_paths_or_topics:
+  - compiler pipeline
+  - autotuning
+  - generated code
+  - target coverage
+  - debugging
+  - tests
+  output: docs/research/reviews/REP-KERNEL-DSLS.md
+- id: REV-REP-RUST-RUNTIMES
+  source_ids:
+  - REP-MISTRALRS
+  - REP-CANDLE
+  - REP-BURN
+  priority: 2
+  status: queued
+  decision_question: Which Rust ownership, tensor and serving patterns should be reused
+    or avoided?
+  required_paths_or_topics:
+  - runtime ownership
+  - FFI
+  - tensor abstraction
+  - scheduler
+  - model loading
+  - accelerator paths
+  output: docs/research/reviews/REP-RUST-RUNTIMES.md
+- id: REV-REP-HETEROGENEOUS
+  source_ids:
+  - REP-KTRANSFORMERS
+  priority: 2
+  status: queued
+  decision_question: Which CPU-GPU placement and transfer strategies deserve actual-topology
+    experiments?
+  required_paths_or_topics:
+  - placement
+  - offload
+  - MoE experts
+  - CPU kernels
+  - transfer overlap
+  - benchmarks
+  output: docs/research/reviews/REP-KTRANSFORMERS.md
+- id: REV-REP-HISTORICAL-TGI
+  source_ids:
+  - REP-TGI
+  priority: 3
+  status: queued
+  decision_question: Which Rust/Python serving lessons remain useful despite the project's
+    maintenance direction?
+  required_paths_or_topics:
+  - router
+  - launcher
+  - model server
+  - batching
+  - telemetry
+  - maintenance history
+  output: docs/research/reviews/REP-TGI.md
+- id: REV-REP-LMDEPLOY
+  source_ids:
+  - REP-LMDEPLOY
+  priority: 2
+  status: queued
+  decision_question: Does LMDeploy add a decision-relevant baseline beyond vLLM, SGLang
+    and TensorRT-LLM for the selected Phase 1 profiles?
+  required_paths_or_topics:
+  - TurboMind
+  - persistent batching
+  - blocked KV cache
+  - quantization
+  - benchmark harness
+  output: docs/research/reviews/REP-LMDEPLOY.md
+- id: REV-REP-AMD-STACK
+  source_ids:
+  - REP-ROCM
+  - REP-ROCM-LIBRARIES
+  - REP-AITER
+  priority: 1
+  status: queued
+  decision_question: What is the exact maintained ROCm source and operator stack for
+    the first AMD backend target?
+  required_paths_or_topics:
+  - release compatibility
+  - HIP
+  - Composable Kernel
+  - AITER
+  - hipBLASLt
+  - profilers
+  - licenses
+  output: docs/research/reviews/REP-AMD-STACK.md
+- id: REV-REP-UCX
+  source_ids:
+  - REP-UCX
+  priority: 2
+  status: queued
+  decision_question: Which UCX progress and GPU-memory semantics are appropriate below
+    ForgeLLM distributed transfers?
+  required_paths_or_topics:
+  - UCP
+  - transports
+  - GPU memory
+  - RDMA
+  - threading
+  - failure handling
+  output: docs/research/reviews/REP-UCX.md
+paper_syntheses:
+- id: SYN-SCHEDULING
+  source_ids:
+  - PAP-ORCA
+  - PAP-PAGEDATTENTION
+  - PAP-SGLANG
+  - PAP-SARATHI
+  - PAP-NANOFLOW
+  - PAP-FLEXLLM
+  - PAP-LIBRA
+  priority: 1
+  status: queued
+  decision_question: Which scheduling and overlap mechanisms should define Phase 1
+    workload simulations?
+  output: docs/research/syntheses/SCHEDULING.md
+- id: SYN-DISAGGREGATION
+  source_ids:
+  - PAP-DISTSERVE
+  - PAP-SPLITWISE
+  - PAP-MOONCAKE
+  priority: 1
+  status: queued
+  decision_question: Under which bandwidth and SLO conditions can prefill/decode disaggregation
+    produce net goodput?
+  output: docs/research/syntheses/DISAGGREGATION.md
+- id: SYN-MEMORY-HIERARCHY
+  source_ids:
+  - PAP-VATTENTION
+  - PAP-JENGA
+  - PAP-ELLM
+  - PAP-SOLIDATTENTION
+  - PAP-PAGEDWEIGHT
+  priority: 1
+  status: queued
+  decision_question: Which paging and tiering mechanisms should enter the memory simulator
+    before runtime implementation?
+  output: docs/research/syntheses/MEMORY_HIERARCHY.md
+- id: SYN-ATTENTION-KERNELS
+  source_ids:
+  - PAP-FLASHATTENTION
+  - PAP-FLASHATTENTION2
+  - PAP-FLASHATTENTION3
+  - PAP-FLASHINFER
+  priority: 1
+  status: queued
+  decision_question: Which phase-, shape- and architecture-specific attention variants
+    require separate backend implementations?
+  output: docs/research/syntheses/ATTENTION_KERNELS.md
+- id: SYN-QUANTIZATION
+  source_ids:
+  - PAP-GPTQ
+  - PAP-SMOOTHQUANT
+  - PAP-AWQ
+  - PAP-QSERVE
+  - PAP-SPINQUANT
+  - PAP-MARLIN
+  priority: 2
+  status: queued
+  decision_question: Which weight, activation and KV formats should Phase 1 evaluate
+    under quality and kernel constraints?
+  output: docs/research/syntheses/QUANTIZATION.md
+- id: SYN-SPECULATION
+  source_ids:
+  - PAP-SPECDEC
+  - PAP-SPECSAMPLING
+  - PAP-MEDUSA
+  - PAP-EAGLE
+  - PAP-EAGLE2
+  priority: 2
+  status: queued
+  decision_question: Which speculative methods match the available draft models, vocabularies
+    and latency profiles?
+  output: docs/research/syntheses/SPECULATION.md
+review_gate:
+  required_fields:
+  - immutable source revision or canonical paper identity
+  - architecture or mechanism extraction
+  - test and benchmark methodology assessment
+  - limitations and counter-evidence search
+  - license or artifact terms
+  - claim updates
+  - bounded next experiment or explicit no-action decision
+  - independent reviewer
