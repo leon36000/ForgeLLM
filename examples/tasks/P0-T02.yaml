@@ -20,6 +20,7 @@ outputs:
   - Updated current state, review report and handoff records with remote identity.
   - Explicit prohibition on self-hosted runners until main protection is directly verified.
 allowed_paths:
+  - Makefile
   - docs/state/
   - docs/governance/
   - docs/reviews/
@@ -29,6 +30,7 @@ allowed_paths:
   - scripts/
   - tests/
   - tools/
+  - tasks/open/
   - .github/
   - .gitlab/
 forbidden_actions:
