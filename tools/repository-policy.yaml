@@ -1,5 +1,6 @@
-schema_version: "1.0"
-policy_date: "2026-08-12"
+schema_version: "1.1"
+policy_date: "2026-08-13"
+operating_mode: solo_owner
 github:
   visibility: private
   default_branch: main
@@ -9,10 +10,13 @@ github:
     wiki: false
     discussions: false
   pull_requests:
-    required_approvals: 1
-    high_risk_required_approvals: 2
+    platform_required_approvals_while_solo: 0
+    required_approvals_after_second_human_maintainer: 1
+    high_risk_human_approvals_before_public_release: 1
+    independent_agent_or_fresh_context_review_required: true
+    owner_final_merge_decision_required: true
     dismiss_stale_approvals: true
-    require_code_owner_review_after_team_creation: true
+    require_code_owner_review_after_second_human_maintainer: true
     require_conversation_resolution: true
   branch_or_ruleset:
     required_checks:
@@ -46,10 +50,23 @@ github:
     environment_approval: gpu-lab
     preferred_lifecycle: ephemeral
     required_labels: [self-hosted, linux, x64, forgellm-gpu]
+solo_review:
+  policy: docs/governance/SOLO_PROJECT_REVIEW_POLICY.md
+  review_report_required: true
+  second_account_owned_by_same_person_is_not_independent: true
+  external_human_review_required_for:
+    - public release
+    - unsafe or C-ABI memory ownership changes
+    - memory-writing CUDA or HIP kernels
+    - privileged runners, signing, credentials or release provenance
+    - security-sensitive network services
+    - published headline performance claims
+    - destructive compatibility migrations
 gitlab:
   visibility: private
   protected_default_branch: true
-  merge_request_approval_count: 1
+  merge_request_approval_count_while_solo: 0
+  merge_request_approval_count_after_second_human_maintainer: 1
   protected_variables: true
   protected_runner_tags: true
   fork_code_on_privileged_runner_forbidden: true
