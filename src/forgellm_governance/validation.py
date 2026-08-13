@@ -16,7 +16,6 @@ from typing import Any
 import yaml
 from jsonschema import Draft202012Validator, FormatChecker
 
-
 _ID_PATTERNS = {
     "claim": re.compile(r"^CLM-[0-9]{3,}$"),
     "source": re.compile(r"^(REP|PAP|OFF)-[A-Z0-9][A-Z0-9-]*$"),
