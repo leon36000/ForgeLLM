@@ -22,11 +22,12 @@ outputs:
   - Direct evidence of main branch protection or ruleset configuration, including exact API/CLI output and limitations.
   - Read-only repository security and Actions-permission audit artifact.
   - Verified decision on whether CodeQL and Dependency Review are supported and enabled.
-  - Updated repository policy, state, risk register, mobile projection, and handoff.
+  - Updated repository policy, state, risk register, mobile projection, review report, and handoff.
 allowed_paths:
   - .github/
   - artifacts/governance/
   - docs/governance/
+  - docs/reviews/
   - docs/state/
   - docs/roadmap/
   - chatgpt/mobile-core/
