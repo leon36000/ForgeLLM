@@ -1,0 +1,65 @@
+schema_version: "1.0"
+task_id: P0-T03
+title: Configure and verify the ForgeLLM main-branch ruleset
+phase: P0
+status: ready
+charter_goals:
+  - Protect canonical project state from direct, destructive, or unverified changes.
+  - Preserve the solo-maintainer review model without inventing a second human identity.
+goal: Activate and verify an enforceable GitHub ruleset for main that requires pull requests and the exact ForgeLLM verification check while keeping approval count at zero in solo mode.
+non_goals:
+  - Create a second GitHub account controlled by the owner.
+  - Activate CODEOWNERS before a real collaborator exists.
+  - Register a self-hosted or GPU runner.
+  - Begin inference-engine implementation.
+inputs:
+  - Merged ForgeLLM Phase 0 foundation at commit 20bc5fa0ea44333c91bec7279dcb708a35220b2b.
+  - Accepted ADR-0003 solo-project review mode.
+  - Successful exact-tree CI evidence from pull request 1.
+outputs:
+  - Active GitHub ruleset targeting refs/heads/main.
+  - Read-only JSON evidence of the ruleset and protected branch state.
+  - Updated ForgeLLM state and handoff identifying the effective protection.
+allowed_paths:
+  - tasks/open/
+  - docs/state/
+  - docs/governance/
+  - tools/repository-policy.yaml
+  - .github/
+forbidden_actions:
+  - Make the repository public.
+  - Require a fabricated GitHub approval or a second owner-controlled account.
+  - Enable CODEOWNERS without a real collaborator.
+  - Add a bypass actor without an accepted security decision.
+  - Disable or weaken the Validate and test status check.
+  - Allow force pushes or deletion of main.
+  - Register a self-hosted runner before protection is verified.
+acceptance_criteria:
+  - An active ruleset targets refs/heads/main.
+  - Pull requests are required before changes reach main.
+  - The required approving review count is zero while maintainer_mode is solo.
+  - The exact required status check is Validate and test with strict branch update enforcement.
+  - Review-thread resolution is required.
+  - Force pushes and deletion are blocked.
+  - No bypass actor and no active CODEOWNERS file exists in solo mode.
+  - GitHub API evidence is stored or summarized with sensitive data redacted.
+  - CURRENT_STATE.md and HANDOFF.md record the verified ruleset identity and effective state.
+verification_commands:
+  - gh api repos/leon36000/ForgeLLM/rulesets
+  - gh api repos/leon36000/ForgeLLM/branches/main
+  - gh api repos/leon36000/ForgeLLM/branches/main/protection
+  - python scripts/validate_maintainer_policy.py --root .
+  - make ci
+evidence_requirements:
+  - Record the ruleset numeric identifier, name, enforcement state, target, conditions, rules, and observed_at timestamp.
+  - Record the exact required check context and the branch protected flag.
+  - Record any GitHub-plan or API limitation as an explicit exception rather than silently weakening policy.
+dependencies:
+  - P0-T02
+owner_role: Project owner and repository administrator
+reviewer_role: Context-separated governance verifier
+risk_ids:
+  - R-005
+  - R-007
+claim_ids:
+  - CLM-010
