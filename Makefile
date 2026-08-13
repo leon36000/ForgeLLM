@@ -8,6 +8,7 @@ validate:
 	$(PYTHON) scripts/validate_research_catalog.py --root .
 	$(PYTHON) scripts/validate_benchmark.py examples/benchmarks/valid-example.json --root .
 	$(PYTHON) scripts/validate_task_packet.py examples/tasks/P0-T02.yaml --root .
+	$(PYTHON) scripts/validate_task_packet.py tasks/open/P0-T03-repository-hardening.yaml --root .
 	$(PYTHON) scripts/hash_mobile_context.py --root .
 	bash -n scripts/bootstrap_core_ubuntu.sh
 

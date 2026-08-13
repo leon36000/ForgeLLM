@@ -2,7 +2,7 @@ schema_version: "1.0"
 task_id: P0-T02
 title: Initialize the private ForgeLLM repository and mobile project
 phase: P0
-status: in_progress
+status: complete
 charter_goals:
   - Preserve canonical project state in version control.
   - Make agent handoffs independently verifiable.
@@ -18,8 +18,9 @@ outputs:
   - Private remote containing the Phase 0 foundation.
   - Mobile project containing exactly the five approved context files.
   - Updated current state, review report and handoff records with remote identity.
-  - Protected main branch before any self-hosted GPU runner is registered.
+  - Explicit prohibition on self-hosted runners until main protection is directly verified.
 allowed_paths:
+  - Makefile
   - docs/state/
   - docs/governance/
   - docs/reviews/
@@ -29,6 +30,7 @@ allowed_paths:
   - scripts/
   - tests/
   - tools/
+  - tasks/open/
   - .github/
   - .gitlab/
 forbidden_actions:
@@ -41,10 +43,10 @@ acceptance_criteria:
   - make ci exits successfully on the exact pull-request head commit.
   - The remote repository visibility is confirmed private.
   - Exactly five mobile Markdown files exist and deterministic SHA-256 records are emitted by scripts/hash_mobile_context.py.
-  - CURRENT_STATE.md and HANDOFF.md identify the remote, branch and verified CI run.
+  - CURRENT_STATE.md and HANDOFF.md identify the remote, merge commit and verified CI runs.
   - A fresh agent/context review report records findings, evidence, limitations and verdict.
   - The owner makes the final merge decision under docs/governance/SOLO_PROJECT_REVIEW_POLICY.md.
-  - Main protection is configured before any self-hosted GPU runner is registered, or the lack of protection remains an explicit blocker.
+  - Main protection is configured before any self-hosted GPU runner is registered, or the lack of direct evidence remains an explicit downstream blocker.
 verification_commands:
   - make ci
   - git status --short
@@ -54,7 +56,7 @@ verification_commands:
 evidence_requirements:
   - Save command outputs with secrets and stable device identifiers redacted.
   - Record the exact commit and remote repository identifier.
-  - Record the GitHub Actions run and job identifiers for the final head.
+  - Record the GitHub Actions run and job identifiers for the final PR head and post-merge main.
   - Preserve the independent-agent review report.
   - Record branch-protection settings or keep GPU-runner registration blocked.
 dependencies:

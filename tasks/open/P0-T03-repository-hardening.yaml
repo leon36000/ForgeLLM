@@ -1,0 +1,83 @@
+schema_version: "1.0"
+task_id: P0-T03
+title: Harden and directly verify the ForgeLLM GitHub control plane
+phase: P0
+status: in_progress
+charter_goals:
+  - Preserve canonical project state in version control.
+  - Prevent unverified or privileged execution from bypassing project gates.
+  - Make repository security controls directly observable.
+goal: Configure or explicitly document the strongest available GitHub protections for main, validate optional security workflows, and preserve machine-readable evidence without registering any self-hosted runner.
+non_goals:
+  - Implement inference runtime or kernel code.
+  - Register a self-hosted CPU or GPU runner.
+  - Install or modify GPU drivers, CUDA, ROCm, firmware, or system services.
+  - Make the repository public.
+  - Select a project license.
+inputs:
+  - S-0003 state and merged Phase 0 commit 20bc5fa061aa039d32c2702d47eeba07dd353363.
+  - GitHub repository leon36000/ForgeLLM.
+  - Successful post-merge Phase 0 run 31676680397 and job 94372665642.
+  - Successful CodeQL run 31677360037 and job 94374758365 on PR #4 head 113b0e8cf86fa40c2f05e2742a635de17cef5afd.
+outputs:
+  - Direct evidence of main branch protection or ruleset configuration, including exact API/CLI output and limitations.
+  - Read-only repository security and Actions-permission audit artifact.
+  - Verified decision on CodeQL alert state and whether Dependency Review is supported and enabled.
+  - Updated repository policy, state, risk register, mobile projection, review report, and handoff.
+allowed_paths:
+  - .github/
+  - artifacts/governance/
+  - docs/governance/
+  - docs/reviews/
+  - docs/state/
+  - docs/roadmap/
+  - chatgpt/mobile-core/
+  - scripts/github/
+  - tasks/open/
+  - tasks/closed/
+  - tools/
+forbidden_actions:
+  - Register or execute a self-hosted runner.
+  - Weaken the Validate and test gate.
+  - Grant workflow write permissions not required by a reviewed workflow.
+  - Add credentials, tokens, hostnames, network addresses, or stable device identifiers to Git.
+  - Enable a conditionally skipped check as required.
+  - Invent CODEOWNERS identities or a second human reviewer.
+  - Bypass unsupported GitHub plan features by disabling existing safety rules.
+  - Interpret a successful CodeQL workflow as evidence of zero alerts without inspecting the uploaded results.
+acceptance_criteria:
+  - The repository remains private and main remains the default branch.
+  - The exact main protection or ruleset state is captured by a direct GitHub API or gh CLI response; access denial is recorded as a blocker rather than interpreted as protection.
+  - When supported, main rejects force pushes and deletion, requires pull requests, conversation resolution, and the stable Validate and test check.
+  - GitHub Actions default workflow permissions are read-only unless a documented workflow requires more.
+  - CodeQL execution, SARIF upload and processing are evidenced, and alert count/severity is directly inspected or remains explicitly unknown.
+  - Dependency Review is either successfully executed and evidenced before becoming required, or remains explicitly disabled/skipped with the reason recorded.
+  - No self-hosted runner exists or is registered by this task.
+  - make ci succeeds on the exact final pull-request head.
+  - A fresh agent/context review report records findings and verdict.
+verification_commands:
+  - make ci
+  - gh repo view leon36000/ForgeLLM --json nameWithOwner,visibility,defaultBranchRef
+  - gh api repos/leon36000/ForgeLLM/branches/main/protection
+  - gh api repos/leon36000/ForgeLLM/actions/permissions/workflow
+  - gh api repos/leon36000/ForgeLLM/actions/permissions/selected-actions
+  - gh api repos/leon36000/ForgeLLM/rulesets
+  - gh api 'repos/leon36000/ForgeLLM/code-scanning/alerts?state=open&per_page=100'
+  - python scripts/github/audit_repository.py --repo leon36000/ForgeLLM --output artifacts/governance/github-audit-s0004.json
+evidence_requirements:
+  - Preserve redacted command output, timestamps, repository identity, exact commits, workflow run IDs, job IDs, and API status codes.
+  - Distinguish unsupported, inaccessible, disabled, skipped, enabled, executed, uploaded, processed, passing, and clean states.
+  - Record every repository-admin write and its rollback command.
+  - Preserve a fresh-context review report and owner disposition.
+  - Preserve CodeQL run 31677360037 and job 94374758365 as successful execution evidence while keeping alert details unknown after the 403 alerts response.
+  - Preserve Dependency Review run 31677360127 as skipped and branch-protection access as unknown after the 403 response.
+dependencies:
+  - P0-T02
+owner_role: Project owner and repository administrator
+reviewer_role: Independent agent or fresh review context; external human review before privileged runner activation
+risk_ids:
+  - R-005
+  - R-006
+  - R-007
+claim_ids:
+  - CLM-010
