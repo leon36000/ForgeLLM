@@ -4,7 +4,7 @@
 - **Updated:** 2026-08-13
 - **Phase:** P0
 - **Milestone:** P0-M3 — public repository boundary accepted and hardening underway
-- **Overall status:** P0-T03 in progress; public visibility is owner-approved under ADR-0003, public-data controls are defined, and automated security gates are being strengthened; `main` protection remains the blocking owner-admin control
+- **Overall status:** P0-T03 in progress; public visibility is owner-approved under ADR-0003, public-data controls are defined, and CodeQL is passing; `main` protection and owner-enabled Dependency Graph remain administrative blockers
 - **Authorized next task:** P0-T03
 - **State anchor:** the Git commit containing this file
 
@@ -40,6 +40,20 @@ Git remains canonical. Neon or another RAG may later index the repository, but i
 - CodeQL executed `security-extended`, uploaded SARIF and completed processing on prior heads; alert details remain inaccessible to this integration.
 - No ForgeLLM inference runtime, GPU backend, self-hosted runner or private asset store exists.
 
+## P0-T03 first PR-head evidence
+
+PR #9 head `f6e3632bdbbdab74d88e296bfb3bb98555da1bc3` produced:
+
+- CodeQL run `31681032932`, job `94386280268`: success; 62 Python modules extracted, 52 `security-extended` queries executed, SARIF uploaded and processing completed; alert details remain inaccessible.
+- Phase 0 run `31681032948`, job `94386280549`: failure after Ruff and all structural validators passed; 15 tests passed and one stale syntax-coupled test failed because the Dependency Review condition changed.
+- Dependency Review run `31681032967`, job `94386280488`: failure before dependency analysis because GitHub Dependency Graph is not enabled. This is a capability/configuration failure, not a vulnerability or license finding.
+
+Root-cause corrections:
+
+- Dependency Review returned to explicit opt-in until the owner enables Dependency Graph;
+- the workflow guard test now mutates the semantic feature marker instead of one exact formatting string;
+- the failed runs remain evidence and are not reclassified as passes.
+
 ## P0-T03 changes in this state
 
 - accepted ADR-0003;
@@ -47,9 +61,9 @@ Git remains canonical. Neon or another RAG may later index the repository, but i
 - added a public-facing security reporting file;
 - updated contribution and licensing notices;
 - updated repository policy, task packet, decisions, risks and mobile state;
-- activated Dependency Review automatically for internal PRs while public;
 - added tests for repository-audit classification and solo branch-protection payload;
-- updated the read-only audit to distinguish pass, fail and unknown controls.
+- updated the read-only audit to distinguish pass, fail and unknown controls;
+- probed Dependency Review and recorded its disabled Dependency Graph prerequisite.
 
 ## P0-T03 gates
 
@@ -57,22 +71,18 @@ Git remains canonical. Neon or another RAG may later index the repository, but i
 
 - exact-head `make ci`;
 - CodeQL execution/upload;
-- successful Dependency Review on the internal public PR;
+- Dependency Review safely skipped until owner-enabled, or successful after Dependency Graph is enabled;
 - fresh-context review;
 - consistent public-data and no-license notices.
 
-### Blocking manual/admin gate
+### Blocking manual/admin gates
 
-Before P0-T03 can complete, direct evidence must show `main` protected by branch protection or an enforced ruleset that:
+Before P0-T03 can complete:
 
-- requires pull requests;
-- requires the stable `Validate and test` check;
-- requires conversation resolution;
-- enforces admins/owner;
-- rejects force pushes and branch deletion;
-- uses zero fabricated human approvals while the project is solo.
+1. direct evidence must show `main` protected by branch protection or an enforced ruleset that requires pull requests, the stable `Validate and test` check, conversation resolution, administrators/owner, and no force push/deletion;
+2. Dependency Graph must be enabled before Dependency Review can become active or required.
 
-The current integration cannot perform or read that administrative write. `scripts/github/apply_branch_protection.py` provides a reviewed dry-run/apply command for an owner-authenticated `gh` session.
+The current integration cannot perform or read those administrative writes. `scripts/github/apply_branch_protection.py` provides a reviewed dry-run/apply command for an owner-authenticated `gh` session.
 
 ## External-tool applicability
 
@@ -86,7 +96,7 @@ The current integration cannot perform or read that administrative write. `scrip
 
 ## Evidence boundary
 
-This state proves only directly observed repository metadata and the evidence emitted by completed CI jobs. It does not prove branch protection, Actions administrative settings, zero CodeQL alerts, Dependency Review success before this PR runs, or any inference/hardware performance.
+This state proves only directly observed repository metadata and evidence emitted by completed CI jobs. It does not prove branch protection, Actions administrative settings, zero CodeQL alerts, Dependency Review results, or any inference/hardware performance.
 
 ## Forbidden next steps
 

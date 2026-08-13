@@ -3,7 +3,7 @@
 **Mise à jour :** 2026-08-13  
 **Version d’état :** S-0004  
 **Phase :** P0 — gouvernance, mémoire durable et laboratoire de preuve  
-**Statut global :** dépôt public accepté par ADR-0003; P0-T03 est en cours et bloqué uniquement sur la preuve administrative de protection de `main` après les gates CI/revue
+**Statut global :** dépôt public accepté par ADR-0003; P0-T03 est en cours et bloqué sur la protection administrative de `main` ainsi que l’activation optionnelle de Dependency Graph
 
 ## Objectif invariant
 
@@ -48,13 +48,21 @@ La visibilité publique ne constitue pas une licence. Les contributions de code 
 - Temporal : futur orchestrateur après spécification des workflows.
 - skills NVIDIA/AMD : phases matériel/backend protégées, pas avant.
 
+## Preuves du premier head PR #9
+
+- CodeQL `31681032932` / `94386280268` : succès, 62 modules, 52 requêtes, SARIF traité; alertes inconnues.
+- Phase 0 `31681032948` / `94386280549` : Ruff et validateurs réussis, 15 tests réussis, un test de syntaxe de workflow périmé en échec.
+- Dependency Review `31681032967` / `94386280488` : échec de capacité parce que Dependency Graph est désactivé; aucun résultat de dépendance.
+
+La correction remet Dependency Review en opt-in et rend le test indépendant du format exact de la condition.
+
 ## P0-T03
 
-Cette branche ajoute ADR/politiques publics, audit typé, tests de protection et Dependency Review pour les PR internes publiques.
+Cette branche ajoute ADR/politiques publics, audit typé, tests de protection et un probe documenté de Dependency Review.
 
-Gates à prouver par la PR : `make ci`, CodeQL, Dependency Review, revue fraîche et hachage mobile.
+Gates à prouver par la tête corrective : `make ci`, CodeQL, revue fraîche et hachage mobile. Dependency Review reste ignoré jusqu’à activation propriétaire de Dependency Graph.
 
-Gate propriétaire restant : protéger `main` ou appliquer un ruleset équivalent exigeant PR, `Validate and test`, résolution des conversations, administrateurs inclus, aucun force-push ni suppression. Zéro faux reviewer humain est utilisé en mode solo.
+Gate propriétaire bloquant : protéger `main` ou appliquer un ruleset équivalent exigeant PR, `Validate and test`, résolution des conversations, administrateurs inclus, aucun force-push ni suppression. Zéro faux reviewer humain est utilisé en mode solo.
 
 ## Blocage
 

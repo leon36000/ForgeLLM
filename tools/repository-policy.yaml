@@ -40,8 +40,8 @@ github:
   security:
     secret_scanning: required_when_supported
     push_protection: required_when_supported
-    dependency_graph: required
-    dependency_review: required_for_internal_pull_requests_after_first_success
+    dependency_graph: owner_setting_required
+    dependency_review: disabled_until_dependency_graph_enabled_and_verified
     private_vulnerability_reporting: required_when_supported
     code_scanning: required_when_supported
     public_data_policy: docs/governance/PUBLIC_REPOSITORY_POLICY.md

@@ -20,29 +20,39 @@ The public repository contains source, governance, public research metadata and 
 - rulesets: none;
 - protection, Actions-permission and code-alert admin endpoints: integration `403`.
 
+## First PR-head evidence
+
+On PR #9 head `f6e3632bdbbdab74d88e296bfb3bb98555da1bc3`:
+
+- CodeQL run `31681032932`, job `94386280268`: success; 62 modules, 52 queries, SARIF uploaded/processed; alert details unknown.
+- Phase 0 run `31681032948`, job `94386280549`: Ruff and all structural validators passed; 15 tests passed, one stale workflow-guard test failed.
+- Dependency Review run `31681032967`, job `94386280488`: failed because GitHub Dependency Graph is disabled; no dependency result was produced.
+
+The corrective commit restores Dependency Review opt-in and makes the regression test semantic rather than formatting-specific.
+
 ## Implemented on `agent/p0-t03-public-repository-hardening`
 
 - ADR-0003 and public repository policy;
 - public security reporting entry point;
 - public-data, private-asset and no-license notices;
-- Dependency Review enabled for internal public PRs;
 - read-only audit with pass/fail/unknown semantics;
 - solo branch-protection payload with zero fabricated human approvals;
 - unit tests for repository audit and protection payload;
-- S-0004 state, decisions, risks, open questions and mobile projection.
+- S-0004 state, decisions, risks, open questions and mobile projection;
+- direct failed capability probe for Dependency Review.
 
 ## Remaining evidence to collect
 
-1. exact PR head and commit tree;
-2. `Validate and test` run/job and 16 expected tests if all new tests are collected;
-3. CodeQL run/job and explicit alert-visibility limitation;
-4. Dependency Review run/job and conclusion;
+1. exact corrective head and commit tree;
+2. final `Validate and test` run/job and all 16 tests passing;
+3. final CodeQL run/job and explicit alert-visibility limitation;
+4. Dependency Review skipped by the explicit opt-in guard until the owner enables Dependency Graph;
 5. fresh-context review report and owner disposition;
 6. direct protection/ruleset evidence after the owner-admin action.
 
-## Manual owner-admin checkpoint
+## Manual owner-admin checkpoints
 
-From an authenticated workstation with GitHub CLI:
+### Protect main
 
 ```bash
 python scripts/github/apply_branch_protection.py \
@@ -54,7 +64,15 @@ python scripts/github/apply_branch_protection.py \
   --repo leon36000/ForgeLLM \
   --human-approvals 0 \
   --apply
+```
 
+### Enable Dependency Review capability
+
+In GitHub repository settings, enable **Dependency graph** under security analysis. After direct verification, set repository variable `FORGELLM_ENABLE_DEPENDENCY_REVIEW=true` and observe one successful internal PR run before considering the check required.
+
+### Audit
+
+```bash
 python scripts/github/audit_repository.py \
   --repo leon36000/ForgeLLM \
   --expected-visibility public \
@@ -62,7 +80,7 @@ python scripts/github/audit_repository.py \
   --strict
 ```
 
-Review the dry-run payload before setting the confirmation variable. Preserve output and rollback instructions. If the API rejects zero approvals, use a GitHub ruleset that still requires pull requests and checks without inventing another identity.
+Review every dry-run payload before setting the confirmation variable. Preserve output and rollback instructions.
 
 ## Hard blocker
 

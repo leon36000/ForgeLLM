@@ -24,7 +24,7 @@ outputs:
   - Accepted public-repository/private-asset ADR and operating policy.
   - Direct evidence of main branch protection or ruleset configuration, including exact API/CLI output and limitations.
   - Read-only repository security and Actions-permission audit artifact.
-  - Successful Dependency Review execution for an internal public pull request.
+  - Verified Dependency Review capability decision, including the observed Dependency Graph prerequisite.
   - Updated repository policy, security/licensing/contribution guidance, state, risks, mobile projection, review report, and handoff.
 allowed_paths:
   - .github/
@@ -58,7 +58,7 @@ acceptance_criteria:
   - Before P0-T03 completes, main rejects force pushes and deletion, requires pull requests, conversation resolution, and the stable Validate and test check.
   - GitHub Actions default workflow permissions are read-only or remain explicitly unknown after a recorded access denial.
   - CodeQL execution/upload is evidenced, and alert count/severity is directly inspected or remains explicitly unknown.
-  - Dependency Review executes successfully on the P0-T03 pull request before it becomes a candidate required check.
+  - Dependency Review either succeeds after the owner enables Dependency Graph and the opt-in variable, or remains explicitly disabled and non-required with the failed capability probe preserved.
   - No self-hosted runner exists or is registered by this task.
   - make ci succeeds on the exact final pull-request head.
   - A fresh agent/context review report records findings and verdict.
@@ -79,6 +79,7 @@ evidence_requirements:
   - Record every repository-admin write and its rollback command.
   - Preserve a fresh-context review report and owner disposition.
   - Preserve issue 8 and ADR-0003 as the authority for public visibility.
+  - Preserve Dependency Review run 31681032967 and job 94386280488 as a failed capability probe caused by disabled Dependency Graph, not a dependency finding.
   - Keep branch protection as an explicit blocker until direct evidence reports protected=true or an enforced ruleset.
 dependencies:
   - P0-T02
