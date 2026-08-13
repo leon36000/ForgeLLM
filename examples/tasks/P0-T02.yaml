@@ -2,7 +2,7 @@ schema_version: "1.0"
 task_id: P0-T02
 title: Initialize the private ForgeLLM repository and mobile project
 phase: P0
-status: ready
+status: in_progress
 charter_goals:
   - Preserve canonical project state in version control.
   - Make agent handoffs independently verifiable.
@@ -13,42 +13,57 @@ non_goals:
   - Select a public project license.
 inputs:
   - Verified ForgeLLM Phase 0 archive.
-  - Owner-selected GitHub or GitLab account and private repository namespace.
+  - Owner-selected GitHub account and private repository namespace.
 outputs:
-  - Private remote with protected main branch.
+  - Private remote containing the Phase 0 foundation.
   - Mobile project containing exactly the five approved context files.
-  - Updated current state and handoff records with remote identity.
+  - Updated current state, review report and handoff records with remote identity.
+  - Protected main branch before any self-hosted GPU runner is registered.
 allowed_paths:
   - docs/state/
+  - docs/governance/
+  - docs/reviews/
+  - docs/roadmap/
   - chatgpt/mobile-core/
   - artifacts/
+  - scripts/
+  - tests/
+  - tools/
   - .github/
   - .gitlab/
 forbidden_actions:
   - Make the repository public.
-  - Weaken required review or status checks.
+  - Weaken required status checks or solo-project review evidence.
   - Add secrets or private hardware identifiers to Git.
   - Run unreviewed fork code on self-hosted runners.
+  - Use a second account controlled by the same person as an independent reviewer.
 acceptance_criteria:
-  - make ci exits successfully from a clean checkout.
+  - make ci exits successfully on the exact pull-request head commit.
   - The remote repository visibility is confirmed private.
-  - The five mobile files match the repository SHA-256 manifest.
-  - CURRENT_STATE.md and HANDOFF.md identify the remote and exact commit.
+  - Exactly five mobile Markdown files exist and deterministic SHA-256 records are emitted by scripts/hash_mobile_context.py.
+  - CURRENT_STATE.md and HANDOFF.md identify the remote, branch and verified CI run.
+  - A fresh agent/context review report records findings, evidence, limitations and verdict.
+  - The owner makes the final merge decision under docs/governance/SOLO_PROJECT_REVIEW_POLICY.md.
+  - Main protection is configured before any self-hosted GPU runner is registered, or the lack of protection remains an explicit blocker.
 verification_commands:
   - make ci
   - git status --short
   - git rev-parse HEAD
   - gh repo view --json nameWithOwner,visibility,defaultBranchRef
-  - sha256sum chatgpt/mobile-core/*
+  - python scripts/hash_mobile_context.py --root .
 evidence_requirements:
   - Save command outputs with secrets and stable device identifiers redacted.
   - Record the exact commit and remote repository identifier.
-  - Record branch-protection settings or an owner-approved exception.
+  - Record the GitHub Actions run and job identifiers for the final head.
+  - Preserve the independent-agent review report.
+  - Record branch-protection settings or keep GPU-runner registration blocked.
 dependencies:
   - P0-T01
 owner_role: Project owner
-reviewer_role: Independent repository reviewer
+reviewer_role: Independent agent or fresh review context; external human reviewer for high-risk public release
 risk_ids:
   - R-001
+  - R-005
+  - R-007
 claim_ids:
   - CLM-010
