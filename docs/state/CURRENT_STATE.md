@@ -4,7 +4,7 @@
 - **Updated:** 2026-08-13
 - **Phase:** P0
 - **Milestone:** P0-M3 — public repository boundary accepted and hardening underway
-- **Overall status:** P0-T03 in progress; public visibility is owner-approved under ADR-0003, public-data controls are defined, and CodeQL is passing; `main` protection and owner-enabled Dependency Graph remain administrative blockers
+- **Overall status:** P0-T03 in progress; public visibility is owner-approved under ADR-0003, public-data controls and review evidence are complete, hosted gates pass, and `main` protection remains the blocking owner-admin control
 - **Authorized next task:** P0-T03
 - **State anchor:** the Git commit containing this file
 
@@ -17,86 +17,106 @@ Complete the public GitHub control-plane hardening before any self-hosted hardwa
 - Repository: `leon36000/ForgeLLM`.
 - Visibility: `public`, directly reported by GitHub on 2026-08-13.
 - Default branch: `main`.
-- Main commit before this change: `843f8127f76a0c7f2ef9863853dccaddeff90aa8`.
-- Main branch direct evidence: `protected=false`; required-status-check enforcement `off`; no contexts/checks.
+- Main commit before P0-T03: `843f8127f76a0c7f2ef9863853dccaddeff90aa8`.
+- Main direct evidence: `protected=false`; required-status-check enforcement `off`; no contexts/checks.
 - Repository rulesets direct evidence: empty list.
 - Branch-protection administrative endpoint: `403 Resource not accessible by integration`.
 - Actions default/selected permission endpoints: `403 Resource not accessible by integration`.
 - Code-scanning alert endpoint: `403 Resource not accessible by integration`.
 
-The previous S-0003 statements that the repository was private are superseded by this state and ADR-0003. The repository was already public; this update records the owner's intentional decision rather than claiming an unverified private boundary.
+The previous private-visibility statements are superseded by ADR-0003 and this state. The repository was already public; the owner intentionally retains that boundary for public tooling.
 
 ## Owner decision and operating boundary
 
-Issue #8 and ADR-0003 accept a public source/governance repository so public CI and agent-tool ecosystems remain available.
+Issue #8 and ADR-0003 accept a public source/governance repository. Every Git-tracked byte, issue, PR, workflow log and artifact is treated as public and permanently copyable.
 
-Every Git-tracked byte is treated as public. Secrets, restricted weights, private datasets/prompts, unredacted traces, private network details and stable device identifiers are forbidden. A future private asset plane will be introduced only through a bounded task and will be referenced by opaque IDs, revisions and hashes.
+Secrets, restricted weights, private datasets/prompts, unredacted traces, private network details and stable device identifiers are forbidden. A future private asset plane requires its own bounded task and is referenced publicly only through opaque IDs, revisions and hashes.
 
-Git remains canonical. Neon or another RAG may later index the repository, but it is derived and cannot override ADRs, state, evidence or history. NVIDIA, AMD, Temporal, SonarQube, Consensus and other integrations require least privilege and task-specific data review.
+Git remains canonical. Neon or another RAG may index the repository later, but it is derived and cannot override ADRs, state, evidence or history. NVIDIA, AMD, Temporal, SonarQube, Consensus and other integrations require least privilege and task-specific data review.
 
-## Verified inherited evidence
+## P0-T03 verified implementation evidence
 
-- Phase 0 final PR and post-merge gates passed with Ruff, validators, deterministic mobile hashes and 13 tests.
-- CodeQL executed `security-extended`, uploaded SARIF and completed processing on prior heads; alert details remain inaccessible to this integration.
-- No ForgeLLM inference runtime, GPU backend, self-hosted runner or private asset store exists.
+Reviewed implementation head: `9d3b47365aa017f37b16a6f8c7e307677a7526cf`.
 
-## P0-T03 first PR-head evidence
+### Phase 0 verification
 
-PR #9 head `f6e3632bdbbdab74d88e296bfb3bb98555da1bc3` produced:
+- run: `31681837631`;
+- job: `94388820133`;
+- conclusion: success;
+- Ruff passed;
+- project, research, benchmark, P0-T02 and P0-T03 task validation passed;
+- exact five-file mobile hashing passed;
+- **17 tests passed**;
+- Ubuntu bootstrap dry-run passed;
+- workflow token permissions were contents/read and metadata/read.
 
-- CodeQL run `31681032932`, job `94386280268`: success; 62 Python modules extracted, 52 `security-extended` queries executed, SARIF uploaded and processing completed; alert details remain inaccessible.
-- Phase 0 run `31681032948`, job `94386280549`: failure after Ruff and all structural validators passed; 15 tests passed and one stale syntax-coupled test failed because the Dependency Review condition changed.
-- Dependency Review run `31681032967`, job `94386280488`: failure before dependency analysis because GitHub Dependency Graph is not enabled. This is a capability/configuration failure, not a vulnerability or license finding.
+### CodeQL
 
-Root-cause corrections:
+- run: `31681837665`;
+- job: `94388813356`;
+- conclusion: success;
+- CodeQL Action 4.37.6 / CLI 2.26.2;
+- 62 Python modules extracted;
+- 52 `security-extended` queries executed;
+- SARIF uploaded and processing completed;
+- alert details remain inaccessible and therefore unknown.
 
-- Dependency Review returned to explicit opt-in until the owner enables Dependency Graph;
-- the workflow guard test now mutates the semantic feature marker instead of one exact formatting string;
-- the failed runs remain evidence and are not reclassified as passes.
+### Dependency Review
 
-## P0-T03 changes in this state
+- capability probe run `31681032967`, job `94386280488`: failed because Dependency Graph is disabled; no dependency finding was produced;
+- reviewed-head run `31681837651`: skipped by the explicit opt-in guard.
 
-- accepted ADR-0003;
-- added public repository and data-classification policies;
-- added a public-facing security reporting file;
-- updated contribution and licensing notices;
-- updated repository policy, task packet, decisions, risks and mobile state;
-- added tests for repository-audit classification and solo branch-protection payload;
-- updated the read-only audit to distinguish pass, fail and unknown controls;
-- probed Dependency Review and recorded its disabled Dependency Graph prerequisite.
+Dependency Review remains non-required until the owner enables Dependency Graph and obtains one successful internal PR run.
 
-## P0-T03 gates
+### Fresh-context review
 
-### Expected to be demonstrated by this pull request
+`docs/reviews/P0-T03-PUBLIC-REPOSITORY-REVIEW.md` records verdict `ACCEPT` for the governance PR while preserving P0-T03 as `in_progress`.
 
-- exact-head `make ci`;
-- CodeQL execution/upload;
-- Dependency Review safely skipped until owner-enabled, or successful after Dependency Graph is enabled;
-- fresh-context review;
-- consistent public-data and no-license notices.
+The review found and resolved an audit false positive: a nonempty but unrelated/disabled ruleset can no longer be treated as protection for `main`. Direct `branches/main.protected=true` is required for the audit pass.
 
-### Blocking manual/admin gates
+## P0-T03 implemented changes
 
-Before P0-T03 can complete:
+- ADR-0003 and decisions D-0008/D-0009;
+- public repository/data-classification policy and public security reporting entry point;
+- contribution and no-license notices;
+- expanded secret/restricted-asset ignore rules;
+- typed read-only repository audit and reviewed branch-protection payload;
+- tests for public visibility, inaccessible admin controls, unrelated rulesets and solo-owner protection semantics;
+- honest recording of Dependency Graph and CodeQL-alert visibility limitations;
+- S-0004 decisions, risks, roadmap, handoff and mobile projection.
 
-1. direct evidence must show `main` protected by branch protection or an enforced ruleset that requires pull requests, the stable `Validate and test` check, conversation resolution, administrators/owner, and no force push/deletion;
-2. Dependency Graph must be enabled before Dependency Review can become active or required.
+## P0-T03 remaining blocking gates
 
-The current integration cannot perform or read those administrative writes. `scripts/github/apply_branch_protection.py` provides a reviewed dry-run/apply command for an owner-authenticated `gh` session.
+Before P0-T03 can complete, direct evidence must show `main` protected by classic protection or an enforced equivalent ruleset that:
+
+- requires pull requests;
+- requires the stable `Validate and test` check;
+- requires conversation resolution;
+- enforces the owner/admin path;
+- rejects force pushes and branch deletion;
+- uses zero fabricated human approvals while the project is solo.
+
+The current integration cannot perform or read that administrative write. `scripts/github/apply_branch_protection.py` provides a reviewed dry-run/apply command for an owner-authenticated `gh` session.
+
+Optional security follow-ups:
+
+- enable Dependency Graph before opt-in Dependency Review;
+- inspect CodeQL alerts through an owner-authorized UI or CLI;
+- capture Actions administrative permissions directly.
 
 ## External-tool applicability
 
-- Codex Engineering Guardrails and GitHub/CodeQL: used for current implementation and verification.
-- SonarQube: useful when a callable server/project is connected; not currently treated as executed evidence.
-- Fallow: not applicable to the present Python/Markdown codebase.
+- GitHub, CodeQL and Codex Engineering Guardrails: used for P0-T03.
+- SonarQube: relevant only when a callable server/project is configured; no Sonar result is claimed.
+- Fallow: not applicable to the current Python/Markdown surface.
 - Consensus: reserved for bounded scientific synthesis tasks.
 - Neon Postgres: candidate derived RAG only after a dedicated ADR/task.
 - Temporal: candidate for durable agent orchestration after workflow semantics are specified.
-- NVIDIA/AMD skills: reserved for protected hardware and backend phases.
+- NVIDIA/AMD skills: reserved for protected hardware/backend phases.
 
 ## Evidence boundary
 
-This state proves only directly observed repository metadata and evidence emitted by completed CI jobs. It does not prove branch protection, Actions administrative settings, zero CodeQL alerts, Dependency Review results, or any inference/hardware performance.
+This state proves directly observed repository metadata and completed hosted jobs only. It does not prove protected `main`, readable Actions settings, zero CodeQL alerts, Dependency Review success, runner safety, an open-source license or any inference/hardware performance.
 
 ## Forbidden next steps
 

@@ -3,7 +3,7 @@
 **Mise à jour :** 2026-08-13  
 **Version d’état :** S-0004  
 **Phase :** P0 — gouvernance, mémoire durable et laboratoire de preuve  
-**Statut global :** dépôt public accepté par ADR-0003; P0-T03 est en cours et bloqué sur la protection administrative de `main` ainsi que l’activation optionnelle de Dependency Graph
+**Statut global :** dépôt public accepté par ADR-0003; les gates hébergés et la revue passent; P0-T03 reste bloqué uniquement sur la protection administrative de `main`
 
 ## Objectif invariant
 
@@ -14,7 +14,7 @@ Concevoir et construire un moteur d’inférence LLM hétérogène dont correcti
 - dépôt : `leon36000/ForgeLLM`;
 - visibilité : publique, décision propriétaire intentionnelle;
 - branche par défaut : `main`;
-- commit avant S-0004 : `843f8127f76a0c7f2ef9863853dccaddeff90aa8`;
+- commit avant P0-T03 : `843f8127f76a0c7f2ef9863853dccaddeff90aa8`;
 - état direct : `main` non protégée, checks non imposés, aucun ruleset;
 - endpoints administratifs de protection, permissions Actions et alertes CodeQL : `403` pour l’intégration actuelle.
 
@@ -36,34 +36,36 @@ Les anciennes mentions « dépôt privé » sont supersédées.
 
 Tout contenu Git, issue, PR, log et artefact est considéré public et copiable. Secrets, poids restreints, datasets/prompts privés, traces non expurgées, IP privées et UUID matériels sont interdits.
 
-La visibilité publique ne constitue pas une licence. Les contributions de code externes exigent une tâche liée et un traitement explicite des droits entrants jusqu’à l’ADR de licence.
+La visibilité publique ne constitue pas une licence. Les contributions externes de code exigent une tâche liée et un traitement explicite des droits entrants jusqu’à l’ADR de licence.
 
 ## Outils externes
 
 - GitHub, CodeQL et Codex Engineering Guardrails : utilisés maintenant.
-- SonarQube : pertinent quand un serveur/projet callable est connecté; aucune analyse Sonar n’est revendiquée ici.
+- SonarQube : pertinent quand un serveur/projet callable est connecté; aucune analyse Sonar n’est revendiquée.
 - Fallow : non pertinent pour la surface Python/Markdown actuelle.
 - Consensus : futur outil de synthèse scientifique bornée.
 - Neon Postgres : futur index RAG dérivé seulement après ADR/tâche.
 - Temporal : futur orchestrateur après spécification des workflows.
 - skills NVIDIA/AMD : phases matériel/backend protégées, pas avant.
 
-## Preuves du premier head PR #9
+## Preuves de la tête revue
 
-- CodeQL `31681032932` / `94386280268` : succès, 62 modules, 52 requêtes, SARIF traité; alertes inconnues.
-- Phase 0 `31681032948` / `94386280549` : Ruff et validateurs réussis, 15 tests réussis, un test de syntaxe de workflow périmé en échec.
-- Dependency Review `31681032967` / `94386280488` : échec de capacité parce que Dependency Graph est désactivé; aucun résultat de dépendance.
+Tête : `9d3b47365aa017f37b16a6f8c7e307677a7526cf`.
 
-La correction remet Dependency Review en opt-in et rend le test indépendant du format exact de la condition.
+- Phase 0 `31681837631` / `94388820133` : succès; Ruff, validateurs, hachages mobiles, **17 tests** et bootstrap dry-run réussis.
+- CodeQL `31681837665` / `94388813356` : succès; 62 modules, 52 requêtes, SARIF traité; alertes inconnues.
+- Dependency Review `31681837651` : ignoré par opt-in.
+- Probe antérieur `31681032967` / `94386280488` : échec parce que Dependency Graph est désactivé; aucun résultat de dépendance.
+- Revue fraîche : `ACCEPT` pour la PR de gouvernance, P0-T03 restant `in_progress`.
 
-## P0-T03
+La revue a corrigé un faux positif de sécurité : un ruleset non lié ou désactivé ne peut plus être interprété comme protection de `main`.
 
-Cette branche ajoute ADR/politiques publics, audit typé, tests de protection et un probe documenté de Dependency Review.
+## Gate propriétaire bloquant
 
-Gates à prouver par la tête corrective : `make ci`, CodeQL, revue fraîche et hachage mobile. Dependency Review reste ignoré jusqu’à activation propriétaire de Dependency Graph.
+Protéger `main` ou appliquer un ruleset équivalent exigeant PR, `Validate and test`, résolution des conversations, administrateur/propriétaire inclus, aucun force-push ni suppression. Zéro faux reviewer humain est utilisé en mode solo.
 
-Gate propriétaire bloquant : protéger `main` ou appliquer un ruleset équivalent exigeant PR, `Validate and test`, résolution des conversations, administrateurs inclus, aucun force-push ni suppression. Zéro faux reviewer humain est utilisé en mode solo.
+Dependency Graph peut ensuite être activé pour rendre Dependency Review exécutable. Les alertes CodeQL doivent être inspectées séparément.
 
 ## Blocage
 
-Aucun runner GPU/CPU auto-hébergé, secret-bearing workflow, inventaire matériel P0-T04 ou code moteur tant que la protection n’est pas directement prouvée.
+Aucun runner GPU/CPU auto-hébergé, workflow portant des secrets, inventaire matériel P0-T04 ou code moteur tant que la protection n’est pas directement prouvée.
