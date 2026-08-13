@@ -1,13 +1,14 @@
 PYTHON ?= python3
 export PYTHONPATH := src
 
-.PHONY: validate test lint verify ci inventory snapshot clean
+.PHONY: validate test lint verify ci mobile-hashes inventory snapshot clean
 
 validate:
 	$(PYTHON) scripts/validate_project_state.py --root .
 	$(PYTHON) scripts/validate_research_catalog.py --root .
 	$(PYTHON) scripts/validate_benchmark.py examples/benchmarks/valid-example.json --root .
 	$(PYTHON) scripts/validate_task_packet.py examples/tasks/P0-T02.yaml --root .
+	$(PYTHON) scripts/hash_mobile_context.py --root .
 	bash -n scripts/bootstrap_core_ubuntu.sh
 
 test:
@@ -19,6 +20,9 @@ lint:
 verify: validate test
 
 ci: lint verify
+
+mobile-hashes:
+	$(PYTHON) scripts/hash_mobile_context.py --root .
 
 inventory:
 	$(PYTHON) scripts/hardware_inventory.py --output artifacts/hardware-local.json
