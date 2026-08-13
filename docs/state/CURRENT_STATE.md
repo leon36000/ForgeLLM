@@ -4,7 +4,7 @@
 - **Updated:** 2026-08-13
 - **Phase:** P0
 - **Milestone:** P0-M2 — canonical GitHub foundation merged and verified
-- **Overall status:** P0-T02 complete; Phase 0 foundation is merged into private `main` and passed post-merge CI; P0-T03 repository hardening is ready and active
+- **Overall status:** P0-T02 complete; Phase 0 foundation is merged into private `main` and passed post-merge CI; P0-T03 repository hardening is in progress with successful CodeQL execution but branch-protection and alert visibility still unresolved
 - **Authorized next task:** P0-T03
 - **State anchor:** the Git commit containing this file; the state does not embed its own self-referential commit SHA
 
@@ -22,6 +22,7 @@ Harden the canonical repository control plane before connecting privileged or se
 - PR #1 final reviewed head: `aa978989a5f6ad3524618eda5cd8b650288c7a67`
 - PR #1 squash merge commit: `20bc5fa061aa039d32c2702d47eeba07dd353363`
 - PR #1 merge tree: `c75bc10c17744cba0bf0c5a284cd40f4285a2e10`
+- S-0003 closeout PR: `#4 — docs(state): close P0-T02 and activate P0-T03`
 
 ## P0-T02 completion evidence
 
@@ -48,17 +49,49 @@ The decoded post-merge job log showed:
 - Ubuntu bootstrap dry-run: passed;
 - GitHub token permissions limited to metadata/content read.
 
-## Mobile hashes verified on merged `main`
+## S-0003 closeout evidence before the final state amendment
+
+On PR #4 head `113b0e8cf86fa40c2f05e2742a635de17cef5afd`:
+
+### Phase 0 verification
+
+- run: `31677360240`;
+- job: `94374759191`;
+- conclusion: `success`;
+- Ruff passed;
+- project, research, benchmark, P0-T02 and P0-T03 task validation passed;
+- exactly five mobile hashes were emitted;
+- **13 tests passed**;
+- Ubuntu bootstrap dry-run passed;
+- token permissions were metadata/content read only.
+
+### CodeQL
+
+- run: `31677360037`;
+- job: `94374758365`;
+- conclusion: `success`;
+- CodeQL Action 4.37.6 and CLI 2.26.2 initialized successfully;
+- Python extraction completed over 61 modules;
+- the `security-extended` suite executed 52 queries;
+- SARIF upload succeeded and GitHub reported processing complete;
+- workflow permissions were contents/read, metadata/read and security-events/write.
+
+The connected integration returned `403 Resource not accessible by integration` for the code-scanning alerts endpoint. Therefore the analysis execution and upload are proven, while alert count, severities and triage state remain **unknown**. A successful workflow conclusion must not be restated as “zero alerts.”
+
+### Dependency Review
+
+- run: `31677360127`;
+- conclusion: `skipped` by the private-repository feature guard.
+
+Dependency Review is not active evidence and must not become a required check while it remains skipped.
+
+## Mobile hash observed on the reviewed S-0003 proposal
 
 ```text
-8a189b9dab3f60fe370099504c39d2196872ebc1977a5c91e34423a124766fbe  chatgpt/mobile-core/00_FORGELLM_CORE_CONTEXT.md
-e76b7813eae0d8003bd5941d9dc07c28894c8acd0d835545a1b7b12bf865b26b  chatgpt/mobile-core/01_FORGELLM_AGENT_OPERATING_SYSTEM.md
-10830969febb4234a61b0c36857be561d5185a0b64b7b9015fe055b6a0790801  chatgpt/mobile-core/02_FORGELLM_RESEARCH_AND_EVIDENCE.md
-9315d61b2a8c4b4f8ab19e2fb23fbe2367a1089f293c41c7882b94f4cdab853c  chatgpt/mobile-core/03_FORGELLM_STATE_AND_DECISIONS.md
-9697f7b35aa1924bdd9c07cf259fad41209d6e174cd7b2ecec3f65ab71932ff9  chatgpt/mobile-core/04_FORGELLM_PROMPTS_AND_WORKFLOWS.md
+506b740aeff18d6e96a3db2550caa710995a9e93059b7ab5513b8f20020592f0  chatgpt/mobile-core/03_FORGELLM_STATE_AND_DECISIONS.md
 ```
 
-The S-0003 mobile projection changes the fourth hash; the closeout PR must emit and record the replacement hash before merge.
+The current state amendment changes that file; PR #4 must emit a replacement hash on its final exact head before merge.
 
 ## Accepted decisions preserved
 
@@ -78,7 +111,8 @@ The verified Phase 0 foundation proves repository structure, governance tooling,
 - numerical compatibility with PyTorch or another engine;
 - NVIDIA, AMD, CPU or distributed performance;
 - branch-protection activation;
-- CodeQL or Dependency Review success;
+- absence or count of CodeQL alerts;
+- Dependency Review success;
 - any externally reported performance result;
 - public-release or production readiness.
 
@@ -88,20 +122,32 @@ The root `MANIFEST.sha256` remains historical evidence for the initial Phase 0 d
 
 Task packet: `tasks/open/P0-T03-repository-hardening.yaml`.
 
+Status: `in_progress`.
+
 Goal: directly inspect and configure the strongest available GitHub protections and optional security checks without registering a self-hosted runner or weakening existing CI.
 
-Primary gates:
+Progress already evidenced:
+
+- private repository and default branch identity verified;
+- Phase 0 check name and successful execution verified;
+- CodeQL execution, SARIF upload and processing verified;
+- CodeQL alert visibility remains inaccessible;
+- Dependency Review remains skipped.
+
+Remaining primary gates:
 
 1. capture direct branch-protection/ruleset evidence or an explicit API/plan/access blocker;
-2. verify Actions default permissions;
-3. determine whether CodeQL and Dependency Review are supported, enable them only after successful runs, and never make a skipped check required;
-4. preserve all repository-admin writes and rollback commands;
-5. run exact-head CI and fresh-context review.
+2. capture GitHub Actions default and selected-action permissions directly;
+3. retrieve or otherwise review CodeQL alert output before treating the scan as clean or required;
+4. determine whether Dependency Review is supported and run it successfully before making it required;
+5. preserve all repository-admin writes and rollback commands;
+6. run exact-head CI and fresh-context review for P0-T03.
 
 ## Current blockers and owner-controlled choices
 
 - The connected GitHub integration returned `403 Resource not accessible by integration` for the branch-protection endpoint; protection is therefore unknown, not assumed.
-- No self-hosted runner may be registered while that state remains unknown.
+- The same integration returned `403` for the CodeQL alerts endpoint; scan result details are unknown despite successful execution.
+- No self-hosted runner may be registered while branch protection remains unknown.
 - Project license and contributor policy remain undecided.
 - No second real human maintainer or active CODEOWNERS exists.
 - Exact hardware, topology, OS, drivers and network remain unrecorded.
@@ -114,4 +160,4 @@ Primary gates:
 - Do not label external benchmark results as reproduced.
 - Do not install or replace GPU drivers through an unattended agent.
 - Do not make the repository public or select a license without an owner-approved decision.
-- Do not claim CodeQL, Dependency Review, secret scanning, push protection or rulesets are active without direct evidence.
+- Do not claim CodeQL found no alerts, Dependency Review passed, or branch protection/rulesets are active without direct evidence.
