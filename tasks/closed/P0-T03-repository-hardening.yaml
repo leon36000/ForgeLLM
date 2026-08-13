@@ -1,0 +1,75 @@
+schema_version: "1.0"
+task_id: P0-T03
+title: Harden and directly verify the public ForgeLLM GitHub control plane
+phase: P0
+status: complete
+charter_goals:
+  - Preserve canonical project state in version control.
+  - Prevent unverified execution from bypassing project gates.
+  - Make repository controls directly observable.
+goal: Establish the owner-selected public repository boundary and directly verify effective protection of the default branch before hardware work begins.
+non_goals:
+  - Implement inference runtime or kernel code.
+  - Register a self-hosted runner.
+  - Modify hardware or system software.
+  - Select a project license.
+inputs:
+  - ADR-0003 and issue 8 for the public repository boundary.
+  - Issue 10 for the owner protection checkpoint.
+  - Direct GitHub readback of ruleset FLLM and branch main.
+outputs:
+  - Public repository and data-boundary policies.
+  - Active protection of main through ruleset FLLM.
+  - Hosted verification evidence and independent review.
+  - Updated S-0005 state and handoff.
+allowed_paths:
+  - .github/
+  - .gitignore
+  - README.md
+  - Makefile
+  - artifacts/
+  - docs/
+  - chatgpt/mobile-core/
+  - scripts/github/
+  - tasks/open/
+  - tasks/closed/
+  - tests/
+  - tools/
+forbidden_actions:
+  - Register or execute a self-hosted runner.
+  - Weaken the Validate and test gate.
+  - Invent a second human reviewer or bypass identity.
+  - Treat unavailable scanner detail as a clean result.
+acceptance_criteria:
+  - Repository visibility and default branch are directly verified.
+  - Main is directly reported as protected.
+  - Active ruleset targets main and has no bypass actors.
+  - Pull requests and strict Validate and test are required.
+  - Non-fast-forward updates and deletion are blocked.
+  - Hosted repository verification succeeds on the closeout pull request.
+  - A fresh agent/context review records the final evidence boundary.
+verification_commands:
+  - make ci
+  - gh api repos/leon36000/ForgeLLM/branches/main
+  - gh api repos/leon36000/ForgeLLM/rulesets
+  - gh api repos/leon36000/ForgeLLM/rulesets/20820530
+  - git diff --check
+  - git status --short
+evidence_requirements:
+  - Preserve issue 10 as the owner checkpoint record.
+  - Preserve direct ruleset and branch readback identifiers in S-0005.
+  - Preserve hosted verification results for the closeout pull request.
+  - Preserve a fresh-context review report and owner disposition.
+dependencies:
+  - P0-T02
+owner_role: Project owner and repository administrator
+reviewer_role: Independent agent or fresh review context
+risk_ids:
+  - R-005
+  - R-006
+  - R-007
+  - R-013
+  - R-014
+  - R-015
+claim_ids:
+  - CLM-010
