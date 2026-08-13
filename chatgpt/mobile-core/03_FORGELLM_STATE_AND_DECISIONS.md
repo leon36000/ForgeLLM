@@ -1,154 +1,61 @@
 # ForgeLLM — état, décisions et continuité
 
 **Mise à jour :** 2026-08-13  
-**Version d’état :** S-0003  
+**Version d’état :** S-0004  
 **Phase :** P0 — gouvernance, mémoire durable et laboratoire de preuve  
-**Statut global :** P0-T02 terminé; fondation Phase 0 fusionnée et vérifiée; P0-T03 de durcissement GitHub est en cours, avec exécution CodeQL réussie mais protection de `main` et visibilité des alertes encore inconnues
+**Statut global :** dépôt public accepté par ADR-0003; P0-T03 est en cours et bloqué uniquement sur la preuve administrative de protection de `main` après les gates CI/revue
 
 ## Objectif invariant
 
-Concevoir et construire un moteur d’inférence LLM hétérogène dont la correction, la performance, la sécurité et la reproductibilité sont démontrées par des artefacts versionnés.
+Concevoir et construire un moteur d’inférence LLM hétérogène dont correction, performance, sécurité et reproductibilité sont démontrées par des artefacts versionnés.
 
-## Dépôt canonique vérifié
+## Dépôt canonique
 
-- dépôt privé : `leon36000/ForgeLLM`;
+- dépôt : `leon36000/ForgeLLM`;
+- visibilité : publique, décision propriétaire intentionnelle;
 - branche par défaut : `main`;
-- PR Phase 0 : #1, fusionnée par squash;
-- tête finale revue : `aa978989a5f6ad3524618eda5cd8b650288c7a67`;
-- commit de fusion : `20bc5fa061aa039d32c2702d47eeba07dd353363`;
-- arbre de fusion : `c75bc10c17744cba0bf0c5a284cd40f4285a2e10`;
-- PR de clôture S-0003 : #4.
+- commit avant S-0004 : `843f8127f76a0c7f2ef9863853dccaddeff90aa8`;
+- état direct : `main` non protégée, checks non imposés, aucun ruleset;
+- endpoints administratifs de protection, permissions Actions et alertes CodeQL : `403` pour l’intégration actuelle.
 
-## Preuves de P0-T02
+Les anciennes mentions « dépôt privé » sont supersédées.
 
-### CI finale de la PR #1
+## Décisions
 
-- run : `31676559801`;
-- job : `94372299029`;
-- résultat : succès.
+- **D-0001 :** Git est la mémoire canonique; le chat est auxiliaire.
+- **D-0002 :** runtime Rust, C ABI et kernels natifs mesurés.
+- **D-0003 :** remplacer progressivement les composants existants.
+- **D-0004 :** aucune performance sans preuve reproductible.
+- **D-0005 :** revue par contexte distinct + CI exacte + décision du propriétaire.
+- **D-0006 :** aucun runner auto-hébergé avant protection et isolation prouvées.
+- **D-0007 :** profils de charge avant optimisation.
+- **D-0008 :** dépôt source public; actifs restreints dans un plan privé séparé.
+- **D-0009 :** RAG et outils externes sont dérivés; Git reste canonique.
 
-### CI après fusion sur `main`
+## Frontière publique
 
-- run : `31676680397`;
-- job : `94372665642`;
-- résultat : succès.
+Tout contenu Git, issue, PR, log et artefact est considéré public et copiable. Secrets, poids restreints, datasets/prompts privés, traces non expurgées, IP privées et UUID matériels sont interdits.
 
-Le journal post-fusion observé montre :
+La visibilité publique ne constitue pas une licence. Les contributions de code externes exigent une tâche liée et un traitement explicite des droits entrants jusqu’à l’ADR de licence.
 
-- Ruff 0.16.2 réussi;
-- validation projet, recherche, benchmark et paquet de tâche réussie;
-- vérification déterministe de cinq fichiers mobiles réussie;
-- **13 tests réussis**;
-- bootstrap Ubuntu en dry-run réussi;
-- permissions du jeton limitées à la lecture des métadonnées et du contenu.
+## Outils externes
 
-## Preuves de la proposition S-0003
+- GitHub, CodeQL et Codex Engineering Guardrails : utilisés maintenant.
+- SonarQube : pertinent quand un serveur/projet callable est connecté; aucune analyse Sonar n’est revendiquée ici.
+- Fallow : non pertinent pour la surface Python/Markdown actuelle.
+- Consensus : futur outil de synthèse scientifique bornée.
+- Neon Postgres : futur index RAG dérivé seulement après ADR/tâche.
+- Temporal : futur orchestrateur après spécification des workflows.
+- skills NVIDIA/AMD : phases matériel/backend protégées, pas avant.
 
-Sur la tête PR #4 `113b0e8cf86fa40c2f05e2742a635de17cef5afd` :
+## P0-T03
 
-### Gate Phase 0
+Cette branche ajoute ADR/politiques publics, audit typé, tests de protection et Dependency Review pour les PR internes publiques.
 
-- run : `31677360240`;
-- job : `94374759191`;
-- conclusion : succès;
-- Ruff, tous les validateurs actifs, les deux paquets P0-T02/P0-T03, les cinq hachages mobiles, **13 tests** et le bootstrap dry-run ont réussi.
+Gates à prouver par la PR : `make ci`, CodeQL, Dependency Review, revue fraîche et hachage mobile.
 
-### CodeQL
+Gate propriétaire restant : protéger `main` ou appliquer un ruleset équivalent exigeant PR, `Validate and test`, résolution des conversations, administrateurs inclus, aucun force-push ni suppression. Zéro faux reviewer humain est utilisé en mode solo.
 
-- run : `31677360037`;
-- job : `94374758365`;
-- conclusion : succès;
-- CodeQL Action 4.37.6 et CLI 2.26.2;
-- 61 modules Python extraits;
-- 52 requêtes `security-extended` exécutées;
-- SARIF téléversé et traitement GitHub terminé.
+## Blocage
 
-L’endpoint des alertes CodeQL retourne `403 Resource not accessible by integration`. La réussite d’exécution est donc prouvée, mais le nombre, la gravité et l’état de triage des alertes restent **inconnus**. Il est interdit de reformuler cette réussite en « aucune alerte ».
-
-### Dependency Review
-
-- run : `31677360127`;
-- conclusion : ignoré par le garde-fou du dépôt privé.
-
-Dependency Review n’est pas une preuve active et ne doit pas devenir un check requis tant qu’il reste ignoré.
-
-## Hachage mobile observé avant la dernière mise à jour d’état
-
-```text
-506b740aeff18d6e96a3db2550caa710995a9e93059b7ab5513b8f20020592f0  03_FORGELLM_STATE_AND_DECISIONS.md
-```
-
-La tête finale de la PR #4 doit produire le nouveau hachage de ce fichier avant fusion.
-
-## Décisions acceptées
-
-### D-0001 — Dépôt Git canonique
-
-Les ADR, l’état, les preuves, les tâches et les handoffs versionnés sont la mémoire durable. La conversation est auxiliaire.
-
-### D-0002 — Architecture hybride
-
-Rust possède le plan de contrôle; les kernels utilisent les piles natives CUDA/HIP/CPU/DSL qui gagnent sous mesure; une ABI C versionnée sépare les couches.
-
-### D-0003 — Remplacement progressif
-
-Les moteurs existants sont des baselines et adaptateurs. Une brique n’est remplacée qu’après correction et avantage mesuré.
-
-### D-0004 — Preuve avant revendication
-
-Toute performance exige baseline comparable, environnement, données brutes, exactitude, répétitions, statistiques, hachages et portée.
-
-### D-0005 — Revue du projet solo
-
-Un agent ou contexte distinct vérifie le travail, la CI valide la tête exacte et le propriétaire autorise la fusion. Un second compte contrôlé par le même propriétaire n’est pas indépendant.
-
-### D-0006 — Runners GPU interdits sans protection prouvée
-
-Aucun runner auto-hébergé n’est enregistré avant preuve directe du dépôt privé, de la protection de `main` et de l’isolation du code non approuvé.
-
-### D-0007 — Profils avant optimisation
-
-Les modèles, charges, SLO et fonctions objectif de Phase 1 précèdent toute affirmation de « meilleur moteur ».
-
-## Limites de la preuve
-
-La Phase 0 prouve la structure du projet, ses validateurs, sa CI et son contexte mobile. Elle ne prouve aucun moteur, kernel, résultat numérique, support matériel ou gain de performance ForgeLLM. Elle ne prouve pas que CodeQL ne contient aucune alerte, ni que Dependency Review ou la protection de `main` sont actifs.
-
-## Tâche active
-
-**P0-T03 — durcir et vérifier directement le plan de contrôle GitHub.**
-
-Statut : `in_progress`.
-
-Paquet : `tasks/open/P0-T03-repository-hardening.yaml`.
-
-Progrès vérifié :
-
-- identité privée du dépôt et branche par défaut;
-- gate `Validate and test` répétable;
-- CodeQL exécuté, SARIF chargé et traité;
-- Dependency Review identifié comme ignoré.
-
-Objectifs restants :
-
-1. capturer l’état réel de la protection/ruleset de `main`;
-2. vérifier directement les permissions GitHub Actions et la politique des actions autorisées;
-3. consulter les alertes CodeQL ou conserver explicitement leur état inconnu;
-4. exécuter Dependency Review avec succès avant toute exigence;
-5. conserver les commandes administratives et leurs rollbacks;
-6. exécuter CI exacte et revue indépendante pour P0-T03.
-
-## Blocages explicites
-
-- protection de branche : endpoint `403`, état inconnu;
-- alertes CodeQL : endpoint `403`, détails inconnus;
-- Dependency Review : ignoré;
-- tout runner auto-hébergé et P0-T04 restent bloqués.
-
-## Prochain ordre d’exécution
-
-1. P0-T03 : protection et sécurité du dépôt;
-2. P0-T04 : inventaire matériel/topologique seulement après protection vérifiée;
-3. P0-T05 : profils de charge et objectifs;
-4. P0-T06 : plan du laboratoire de baselines;
-5. aucun code moteur avant ces gates.
+Aucun runner GPU/CPU auto-hébergé, secret-bearing workflow, inventaire matériel P0-T04 ou code moteur tant que la protection n’est pas directement prouvée.

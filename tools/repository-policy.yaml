@@ -1,18 +1,22 @@
-schema_version: "1.1"
+schema_version: "1.2"
 policy_date: "2026-08-13"
-operating_mode: solo_owner
+operating_mode: public_solo_owner
 github:
-  visibility: private
+  visibility: public
   default_branch: main
   repository_features:
     issues: true
     projects: true
     wiki: false
     discussions: false
+  licensing:
+    status: undecided
+    public_visibility_is_not_a_license: true
+    external_code_prs_require_explicit_inbound_terms: true
   pull_requests:
     platform_required_approvals_while_solo: 0
     required_approvals_after_second_human_maintainer: 1
-    high_risk_human_approvals_before_public_release: 1
+    high_risk_human_approvals_before_release: 1
     independent_agent_or_fresh_context_review_required: true
     owner_final_merge_decision_required: true
     dismiss_stale_approvals: true
@@ -21,13 +25,9 @@ github:
   branch_or_ruleset:
     required_checks:
       - Validate and test
-    conditional_required_checks:
-      codeql:
-        enabled_by_repository_variable: FORGELLM_ENABLE_CODEQL
-        required_check: CodeQL / analyze-python
-      dependency_review:
-        enabled_by_repository_variable: FORGELLM_ENABLE_DEPENDENCY_REVIEW
-        required_check: Dependency review / dependency-review
+    candidate_required_checks_after_successful_main_run:
+      - CodeQL / analyze-python
+      - Dependency review / dependency-review
     strict_up_to_date_branch: true
     prevent_force_push: true
     prevent_deletion: true
@@ -41,21 +41,28 @@ github:
     secret_scanning: required_when_supported
     push_protection: required_when_supported
     dependency_graph: required
-    dependency_review: required_when_supported
-    private_vulnerability_reporting: required
+    dependency_review: required_for_internal_pull_requests_after_first_success
+    private_vulnerability_reporting: required_when_supported
     code_scanning: required_when_supported
+    public_data_policy: docs/governance/PUBLIC_REPOSITORY_POLICY.md
   self_hosted_runners:
-    repository_must_be_private: true
+    registration_status: forbidden_until_protection_and_external_security_review
     untrusted_forks_forbidden: true
     environment_approval: gpu-lab
     preferred_lifecycle: ephemeral
     required_labels: [self-hosted, linux, x64, forgellm-gpu]
+    secrets_on_untrusted_events: forbidden
+external_tools:
+  canonical_memory: git_only
+  rag_systems_are_derived_indexes: true
+  least_privilege_required: true
+  restricted_data_requires_separate_task_and_private_plane: true
 solo_review:
   policy: docs/governance/SOLO_PROJECT_REVIEW_POLICY.md
   review_report_required: true
   second_account_owned_by_same_person_is_not_independent: true
   external_human_review_required_for:
-    - public release
+    - release
     - unsafe or C-ABI memory ownership changes
     - memory-writing CUDA or HIP kernels
     - privileged runners, signing, credentials or release provenance
@@ -63,10 +70,6 @@ solo_review:
     - published headline performance claims
     - destructive compatibility migrations
 gitlab:
-  visibility: private
+  visibility: not_configured
   protected_default_branch: true
-  merge_request_approval_count_while_solo: 0
-  merge_request_approval_count_after_second_human_maintainer: 1
-  protected_variables: true
-  protected_runner_tags: true
   fork_code_on_privileged_runner_forbidden: true
