@@ -1,0 +1,67 @@
+schema_version: "1.0"
+task_id: P0-T04
+title: Collect the first sanitized hardware and software inventory
+phase: P0
+status: blocked
+charter_goals:
+  - Establish reproducible baselines before optimization.
+  - Preserve auditable laboratory evidence.
+goal: Collect one reproducible and publication-safe inventory from an owner-authorized host without modifying that host or running inference workloads.
+non_goals:
+  - Modify the selected host.
+  - Register a self-hosted runner.
+  - Run inference or performance benchmarks.
+  - Implement ForgeLLM runtime or backend code.
+inputs:
+  - S-0005 repository state after P0-T03 protection verification.
+  - Issue 12 tracking the detailed P0-T04 operating constraints.
+  - One owner-designated host label.
+  - One owner-selected execution mode.
+outputs:
+  - Sanitized machine-readable inventory.
+  - Human-readable inventory summary.
+  - Review report covering reproducibility and publication safety.
+  - Updated state and handoff after verification.
+allowed_paths:
+  - artifacts/
+  - docs/state/
+  - docs/reviews/
+  - docs/tooling/
+  - chatgpt/mobile-core/
+  - scripts/hardware_inventory.py
+  - src/forgellm_governance/hardware.py
+  - tests/test_hardware.py
+  - tasks/open/
+  - tasks/closed/
+forbidden_actions:
+  - Change host configuration.
+  - Publish information forbidden by the repository public-data policy.
+  - Register or execute a self-hosted runner.
+  - Run model inference or performance benchmarks.
+acceptance_criteria:
+  - Exactly one owner-authorized host is designated by a project label.
+  - Collection is observation-only and follows issue 12.
+  - The resulting inventory is machine-readable and publication-safe.
+  - Missing probes are recorded without being interpreted as absent hardware.
+  - make ci succeeds on the exact final pull-request head.
+  - A fresh agent/context review verifies the evidence boundary.
+verification_commands:
+  - make ci
+  - python -m pytest -q tests/test_hardware.py
+  - git diff --check
+  - git status --short
+evidence_requirements:
+  - Record the repository commit used for collection.
+  - Record the project host label and execution mode.
+  - Preserve probe status needed to interpret the inventory.
+  - Review the resulting inventory before publication.
+  - Preserve a fresh-context review report and owner disposition.
+dependencies:
+  - P0-T03
+owner_role: Project owner and lab operator
+reviewer_role: Independent agent or fresh review context
+risk_ids:
+  - R-006
+  - R-007
+  - R-011
+  - R-013

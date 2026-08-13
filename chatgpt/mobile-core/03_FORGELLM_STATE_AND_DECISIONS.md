@@ -1,9 +1,9 @@
 # ForgeLLM — état, décisions et continuité
 
 **Mise à jour :** 2026-08-13  
-**Version d’état :** S-0004  
+**Version d’état :** S-0005  
 **Phase :** P0 — gouvernance, mémoire durable et laboratoire de preuve  
-**Statut global :** dépôt public accepté par ADR-0003; les gates hébergés et la revue passent; P0-T03 reste bloqué uniquement sur la protection administrative de `main`
+**Statut global :** P0-T03 terminé; ruleset `FLLM` actif sur `main`; P0-T04 bloqué uniquement sur la désignation du premier hôte autorisé
 
 ## Objectif invariant
 
@@ -12,13 +12,26 @@ Concevoir et construire un moteur d’inférence LLM hétérogène dont correcti
 ## Dépôt canonique
 
 - dépôt : `leon36000/ForgeLLM`;
-- visibilité : publique, décision propriétaire intentionnelle;
+- visibilité : publique sous ADR-0003;
 - branche par défaut : `main`;
-- commit avant P0-T03 : `843f8127f76a0c7f2ef9863853dccaddeff90aa8`;
-- état direct : `main` non protégée, checks non imposés, aucun ruleset;
-- endpoints administratifs de protection, permissions Actions et alertes CodeQL : `403` pour l’intégration actuelle.
+- commit avant S-0005 : `c1ec3db1613d9bc6a9a4cd0cd7a1c7e4eabaaa7f`;
+- GitHub rapporte maintenant `main.protected=true`;
+- ruleset actif : `FLLM`, id `20820530`;
+- cible : exactement `refs/heads/main`;
+- bypass : aucun.
 
-Les anciennes mentions « dépôt privé » sont supersédées.
+## Protection FLLM vérifiée
+
+- suppression protégée;
+- mises à jour non fast-forward protégées;
+- historique linéaire obligatoire;
+- pull request obligatoire;
+- zéro approbation GitHub artificielle en mode solo;
+- conversations de revue résolues;
+- squash uniquement;
+- check strict `Validate and test` de GitHub Actions id `15368`.
+
+Issue #10 est fermée comme complétée.
 
 ## Décisions
 
@@ -27,45 +40,32 @@ Les anciennes mentions « dépôt privé » sont supersédées.
 - **D-0003 :** remplacer progressivement les composants existants.
 - **D-0004 :** aucune performance sans preuve reproductible.
 - **D-0005 :** revue par contexte distinct + CI exacte + décision du propriétaire.
-- **D-0006 :** aucun runner auto-hébergé avant protection et isolation prouvées.
+- **D-0006 :** l’exécution matérielle privilégiée exige des gates protégés et une revue séparée.
 - **D-0007 :** profils de charge avant optimisation.
 - **D-0008 :** dépôt source public; actifs restreints dans un plan privé séparé.
 - **D-0009 :** RAG et outils externes sont dérivés; Git reste canonique.
+- **D-0010 :** `FLLM` est la politique de protection active de `main` en mode solo jusqu’à décision révisée.
 
-## Frontière publique
+## Tâche active
 
-Tout contenu Git, issue, PR, log et artefact est considéré public et copiable. Secrets, poids restreints, datasets/prompts privés, traces non expurgées, IP privées et UUID matériels sont interdits.
+**P0-T04 — premier inventaire matériel et logiciel assaini.**
 
-La visibilité publique ne constitue pas une licence. Les contributions externes de code exigent une tâche liée et un traitement explicite des droits entrants jusqu’à l’ADR de licence.
+Paquet : `tasks/open/P0-T04-first-hardware-inventory.yaml`  
+Issue : #12  
+Statut : `blocked`
 
-## Outils externes
+Entrée propriétaire requise : un label de machine sûr et le mode d’exécution indiqué dans l’issue #12.
 
-- GitHub, CodeQL et Codex Engineering Guardrails : utilisés maintenant.
-- SonarQube : pertinent quand un serveur/projet callable est connecté; aucune analyse Sonar n’est revendiquée.
-- Fallow : non pertinent pour la surface Python/Markdown actuelle.
-- Consensus : futur outil de synthèse scientifique bornée.
-- Neon Postgres : futur index RAG dérivé seulement après ADR/tâche.
-- Temporal : futur orchestrateur après spécification des workflows.
-- skills NVIDIA/AMD : phases matériel/backend protégées, pas avant.
+P0-T04 est observationnel uniquement. Aucun benchmark d’inférence ni code moteur ne fait partie de cette tâche.
 
-## Preuves de la tête revue
+## Limite de preuve
 
-Tête : `9d3b47365aa017f37b16a6f8c7e307677a7526cf`.
+S-0005 prouve le durcissement du dépôt et les gates déjà enregistrés. Il ne prouve encore aucun inventaire matériel, support accélérateur, résultat numérique ou performance ForgeLLM.
 
-- Phase 0 `31681837631` / `94388820133` : succès; Ruff, validateurs, hachages mobiles, **17 tests** et bootstrap dry-run réussis.
-- CodeQL `31681837665` / `94388813356` : succès; 62 modules, 52 requêtes, SARIF traité; alertes inconnues.
-- Dependency Review `31681837651` : ignoré par opt-in.
-- Probe antérieur `31681032967` / `94386280488` : échec parce que Dependency Graph est désactivé; aucun résultat de dépendance.
-- Revue fraîche : `ACCEPT` pour la PR de gouvernance, P0-T03 restant `in_progress`.
+## Prochain ordre
 
-La revue a corrigé un faux positif de sécurité : un ruleset non lié ou désactivé ne peut plus être interprété comme protection de `main`.
-
-## Gate propriétaire bloquant
-
-Protéger `main` ou appliquer un ruleset équivalent exigeant PR, `Validate and test`, résolution des conversations, administrateur/propriétaire inclus, aucun force-push ni suppression. Zéro faux reviewer humain est utilisé en mode solo.
-
-Dependency Graph peut ensuite être activé pour rendre Dependency Review exécutable. Les alertes CodeQL doivent être inspectées séparément.
-
-## Blocage
-
-Aucun runner GPU/CPU auto-hébergé, workflow portant des secrets, inventaire matériel P0-T04 ou code moteur tant que la protection n’est pas directement prouvée.
+1. propriétaire : désigner un hôte et le mode d’exécution;
+2. P0-T04 : inventaire assaini et revue;
+3. P0-T05 : profils de charge et objectifs;
+4. P0-T06 : plan des baselines;
+5. aucun code moteur avant ces gates.

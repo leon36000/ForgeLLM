@@ -11,9 +11,10 @@
 | D-0007 | 2026-08-12 | accepted | Phase 1 defines workload profiles before any “best engine” claim. | Charter |
 | D-0008 | 2026-08-13 | accepted | Keep the source/governance repository public and place every restricted or operationally sensitive payload in a separate private asset plane. | ADR-0003 / issue #8 |
 | D-0009 | 2026-08-13 | accepted | External RAG systems and agent tools are derived, least-privilege services; Git remains canonical. | ADR-0003 |
+| D-0010 | 2026-08-13 | accepted | Repository ruleset `FLLM` is the active solo-maintainer protection policy for `main` until superseded by reviewed state. | P0-T03 / issue #10 |
 
 ## Register protocol
 
 - This file is an index, not a substitute for an ADR.
-- Add a row in the same pull request that accepts, rejects or supersedes an ADR.
+- Add a row in the same pull request that accepts, rejects or supersedes an ADR or durable governance decision.
 - Never silently change the meaning of an existing decision; supersede it with a new identifier.

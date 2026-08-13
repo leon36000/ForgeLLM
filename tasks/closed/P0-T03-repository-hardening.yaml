@@ -7,11 +7,11 @@ charter_goals:
   - Preserve canonical project state in version control.
   - Prevent unverified execution from bypassing project gates.
   - Make repository controls directly observable.
-goal: Establish the owner-selected public repository boundary and directly verify effective protection of the default branch before later laboratory work begins.
+goal: Establish the owner-selected public repository boundary and directly verify effective protection of the default branch before hardware work begins.
 non_goals:
   - Implement inference runtime or kernel code.
   - Register a self-hosted runner.
-  - Modify laboratory machines.
+  - Modify hardware or system software.
   - Select a project license.
 inputs:
   - ADR-0003 and issue 8 for the public repository boundary.
@@ -26,6 +26,7 @@ allowed_paths:
   - .github/
   - .gitignore
   - README.md
+  - Makefile
   - artifacts/
   - docs/
   - chatgpt/mobile-core/

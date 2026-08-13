@@ -1,127 +1,90 @@
 # ForgeLLM Current State
 
-- **State ID:** S-0004
+- **State ID:** S-0005
 - **Updated:** 2026-08-13
 - **Phase:** P0
-- **Milestone:** P0-M3 — public repository boundary accepted and hardening underway
-- **Overall status:** P0-T03 in progress; public visibility is owner-approved under ADR-0003, public-data controls and review evidence are complete, hosted gates pass, and `main` protection remains the blocking owner-admin control
-- **Authorized next task:** P0-T03
+- **Milestone:** P0-M4 — protected GitHub control plane; first inventory gate next
+- **Overall status:** P0-T03 complete; ruleset `FLLM` is active and protects `main`; P0-T04 is blocked only on designation of the first owner-authorized host
+- **Authorized next task:** P0-T04
 - **State anchor:** the Git commit containing this file
 
 ## Objective
 
-Complete the public GitHub control-plane hardening before any self-hosted hardware or private asset plane is connected.
+Prepare the first reproducible and publication-safe hardware/software inventory on one explicitly authorized machine, without changing that machine or running inference workloads.
 
-## Canonical remote and direct evidence
+## Canonical remote and protection evidence
 
 - Repository: `leon36000/ForgeLLM`.
-- Visibility: `public`, directly reported by GitHub on 2026-08-13.
+- Visibility: public under ADR-0003.
 - Default branch: `main`.
-- Main commit before P0-T03: `843f8127f76a0c7f2ef9863853dccaddeff90aa8`.
-- Main direct evidence: `protected=false`; required-status-check enforcement `off`; no contexts/checks.
-- Repository rulesets direct evidence: empty list.
-- Branch-protection administrative endpoint: `403 Resource not accessible by integration`.
-- Actions default/selected permission endpoints: `403 Resource not accessible by integration`.
-- Code-scanning alert endpoint: `403 Resource not accessible by integration`.
+- Main commit before S-0005: `c1ec3db1613d9bc6a9a4cd0cd7a1c7e4eabaaa7f`.
+- GitHub branch readback on 2026-08-13 reports `main.protected=true`.
+- Active repository ruleset: `FLLM`, id `20820530`.
+- Ruleset enforcement: `active`.
+- Target ref: exactly `refs/heads/main`.
+- Bypass actors: none.
+- Current user bypass: never.
 
-The previous private-visibility statements are superseded by ADR-0003 and this state. The repository was already public; the owner intentionally retains that boundary for public tooling.
+### FLLM policy verified by direct readback
 
-## Owner decision and operating boundary
+- deletion protection;
+- non-fast-forward update protection;
+- required linear history;
+- pull request required;
+- zero approving reviews while ForgeLLM has one human maintainer;
+- stale reviews dismissed on push;
+- CODEOWNERS review not required in solo mode;
+- last-push approval not required in solo mode;
+- review conversations must be resolved;
+- squash is the only allowed merge method;
+- strict required status check `Validate and test` from GitHub Actions integration id `15368`.
 
-Issue #8 and ADR-0003 accept a public source/governance repository. Every Git-tracked byte, issue, PR, workflow log and artifact is treated as public and permanently copyable.
+Issue #10 records the owner checkpoint and is closed as completed. `docs/state/P0-T03-CLOSEOUT-NOTE.md` records the independent readback on the closeout branch.
 
-Secrets, restricted weights, private datasets/prompts, unredacted traces, private network details and stable device identifiers are forbidden. A future private asset plane requires its own bounded task and is referenced publicly only through opaque IDs, revisions and hashes.
+## P0-T03 completion
 
-Git remains canonical. Neon or another RAG may index the repository later, but it is derived and cannot override ADRs, state, evidence or history. NVIDIA, AMD, Temporal, SonarQube, Consensus and other integrations require least privilege and task-specific data review.
+P0-T03 is complete within its repository-hardening scope.
 
-## P0-T03 verified implementation evidence
+Satisfied gates:
 
-Reviewed implementation head: `9d3b47365aa017f37b16a6f8c7e307677a7526cf`.
+- public repository boundary governed by ADR-0003;
+- public/private data separation documented;
+- hosted Phase 0 gate repeatedly successful;
+- CodeQL execution/upload evidenced without unsupported clean-scan claims;
+- Dependency Review remains optional pending its repository prerequisite;
+- `main` is directly evidenced as protected by an active repository ruleset;
+- no fabricated second human reviewer or bypass actor is used.
 
-### Phase 0 verification
+## Decisions preserved
 
-- run: `31681837631`;
-- job: `94388820133`;
-- conclusion: success;
-- Ruff passed;
-- project, research, benchmark, P0-T02 and P0-T03 task validation passed;
-- exact five-file mobile hashing passed;
-- **17 tests passed**;
-- Ubuntu bootstrap dry-run passed;
-- workflow token permissions were contents/read and metadata/read.
+- **D-0001:** Git-tracked state is canonical; conversation memory is auxiliary.
+- **D-0002:** Rust owns the control plane; native target ecosystems own performance-critical kernels; a versioned C ABI connects layers.
+- **D-0003:** existing engines are measured baselines/adapters and are replaced incrementally.
+- **D-0004:** external performance remains unreproduced until a reviewed ForgeLLM experiment reproduces it.
+- **D-0005:** significant work separates implementation, fresh-context verification and owner authorization.
+- **D-0006:** privileged hardware execution requires protected control-plane gates and a separate review.
+- **D-0007:** models, workloads, SLOs and objective functions precede any “best engine” claim.
+- **D-0008:** the source/governance repository is public; restricted assets belong in a separate private plane.
+- **D-0009:** external RAG/apps are derived services; Git remains canonical.
+- **D-0010:** `FLLM` is the active solo-maintainer protection policy for `main` until superseded by a reviewed decision.
 
-### CodeQL
+## Active task: P0-T04
 
-- run: `31681837665`;
-- job: `94388813356`;
-- conclusion: success;
-- CodeQL Action 4.37.6 / CLI 2.26.2;
-- 62 Python modules extracted;
-- 52 `security-extended` queries executed;
-- SARIF uploaded and processing completed;
-- alert details remain inaccessible and therefore unknown.
+Task packet: `tasks/open/P0-T04-first-hardware-inventory.yaml`.
 
-### Dependency Review
+Tracking issue: #12.
 
-- capability probe run `31681032967`, job `94386280488`: failed because Dependency Graph is disabled; no dependency finding was produced;
-- reviewed-head run `31681837651`: skipped by the explicit opt-in guard.
+Status: `blocked` pending one owner input — designation of the first host by a project-safe label and selection of the execution mode described in issue #12.
 
-Dependency Review remains non-required until the owner enables Dependency Graph and obtains one successful internal PR run.
-
-### Fresh-context review
-
-`docs/reviews/P0-T03-PUBLIC-REPOSITORY-REVIEW.md` records verdict `ACCEPT` for the governance PR while preserving P0-T03 as `in_progress`.
-
-The review found and resolved an audit false positive: a nonempty but unrelated/disabled ruleset can no longer be treated as protection for `main`. Direct `branches/main.protected=true` is required for the audit pass.
-
-## P0-T03 implemented changes
-
-- ADR-0003 and decisions D-0008/D-0009;
-- public repository/data-classification policy and public security reporting entry point;
-- contribution and no-license notices;
-- expanded secret/restricted-asset ignore rules;
-- typed read-only repository audit and reviewed branch-protection payload;
-- tests for public visibility, inaccessible admin controls, unrelated rulesets and solo-owner protection semantics;
-- honest recording of Dependency Graph and CodeQL-alert visibility limitations;
-- S-0004 decisions, risks, roadmap, handoff and mobile projection.
-
-## P0-T03 remaining blocking gates
-
-Before P0-T03 can complete, direct evidence must show `main` protected by classic protection or an enforced equivalent ruleset that:
-
-- requires pull requests;
-- requires the stable `Validate and test` check;
-- requires conversation resolution;
-- enforces the owner/admin path;
-- rejects force pushes and branch deletion;
-- uses zero fabricated human approvals while the project is solo.
-
-The current integration cannot perform or read that administrative write. `scripts/github/apply_branch_protection.py` provides a reviewed dry-run/apply command for an owner-authenticated `gh` session.
-
-Optional security follow-ups:
-
-- enable Dependency Graph before opt-in Dependency Review;
-- inspect CodeQL alerts through an owner-authorized UI or CLI;
-- capture Actions administrative permissions directly.
-
-## External-tool applicability
-
-- GitHub, CodeQL and Codex Engineering Guardrails: used for P0-T03.
-- SonarQube: relevant only when a callable server/project is configured; no Sonar result is claimed.
-- Fallow: not applicable to the current Python/Markdown surface.
-- Consensus: reserved for bounded scientific synthesis tasks.
-- Neon Postgres: candidate derived RAG only after a dedicated ADR/task.
-- Temporal: candidate for durable agent orchestration after workflow semantics are specified.
-- NVIDIA/AMD skills: reserved for protected hardware/backend phases.
+P0-T04 is observation-only. The detailed operating and publication constraints are maintained in the task packet, issue #12 and repository policies.
 
 ## Evidence boundary
 
-This state proves directly observed repository metadata and completed hosted jobs only. It does not prove protected `main`, readable Actions settings, zero CodeQL alerts, Dependency Review success, runner safety, an open-source license or any inference/hardware performance.
+S-0005 proves repository protection and previously recorded hosted checks. It does not prove any hardware inventory, accelerator compatibility, inference correctness, performance, energy efficiency, model support, distributed behavior, or release readiness.
 
 ## Forbidden next steps
 
-- no self-hosted runner or P0-T04 hardware execution before protection is directly evidenced;
-- no restricted/private payload in GitHub, issues, logs or artifacts;
-- no engine implementation before repository hardening, hardware inventory and Phase 1 workload definition;
-- no claim that public visibility grants an open-source license;
-- no external RAG or plugin may become canonical project memory.
+- do not change the selected host as part of inventory;
+- do not register a self-hosted runner during P0-T04;
+- do not run inference or performance benchmarks before the inventory is reviewed and P0-T05 defines workload profiles;
+- do not begin engine implementation before the Phase 1 laboratory definition.
