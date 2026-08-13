@@ -40,7 +40,7 @@ def test_inventory_never_queries_uuid_fields() -> None:
     assert "uuid" not in flattened
 
 
-def test_inventory_removes_link_layer_addresses_from_network_data() -> None:
+def test_inventory_removes_link_address_fields_from_network_data() -> None:
     def runner(command: Sequence[str], timeout: float) -> CommandResult:
         argv = list(command)
         if argv[0] == "ip":
@@ -48,8 +48,8 @@ def test_inventory_removes_link_layer_addresses_from_network_data() -> None:
                 argv,
                 "ok",
                 0,
-                '[{"ifname":"eth0","address":"aa:bb:cc:dd:ee:ff","broadcast":"ff:ff:ff:ff:ff:ff",'
-                '"permaddr":"11:22:33:44:55:66","mtu":1500,"operstate":"UP"}]',
+                '[{"ifname":"eth0","address":"REMOVE-ME","broadcast":"REMOVE-ME",'
+                '"permaddr":"REMOVE-ME","mtu":1500,"operstate":"UP"}]',
                 "",
             )
         return CommandResult(argv, "unavailable", None, "", "command not found")
