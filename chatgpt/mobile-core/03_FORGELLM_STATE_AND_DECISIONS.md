@@ -1,33 +1,44 @@
 # ForgeLLM — état, décisions et continuité
 
-**Mise à jour :** 2026-08-12  
-**Version d’état :** S-0001  
+**Mise à jour :** 2026-08-13  
+**Version d’état :** S-0002  
 **Phase :** P0 — gouvernance, mémoire durable et laboratoire de preuve  
-**Statut global :** socle Phase 0 vérifié localement; initialisation propriétaire restante
+**Statut global :** P0-T02 en revue finale; dépôt GitHub privé et PR #1 actifs, CI hébergée verte sur la tête d’implémentation, politique de revue solo formalisée; rapport final, CI finale, décision de fusion et protection de `main` restantes
 
 ## Objectif invariant
 
 Concevoir et construire un moteur d’inférence LLM hétérogène dont la correction, la performance, la sécurité et la reproductibilité sont démontrées par des artefacts versionnés.
 
-## Jalon actif
+## Dépôt canonique
 
-**P0-M1 :** rendre le projet durable entre ChatGPT mobile, Claude Code, Codex et Git; fournir instructions, registres, catalogues, schémas, validateurs, CI et plan de recherche.
+- dépôt : `leon36000/ForgeLLM`;
+- visibilité : privée, vérifiée le 2026-08-13;
+- branche par défaut : `main`;
+- commit d’amorçage : `fb4cd533ef11c08fd31c74716e2dc2bb4ca4b4a9`;
+- branche active : `agent/p0-t02-initialize-repository`;
+- PR : brouillon #1;
+- tête d’implémentation revue : `1f2fdee1fa098e6540eb0b3366203302de56402d`.
 
-## Travail accompli et vérifié
+## Preuve CI observée
 
-- nom ForgeLLM adopté;
-- architecture hybride Rust + backends natifs retenue comme direction révisable;
-- paquet mobile à cinq fichiers et instructions du projet créés;
-- contrat agent, gates anti-dérive, protocole de preuve et standard de benchmark créés;
-- catalogue daté de 26 dépôts, 30 articles et 55 claims créé;
-- 18 revues de dépôts et 6 synthèses scientifiques transformées en tâches bornées;
-- schémas, validateurs, inventaire matériel redacted, snapshots et scripts de recherche créés;
-- modèles GitHub/GitLab, CI SHA-épinglée, CodeQL, audit lecture seule et workflow GPU manuel protégé créés;
-- `make verify` exécuté le 2026-08-12 : catalogues, schémas, automatisation, exemples, scan de secrets et syntaxe shell valides; **11 tests réussis**.
+GitHub Actions run `31676341783`, job `94371625460` :
 
-## Limite de la preuve actuelle
+- Ruff 0.16.2 réussi;
+- validation projet, recherche, benchmark et paquet de tâche réussie;
+- vérification de cinq fichiers mobiles et émission SHA-256 réussie;
+- **13 tests réussis**;
+- bootstrap Ubuntu en dry-run réussi.
 
-Cette validation prouve la cohérence structurelle du socle P0. Aucun moteur externe n’a été benchmarké par ForgeLLM, aucun gain n’est reproduit, aucun runtime ou kernel ForgeLLM n’est implémenté.
+CodeQL et Dependency Review ont été ignorés par leurs garde-fous de dépôt privé. Ils ne sont pas déclarés exécutés.
+
+## Travail ajouté pendant P0-T02
+
+- politique de revue pour projet solo;
+- interdiction d’utiliser un second compte contrôlé par la même personne comme faux réviseur;
+- revue par agent/contexte distinct + CI exacte + décision finale du propriétaire;
+- séparation explicite entre identité Git vivante et manifeste SHA-256 d’un paquet figé;
+- script déterministe de hachage des cinq fichiers mobiles;
+- tests négatifs contre un sixième fichier mobile.
 
 ## Décisions acceptées
 
@@ -49,11 +60,11 @@ Toute affirmation de performance exige baseline, environnement, données brutes,
 
 ### D-0005 — Agents séparés
 
-L’implémentation et la vérification sont confiées à des contextes/agents distincts pour les changements importants.
+L’implémentation et la vérification sont confiées à des contextes/agents distincts pour les changements importants. En mode solo, le propriétaire prend la décision finale; un second compte lui appartenant n’est pas une revue indépendante.
 
 ### D-0006 — Runners GPU protégés
 
-Les runners GPU auto-hébergés ne doivent pas exécuter automatiquement du code de forks ou non approuvé. Dépôt privé, branche protégée et approbation avant activation.
+Aucun runner GPU auto-hébergé avant preuve directe de la protection de `main`, du dépôt privé et des garde-fous contre le code non approuvé.
 
 ### D-0007 — Profils avant optimisation
 
@@ -66,37 +77,19 @@ La Phase 1 définit modèles, charges, SLO et fonctions objectif avant toute aff
 | R-001 | dérive vers un moteur trop large avant baseline | critique | phases et task packets petits |
 | R-002 | benchmarks incomparables ou optimistes | critique | schéma obligatoire, données brutes, vérificateur |
 | R-003 | fragmentation Rust/C++/CUDA/HIP/Python | élevée | ABI étroite, ownership explicite, tests contractuels |
-| R-004 | dépendance à un fournisseur ou DSL immature | élevée | portefeuille de backends, versions épinglées |
-| R-005 | runners GPU compromis | critique | privé, protégé, restreint, manuel/éphémère, aucun fork |
-| R-006 | recherche volumineuse mais non actionnable | élevée | chaque source liée à une claim ou expérience |
-| R-007 | mémoire de chat contradictoire | élevée | bootstrap, état versionné, remplacement du fichier mobile |
+| R-005 | runners GPU compromis | critique | protection vérifiée avant enregistrement |
+| R-007 | mémoire de chat contradictoire | élevée | état versionné et projection mobile régénérée |
 | R-008 | objectifs « le plus puissant » non mesurables | élevée | profils de charge et objectifs séparés en P1 |
 
-## Questions ouvertes prioritaires
+## Limite de preuve
 
-1. compte/organisation GitHub ou GitLab et responsables réels;
-2. licence et politique de contributions;
-3. inventaire exact du matériel, topologie, OS, pilotes et réseau;
-4. modèles et charges de référence de P1;
-5. priorités TTFT, TPOT, goodput, débit, mémoire, énergie, coût et qualité;
-6. premier profil : local interactif, serveur, long contexte ou modèle surdimensionné;
-7. compatibilité initiale : safetensors/Transformers, GGUF ou les deux;
-8. première carte NVIDIA et première carte AMD de laboratoire.
+Aucun moteur, kernel ou benchmark LLM ForgeLLM n’existe encore. Les résultats externes restent non reproduits. La racine `MANIFEST.sha256` décrit le paquet Phase 0 initial, pas tous les commits ultérieurs.
 
-## Prochaine tâche autorisée
+## Prochaine action autorisée
 
-**P0-T02 — Initialiser le dépôt privé et installer le contexte mobile.**
-
-Critères :
-
-- hachages de l’archive et du manifeste vérifiés;
-- `make ci` réussi dans un environnement isolé;
-- dépôt Git initialisé et worktree propre;
-- visibilité privée et `main` protégée avant runner GPU;
-- instructions ChatGPT collées et cinq fichiers téléversés;
-- propriétaire, plateforme, commit et première machine enregistrés;
-- état S-0002 produit.
-
-## Handoff
-
-Commencer toute nouvelle session par le prompt de bootstrap. Ne pas commencer l’implémentation du moteur avant P0-T02, l’inventaire matériel et les profils P1. À la clôture, remplacer entièrement ce fichier par un nouvel état fondé uniquement sur des faits vérifiés.
+1. ajouter le rapport de revue agentique indépendante;
+2. vérifier la CI de la tête finale;
+3. mettre à jour la PR et quitter le mode brouillon si le verdict est `ACCEPT`;
+4. décision de fusion par le propriétaire;
+5. interdire tout runner GPU tant que la protection de `main` n’est pas prouvée;
+6. produire S-0003 après fusion.
