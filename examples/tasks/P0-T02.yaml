@@ -67,17 +67,3 @@ risk_ids:
   - R-007
 claim_ids:
   - CLM-010
-completion_evidence:
-  repository: leon36000/ForgeLLM
-  visibility: private
-  pull_request: 1
-  final_pr_head: aa978989a5f6ad3524618eda5cd8b650288c7a67
-  merge_commit: 20bc5fa061aa039d32c2702d47eeba07dd353363
-  final_pr_run: 31676559801
-  final_pr_job: 94372299029
-  post_merge_run: 31676680397
-  post_merge_job: 94372665642
-  tests_passed: 13
-  review_report: docs/reviews/P0-T02-INDEPENDENT-AGENT-REVIEW.md
-  review_verdict: ACCEPT
-  unresolved_control: main branch protection is not directly evidenced; self-hosted runners remain forbidden
