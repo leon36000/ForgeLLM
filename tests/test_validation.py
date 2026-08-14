@@ -9,8 +9,8 @@ from forgellm_governance.validation import (
     scan_for_secrets,
     validate_benchmark_file,
     validate_project,
-    validate_repository_automation,
     validate_research_catalogs,
+    validate_repository_automation,
     validate_task_packet_file,
 )
 
@@ -64,7 +64,7 @@ def test_repository_automation_is_pinned_and_well_formed() -> None:
     assert validate_repository_automation(ROOT) == []
 
 
-def test_dependency_review_opt_in_guard_is_required(tmp_path: Path) -> None:
+def test_private_feature_workflow_guard_is_required(tmp_path: Path) -> None:
     shutil.copytree(ROOT / "schemas", tmp_path / "schemas")
     shutil.copytree(ROOT / ".github", tmp_path / ".github")
     shutil.copy2(ROOT / "pyproject.toml", tmp_path / "pyproject.toml")
@@ -72,9 +72,81 @@ def test_dependency_review_opt_in_guard_is_required(tmp_path: Path) -> None:
 
     workflow = tmp_path / ".github/workflows/dependency-review.yml"
     text = workflow.read_text(encoding="utf-8")
-    marker = "vars.FORGELLM_ENABLE_DEPENDENCY_REVIEW == 'true'"
-    assert marker in text
-    workflow.write_text(text.replace(marker, "false"), encoding="utf-8")
+    workflow.write_text(text.replace("vars.FORGELLM_ENABLE_DEPENDENCY_REVIEW == 'true' && ", ""), encoding="utf-8")
 
     issues = validate_repository_automation(tmp_path)
     assert any("FORGELLM_ENABLE_DEPENDENCY_REVIEW" in issue.message for issue in issues)
+
+
+def _copy_simulation_root(tmp_path: Path) -> Path:
+    root = tmp_path / "simulation-root"
+    (root / "schemas").mkdir(parents=True)
+    (root / "examples" / "simulations").mkdir(parents=True)
+    (root / "artifacts" / "simulations").mkdir(parents=True)
+    for name in ("topology.schema.json", "component-profile.schema.json", "placement-result.schema.json"):
+        shutil.copy2(ROOT / "schemas" / name, root / "schemas" / name)
+    for name in ("synthetic-cache-draft-topology.json", "synthetic-cache-draft-components.json"):
+        shutil.copy2(
+            ROOT / "examples" / "simulations" / name,
+            root / "examples" / "simulations" / name,
+        )
+    return root
+
+
+def test_cli_validate_topology_dispatches(monkeypatch, capsys) -> None:
+    from forgellm_governance.cli import main
+
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "forgellm-governance",
+            "validate-topology",
+            str(ROOT / "examples/simulations/synthetic-cache-draft-topology.json"),
+            "--root",
+            str(ROOT),
+        ],
+    )
+    assert main() == 0
+    assert "OK:" in capsys.readouterr().out
+
+
+def test_cli_validate_components_dispatches(monkeypatch, capsys) -> None:
+    from forgellm_governance.cli import main
+
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "forgellm-governance",
+            "validate-components",
+            str(ROOT / "examples/simulations/synthetic-cache-draft-components.json"),
+            "--root",
+            str(ROOT),
+        ],
+    )
+    assert main() == 0
+    assert "OK:" in capsys.readouterr().out
+
+
+def test_cli_simulate_placement_dispatches(tmp_path: Path, monkeypatch, capsys) -> None:
+    from forgellm_governance.cli import main
+
+    root = _copy_simulation_root(tmp_path)
+    output = root / "artifacts" / "simulations" / "result.json"
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "forgellm-governance",
+            "simulate-placement",
+            "--root",
+            str(root),
+            "--topology",
+            "examples/simulations/synthetic-cache-draft-topology.json",
+            "--components",
+            "examples/simulations/synthetic-cache-draft-components.json",
+            "--output",
+            "artifacts/simulations/result.json",
+        ],
+    )
+    assert main() == 0
+    assert capsys.readouterr().out.strip() == str(output.resolve())
+    assert output.exists()
