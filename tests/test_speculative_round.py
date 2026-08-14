@@ -6,6 +6,7 @@ import pytest
 
 from forgellm_governance.exact_distribution import ExactDistribution, RandomTape
 from forgellm_governance.speculative_decoding import (
+    OneTokenDecision,
     ProposalValidationError,
     SampledRoundRequest,
     SampledRoundResult,
@@ -268,5 +269,62 @@ def test_bonus_branch_requires_exact_acceptance_probability_count() -> None:
             termination="all_accepted",
             tape=RandomTape(()),
             remaining_budget=2,
+            eos_token_id=9,
+        )
+
+
+def test_decision_and_round_result_require_random_tape() -> None:
+    with pytest.raises(ProposalValidationError, match="tape must be a RandomTape"):
+        OneTokenDecision(
+            proposed_token=0,
+            acceptance_probability=Fraction(1),
+            accepted=True,
+            emitted_token=0,
+            correction_kind="accepted",
+            tape=object(),  # type: ignore[arg-type]
+        )
+    with pytest.raises(ProposalValidationError, match="tape must be a RandomTape"):
+        SampledRoundResult(
+            prefix=(),
+            proposed_tokens=(0,),
+            accepted_count=1,
+            emitted_tokens=(0,),
+            acceptance_probabilities=(Fraction(1),),
+            correction_kind="none",
+            termination="budget",
+            tape=object(),  # type: ignore[arg-type]
+            remaining_budget=1,
+            eos_token_id=9,
+        )
+
+
+def test_proposal_eos_must_be_last_generated_token() -> None:
+    with pytest.raises(ProposalValidationError, match="EOS must be the final proposed token"):
+        SampledRoundResult(
+            prefix=(),
+            proposed_tokens=(9, 0),
+            accepted_count=0,
+            emitted_tokens=(1,),
+            acceptance_probabilities=(Fraction(0),),
+            correction_kind="residual",
+            termination="rejection",
+            tape=RandomTape(()),
+            remaining_budget=2,
+            eos_token_id=9,
+        )
+
+
+def test_positive_budget_cannot_have_empty_round_witness() -> None:
+    with pytest.raises(ProposalValidationError, match="positive budget requires at least one proposal"):
+        SampledRoundResult(
+            prefix=(),
+            proposed_tokens=(),
+            accepted_count=0,
+            emitted_tokens=(),
+            acceptance_probabilities=(),
+            correction_kind="none",
+            termination="budget",
+            tape=RandomTape(()),
+            remaining_budget=1,
             eos_token_id=9,
         )
