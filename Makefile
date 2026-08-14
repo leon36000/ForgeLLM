@@ -33,6 +33,7 @@ validate:
 	$(PYTHON) scripts/validate_task_packet.py tasks/closed/P0-T08-exact-speculative-decoding.yaml --root .
 	$(PYTHON) scripts/validate_task_packet.py tasks/open/P0-T09-sonarqube-main-analysis.yaml --root .
 	$(PYTHON) -m json.tool artifacts/governance/P0-T09-sonar-baseline.json >/dev/null
+	$(PYTHON) -m json.tool artifacts/governance/P0-T09-sonar-admin-readback.template.json >/dev/null
 	$(PYTHON) scripts/validate_topology.py examples/simulations/synthetic-cache-draft-topology.json --root .
 	$(PYTHON) scripts/validate_component_profile.py examples/simulations/synthetic-cache-draft-components.json --root .
 	$(PYTHON) scripts/hash_mobile_context.py --root .
