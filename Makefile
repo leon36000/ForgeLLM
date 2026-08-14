@@ -1,7 +1,7 @@
 PYTHON ?= python3
 export PYTHONPATH := src
 
-SPECULATIVE_SOURCES := \
+SPECULATIVE_FORMAT_FILES := \
 	src/forgellm_governance/__init__.py \
 	src/forgellm_governance/exact_distribution.py \
 	src/forgellm_governance/speculative_decoding.py \
@@ -9,9 +9,7 @@ SPECULATIVE_SOURCES := \
 	src/forgellm_governance/speculative_exhaustive.py \
 	src/forgellm_governance/speculative_greedy.py \
 	src/forgellm_governance/speculative_state.py \
-	src/forgellm_governance/speculative_trace.py
-
-SPECULATIVE_TESTS := \
+	src/forgellm_governance/speculative_trace.py \
 	tests/test_exact_distribution.py \
 	tests/test_speculative_sampling.py \
 	tests/test_speculative_round.py \
@@ -21,8 +19,6 @@ SPECULATIVE_TESTS := \
 	tests/test_speculative_state.py \
 	tests/test_speculative_trace.py \
 	tests/test_speculative_adversarial.py
-
-SPECULATIVE_FILES := $(SPECULATIVE_SOURCES) $(SPECULATIVE_TESTS)
 
 .PHONY: validate test lint verify verify-speculative ci mobile-hashes simulate-cache-draft inventory snapshot clean
 
@@ -34,7 +30,7 @@ validate:
 	$(PYTHON) scripts/validate_task_packet.py tasks/open/P0-T03-repository-hardening.yaml --root .
 	$(PYTHON) scripts/validate_task_packet.py tasks/open/P0-T04-first-hardware-inventory.yaml --root .
 	$(PYTHON) scripts/validate_task_packet.py tasks/closed/P0-T07-cache-aware-placement-simulator.yaml --root .
-	$(PYTHON) scripts/validate_task_packet.py tasks/open/P0-T08-exact-speculative-decoding.yaml --root .
+	$(PYTHON) scripts/validate_task_packet.py tasks/closed/P0-T08-exact-speculative-decoding.yaml --root .
 	$(PYTHON) scripts/validate_topology.py examples/simulations/synthetic-cache-draft-topology.json --root .
 	$(PYTHON) scripts/validate_component_profile.py examples/simulations/synthetic-cache-draft-components.json --root .
 	$(PYTHON) scripts/hash_mobile_context.py --root .
@@ -45,12 +41,21 @@ test:
 
 lint:
 	$(PYTHON) -m ruff check src scripts tests
-	$(PYTHON) -m ruff format --check $(SPECULATIVE_FILES)
+	$(PYTHON) -m ruff format --check $(SPECULATIVE_FORMAT_FILES)
 
 verify: validate test
 
 verify-speculative:
-	$(PYTHON) -m pytest -q $(SPECULATIVE_TESTS)
+	$(PYTHON) -m pytest -q \
+	  tests/test_exact_distribution.py \
+	  tests/test_speculative_sampling.py \
+	  tests/test_speculative_round.py \
+	  tests/test_target_law.py \
+	  tests/test_speculative_exhaustive.py \
+	  tests/test_speculative_greedy.py \
+	  tests/test_speculative_state.py \
+	  tests/test_speculative_trace.py \
+	  tests/test_speculative_adversarial.py
 
 ci: lint verify verify-speculative simulate-cache-draft
 

@@ -1,9 +1,9 @@
 # ForgeLLM — état, décisions et continuité
 
 **Mise à jour :** 2026-08-14  
-**Version d’état :** S-0006  
+**Version d’état :** S-0007  
 **Phase :** P0 — gouvernance, simulation et laboratoire de preuve  
-**Statut global :** P0-T07 terminé avec preuve synthétique; P0-T04 attend un hôte; CA-03 est autorisé en mode subagent-driven mais doit commencer par une spécification, un plan et un paquet borné
+**Statut global :** P0-T07 et P0-T08 terminés; P0-T04 attend la désignation d’un hôte; QG-01 suit une incohérence d’analyse Sonar sur `main`; aucun futur paquet de recherche ou runtime n’est automatiquement autorisé
 
 ## Objectif invariant
 
@@ -12,79 +12,73 @@ Concevoir et construire un moteur d’inférence LLM hétérogène dont correcti
 ## Dépôt canonique
 
 - dépôt : `leon36000/ForgeLLM`;
-- visibilité : publique sous ADR-0003;
-- branche par défaut : `main`;
-- protection : ruleset `FLLM` actif;
-- commit d’implémentation P0-T07 : `b0f3f241537b50de0dd3c0cb7bc2e6bf274a7034`;
-- aucun runner auto-hébergé, modèle, benchmark matériel ou code accélérateur ajouté.
+- branche par défaut : `main` protégée par `FLLM`;
+- merge P0-T07 : `b0f3f241537b50de0dd3c0cb7bc2e6bf274a7034`;
+- merge P0-T08 : `e6c9d1ae30f1b5e161a56bf8c9b4fa25c823fe24`;
+- merge de remédiation Sonar : `e81c1c0ad0b161844569df46ee62246c9de56698`;
+- aucun runner auto-hébergé, modèle, benchmark matériel ou code accélérateur ajouté par CA-03.
 
 ## Décisions durables
 
 - Git est la mémoire canonique; le chat et les RAG sont dérivés.
 - Le runtime futur appartient principalement à Rust, avec une ABI C stable et des backends natifs.
-- Les moteurs existants sont des baselines/adaptateurs remplacés progressivement.
 - Aucune performance n’est acceptée sans preuve ForgeLLM reproductible.
-- Les travaux significatifs séparent implémentation, revue fraîche et autorisation propriétaire.
-- Les profils de charge précèdent les déclarations de meilleur moteur.
-- Le dépôt source est public; les actifs restreints vivent dans un plan privé.
-- `FLLM` protège `main` en mode mainteneur solo.
 - Le plan microarchitectural utilise un graphe de capacités et un placement/autotuning empirique.
-- ForgeCacheDraft est le premier cas CPU-cache/GPU; Transition Atlas reste expérimental.
+- ForgeCacheDraft est le premier cas CPU-cache/GPU; Transition Atlas reste expérimental et non autorisé.
+- Les futures implémentations spéculatives doivent se conformer à l’oracle exact CA-03.
 
 ## P0-T07 terminé
 
-P0-T07 livre :
+P0-T07 fournit le simulateur synthétique cache-aware, ses schémas, son coût entier, ses placements légaux et son fallback générique obligatoire. Sa limite demeure `synthetic_only`.
 
-- schémas stricts de topologie, composants et résultats;
-- modèles immuables et neutres vis-à-vis des produits;
-- coût entier en octets, taux et nanosecondes;
-- placements légaux, rejets stables et fallback générique obligatoire;
-- sortie atomique confinée sous `artifacts/`;
-- scénario cache-draft synthétique;
-- tests adversariaux.
+## P0-T08 / CA-03 terminé
+
+CA-03 fournit :
+
+- distributions finies exactes en `Fraction`;
+- source aléatoire immuable `RandomTape`;
+- acceptation `min(1, p(x)/q(x))`;
+- correction au premier rejet par `(p-q)_+` normalisé;
+- token bonus cible lorsque le bloc est entièrement accepté;
+- égalité exacte des lois cible et spéculative;
+- oracle greedy séparé;
+- état transactionnel target/draft/sampler/grammar;
+- commit du préfixe accepté, abandon du suffixe rejeté et rollback exact;
+- traces déterministes sans dépendance à l’environnement;
+- gate `make verify-speculative`.
 
 Preuves finales :
 
 ```text
-PR head                99c1c1488f622a6d4290e21a17ff313a1c3568c6
-Merge main             b0f3f241537b50de0dd3c0cb7bc2e6bf274a7034
-Tests                   102 réussis
-Phase 0 PR              31784275654 / 94716606110
-CodeQL PR               31784275655 / 94716597658
-Phase 0 post-merge      31784610893 / 94717633943
-CodeQL post-merge       31784610881 / 94717633957
-Limite                  synthetic_only
+Base                    1cd502609c7b05ac628057f79a9135b07c08e821
+Tête implémentation     16d65288b34a9f2f91a4c67182aab13ddfb5e17d
+Merge implémentation    e6c9d1ae30f1b5e161a56bf8c9b4fa25c823fe24
+Tests complets          332 réussis
+Tests ciblés            230 réussis
+Phase 0 implémentation  31831781322 / 94868927648
+CodeQL implémentation   31831781266 / 94868926709
+Revue spécification     4940413742 / ACCEPT
+Revue qualité           4940415259 / ACCEPT
+Tête remédiation        a7f508fe1fa4787b889445c5e5986339b508217a
+Merge remédiation       e81c1c0ad0b161844569df46ee62246c9de56698
+Phase 0 remédiation     31838436974 / 94889874946
+CodeQL remédiation      31838436902 / 94889874310
+Sonar PR                94889986512 / PASSED / 0 nouvelle issue
+Phase 0 final main      31838603770 / 94890388826
+CodeQL final main       31838603775 / 94890388594
+Limite                  finite_exact_reference
 ```
 
-Les nanosecondes simulées ne sont pas des mesures matérielles.
+L’exactitude stochastique signifie l’égalité de la loi de sortie, pas l’identité de séquence sous le même seed.
 
-## Travail autorisé : CA-03
+## SonarQube Cloud
 
-Le propriétaire a autorisé `CA-03 / subagent-driven`.
+La PR de remédiation a réussi le Quality Gate Sonar avec zéro nouvelle issue et zéro hotspot. L’analyse automatique de `main` a ensuite été signalée comme annulée/échouée sans annotation par le check `94890528740`. QG-01 / issue #26 suit cette incohérence. Il est interdit de présenter le résultat PR comme preuve que l’analyse de branche fonctionne.
 
-CA-03 doit définir et tester :
+## Limites de preuve
 
-- distributions cible et proposition;
-- acceptation/rejet exact;
-- résidu positif normalisé;
-- token bonus lorsque tout le draft est accepté;
-- oracle greedy séparé;
-- commit/rollback KV et états auxiliaires;
-- annulation, EOS et budget;
-- égalité exhaustive de loi sur petits modèles synthétiques.
+CA-03 ne prouve pas les logits flottants ou quantifiés, un modèle réel, le tokenizer, le KV tensoriel, le batching, le matériel, la performance, l’énergie, le distribué ou la production.
 
-CA-03 interdit les téléchargements de modèles, l’inférence matérielle, le runtime Rust, l’ABI C, les kernels et les affirmations de performance.
+## Tâche opérationnelle suivante
 
-## Tâche matérielle parallèle
-
-P0-T04 reste bloqué sur un label d’hôte sûr et un mode d’exécution. Il demeure observationnel uniquement.
-
-## Prochaine séquence
-
-1. sources primaires et claims CA-03;
-2. spécification écrite;
-3. plan TDD;
-4. paquet P0-T08/CA-03;
-5. implémentation de référence exacte;
-6. revue et gates hébergés;
-7. aucune intégration runtime avant les gates ultérieurs.
+P0-T04 reste bloqué sur un label d’hôte sûr et un mode d’exécution. Il demeure observationnel uniquement. QG-01 peut être autorisé séparément. Toute autre suite — Transition Atlas, conformance modèle réel, runtime Rust, ABI C ou backend — exige un nouveau paquet explicitement autorisé.

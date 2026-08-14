@@ -1,113 +1,132 @@
 # ForgeLLM Current State
 
-- **State ID:** S-0006
+- **State ID:** S-0007
 - **Updated:** 2026-08-14
 - **Phase:** P0
-- **Milestone:** P0-M5 — synthetic cache-aware placement simulator verified
-- **Overall status:** P0-T07 is complete with synthetic-only evidence; P0-T04 remains blocked on designation of one owner-authorized host; CA-03 exact speculative-decoding semantics is owner-authorized for subagent-driven execution but has not yet begun implementation
-- **Authorized next work:** CA-03 specification, implementation plan and bounded task packet; P0-T04 may proceed independently after host designation
+- **Milestone:** P0-M6 — exact speculative-decoding reference verified
+- **Overall status:** P0-T08 / CA-03 is complete with finite exact-reference evidence; P0-T04 remains blocked on designation of one owner-authorized host; SonarQube Cloud pull-request analysis is clean while automatic `main` analysis remains an open tooling discrepancy tracked by QG-01 / issue #26
+- **Authorized next work:** P0-T04 after owner host designation; QG-01 requires a separate schema-valid task packet before configuration changes; no model, runtime, backend, kernel or Transition Atlas implementation is authorized
 - **State anchor:** the Git commit containing this file
 
 ## Objective
 
-Define and verify exact speculative-decoding reference semantics independently of hardware placement while preserving P0-T04 and P0-T05 as the gates for observed hardware and workload-dependent claims.
+Preserve the exact speculative-decoding oracle as the correctness reference for later cache-aware, accelerator and runtime implementations while keeping observed-hardware and workload claims behind P0-T04 and P0-T05.
 
-## Canonical repository and protection
+## Canonical repository
 
 - Repository: `leon36000/ForgeLLM`.
-- Visibility: public under ADR-0003.
-- Default branch: `main`.
-- `main` is protected by active ruleset `FLLM`.
-- P0-T07 implementation merge: `b0f3f241537b50de0dd3c0cb7bc2e6bf274a7034`.
-- Pull request: #20.
-- No self-hosted runner, hardware probe, model execution or accelerator kernel was introduced by P0-T07.
+- Default branch: protected `main`.
+- P0-T08 implementation pull request: #24.
+- Final implementation head: `16d65288b34a9f2f91a4c67182aab13ddfb5e17d`.
+- Implementation merge: `e6c9d1ae30f1b5e161a56bf8c9b4fa25c823fe24`.
+- Sonar remediation pull request: #25.
+- Final remediation head: `a7f508fe1fa4787b889445c5e5986339b508217a`.
+- Remediation merge: `e81c1c0ad0b161844569df46ee62246c9de56698`.
 
-## P0-T07 completion
+## P0-T08 / CA-03 completion
 
-P0-T07 delivered a deterministic synthetic-only topology and placement simulator.
+CA-03 delivered a placement-independent finite exact oracle for stochastic and greedy speculative decoding.
 
 ### Delivered capabilities
 
-- strict Draft 2020-12 schemas for topology, component profiles and placement results;
-- immutable product-neutral compute, memory, link, component and implementation models;
-- duplicate-key rejection and repository/artifact path confinement;
-- deterministic integer-only byte/rate/nanosecond cost accounting;
-- exhaustive legal candidate generation with stable rejection codes;
-- deterministic selection retaining a legal generic fallback;
-- atomic JSON output under `artifacts/`;
-- a canonical product-neutral cache-draft example;
-- focused, adversarial and CLI tests;
-- hosted execution of the canonical synthetic scenario.
+- canonical finite distributions using `fractions.Fraction`;
+- immutable deterministic `RandomTape` with no modulo reduction;
+- exact Bernoulli and one-token modified rejection sampling;
+- recorded proposal distributions and prefixes;
+- first-rejection correction from normalized `(p-q)_+`;
+- legal target bonus, EOS and output-budget semantics;
+- exact ordinary-target and speculative output-law enumeration;
+- exact-law grids for budgets 0–4 and draft lengths 1–3, including prefix-dependent and adversarial models;
+- separate deterministic greedy oracle;
+- transactional materialized/pending target, draft, sampler and grammar witnesses;
+- cancellation rollback and pending-token synchronization;
+- deterministic environment-free traces;
+- fail-closed guards for invalid direct constructions and impossible probability witnesses;
+- explicit `verify-speculative` repository gate.
 
-### Final pull-request evidence
+### Implementation pull-request evidence
 
-Final reviewed head: `99c1c1488f622a6d4290e21a17ff313a1c3568c6`.
+On `16d65288b34a9f2f91a4c67182aab13ddfb5e17d`:
 
-- Phase 0 run `31784275654`, job `94716606110`: success.
-- Complete suite: **102 passed**.
-- Canonical `make simulate-cache-draft`: success.
-- CodeQL run `31784275655`, job `94716597658`: success.
-- Dependency Review run `31784275656`: skipped by policy and not treated as executed evidence.
-- Fresh-context review verdict: `ACCEPT`.
+- Phase 0 run `31831781322`, job `94868927648`: success;
+- complete suite: **332 passed**;
+- focused `verify-speculative`: **230 passed**;
+- CodeQL run `31831781266`, job `94868926709`: success;
+- specification-compliance review `4940413742`: `ACCEPT`;
+- code-quality review `4940415259`: `ACCEPT`.
 
-### Post-merge evidence
+The SonarQube Cloud analysis on PR #24 failed and exposed two production-code maintainability findings plus test-code smells. The two production findings were fixed in the separate remediation PR #25 before task closeout.
 
-On `main` commit `b0f3f241537b50de0dd3c0cb7bc2e6bf274a7034`:
+### Sonar remediation evidence
 
-- Phase 0 run `31784610893`, job `94717633943`: success.
-- CodeQL run `31784610881`, job `94717633957`: success.
+On `a7f508fe1fa4787b889445c5e5986339b508217a`:
 
-A successful CodeQL workflow proves execution and upload, not zero alerts; alert details are not asserted here.
+- Phase 0 run `31838436974`, job `94889874946`: success;
+- CodeQL run `31838436902`, job `94889874310`: success;
+- CodeQL check `94890057549`: no new alerts in code changed by the pull request;
+- SonarQube Cloud check `94889986512`: Quality Gate passed, 0 new issues, 0 accepted issues and 0 security hotspots;
+- GitGuardian check `94889866775`: success;
+- Dependency Review run `31838436968`: skipped by policy.
 
-### Synthetic evidence hashes
+### Final post-merge evidence
 
-```text
-6738d9596a2a9b9224a68e071a94463cdcbe7cff10a7cd30c4de29cd3381aa2f  examples/simulations/synthetic-cache-draft-topology.json
-3aa6dcb2504aebee7c3db236abdd59867efe25296420bdc7e9ba1883061f4cb5  examples/simulations/synthetic-cache-draft-components.json
-e5eb661bb48eca62b778714670000f963922ca459cb8590b3717150993a921ae  artifacts/simulations/synthetic-cache-draft-result.json
-```
+On `main` commit `e81c1c0ad0b161844569df46ee62246c9de56698`:
+
+- Phase 0 run `31838603770`, job `94890388826`: success;
+- CodeQL run `31838603775`, job `94890388594`: success.
+
+CodeQL workflow success proves execution and SARIF processing; zero repository-wide alerts are not asserted.
+
+## SonarQube Cloud discrepancy
+
+The automatic SonarQube Cloud analysis of `main` at `e81c1c0ad0b161844569df46ee62246c9de56698` was reported as cancelled / analysis failed by check `94890528740`, with no GitHub annotations. This does not overturn the clean exact-head PR quality gate, but it prevents a claim that Sonar branch analysis is healthy. QG-01 / issue #26 tracks the integration investigation. No Sonar issue is suppressed or accepted merely to make a gate green.
+
+## Established claims
+
+Within the finite exact oracle and committed test families:
+
+- modified rejection sampling recovers the target output law exactly;
+- changing a valid draft distribution changes branch behavior but not the final target law;
+- the greedy speculative oracle equals ordinary target greedy decoding;
+- rejected speculative suffix state is not committed;
+- cancellation restores the original token-prefix witness exactly;
+- same-seed token identity is not the stochastic correctness criterion.
 
 ## Evidence boundary
 
-P0-T07 evidence is `synthetic_only`. Its predicted nanoseconds are analytical fixture outputs, not measurements. P0-T07 does not establish:
+P0-T08 evidence is `finite_exact_reference`. It does not establish:
 
-- inference correctness;
-- model or tokenizer support;
-- hardware performance or energy efficiency;
-- CPU cache residency on any real processor;
-- GPU compatibility;
-- runtime, ABI, scheduler or kernel readiness;
-- production suitability.
+- floating-point or quantized numerical equivalence;
+- correctness of any neural model or tokenizer;
+- real KV tensors, concurrent memory safety or batching;
+- CPU/GPU placement, cache residency or overlap;
+- distributed execution or networking;
+- latency, throughput, energy, acceptance-rate or quality improvement;
+- production runtime, ABI, backend or kernel readiness.
 
-Unsupported cost terms remain explicit: acceptance-rate feedback, cache-miss penalties, energy, interference, multi-hop routing, overlap and queueing.
+## Active and blocked work
 
-## Owner authorization: CA-03
+### P0-T04
 
-On 2026-08-14 the owner authorized `CA-03 / subagent-driven`.
+`tasks/open/P0-T04-first-hardware-inventory.yaml` remains observation-only and blocked on one owner input: a project-safe host label and execution mode.
 
-CA-03 is limited to exact speculative-decoding reference semantics:
+### P0-T05 and P0-T06
 
-- target and proposal distributions;
-- acceptance/rejection correction;
-- greedy reference behavior;
-- exact probability-law verification on finite synthetic models;
-- KV and auxiliary-state commit/rollback boundaries;
-- cancellation, EOS and token-budget behavior;
-- deterministic test traces.
+They remain blocked behind the reviewed inventory and workload/SLO definitions.
 
-CA-03 must not introduce model downloads, real inference, hardware-dependent placement, runtime or accelerator code. A schema-valid task packet and reviewed implementation plan precede code.
+### QG-01
 
-## P0-T04 remains active and blocked
+Issue #26 tracks SonarQube Cloud `main`-branch analysis reliability. It is a proposed quality-governance package only; configuration changes require a reviewed task packet.
 
-Task packet: `tasks/open/P0-T04-first-hardware-inventory.yaml`.
+### Future research
 
-P0-T04 remains observation-only and blocked on one owner input: a project-safe host label and execution mode. CA-03 may proceed without bypassing P0-T04 because it uses finite synthetic reference models only.
+Transition Atlas and runtime conformance may use CA-03 as an oracle, but neither is authorized by S-0007. Each requires a separate primary-source-backed specification, plan and task packet.
 
 ## Forbidden next steps
 
-- no hardware calibration or benchmark before P0-T04 and P0-T05;
-- no model download or production inference;
-- no Rust runtime, C ABI, GPU backend or kernel under CA-03;
-- no claim that exact distributional semantics imply performance;
-- no Transition Atlas implementation before CA-03 provides an exact oracle;
-- no approximate quality-changing policy under the exact-mode task.
+- no hardware benchmark before P0-T04 and P0-T05;
+- no model download or production inference under the completed CA-03 task;
+- no claim that finite exact semantics proves real-model or hardware behavior;
+- no claim that PR-level Sonar success establishes a healthy `main` analysis;
+- no Transition Atlas, runtime, C ABI, backend or kernel implementation without a new authorization packet;
+- no approximate quality-changing policy presented as exact speculative decoding.
