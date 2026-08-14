@@ -42,7 +42,11 @@ from .speculative_state import (
     commit_round,
     synchronize_pending,
 )
-from .speculative_trace import build_trace_document, canonical_trace_bytes
+from .speculative_trace import (
+    build_trace_document,
+    canonical_trace_bytes,
+    canonical_trace_document,
+)
 from .topology import TopologySnapshot, load_topology
 from .validation import (
     ValidationIssue,
@@ -79,6 +83,7 @@ __all__ = [
     "build_trace_document",
     "cancel_round",
     "canonical_trace_bytes",
+    "canonical_trace_document",
     "commit_round",
     "decide_one_token",
     "enumerate_speculative_law",
