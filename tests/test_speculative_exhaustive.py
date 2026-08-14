@@ -48,6 +48,23 @@ def eos_prefix_model(
     )
 
 
+def prefix_dependent_model(
+    root: ExactDistribution,
+    by_last_token: dict[int, ExactDistribution],
+    *,
+    alphabet: tuple[int, ...],
+    budget: int,
+) -> FiniteTableModel:
+    depth = max(budget, 1)
+    rows: list[tuple[tuple[int, ...], ExactDistribution]] = []
+    for length in range(depth):
+        for raw_prefix in product(alphabet, repeat=length):
+            prefix = tuple(raw_prefix)
+            distribution = root if not prefix else by_last_token[prefix[-1]]
+            rows.append((prefix, distribution))
+    return FiniteTableModel.from_pairs(rows)
+
+
 def assert_laws_equal(left: ExactSequenceLaw, right: ExactSequenceLaw) -> None:
     assert left.probabilities == right.probabilities
     assert left.total_mass == right.total_mass == 1
@@ -100,6 +117,49 @@ def test_required_finite_model_grid_matches_target_law_exactly(
         alphabet=alphabet,
         budget=budget,
     )
+    assert_laws_equal(
+        enumerate_target_law(target, (), budget, 9),
+        enumerate_speculative_law(
+            target,
+            draft,
+            (),
+            budget,
+            draft_length,
+            9,
+        ),
+    )
+
+
+@pytest.mark.parametrize("budget", range(5))
+@pytest.mark.parametrize("draft_length", (1, 2, 3))
+def test_prefix_dependent_target_and_draft_match_exactly(
+    budget: int,
+    draft_length: int,
+) -> None:
+    alphabet = (0, 1, 2)
+    target = prefix_dependent_model(
+        d((0, 1), (1, 2)),
+        {
+            0: d((0, 3), (1, 1)),
+            1: d((0, 1), (1, 3)),
+            2: d((0, 1), (1, 1)),
+        },
+        alphabet=alphabet,
+        budget=budget,
+    )
+    draft = prefix_dependent_model(
+        d((0, 3), (2, 1)),
+        {
+            0: d((1, 1), (2, 3)),
+            1: d((0, 5), (2, 1)),
+            2: d((0, 1), (1, 1)),
+        },
+        alphabet=alphabet,
+        budget=budget,
+    )
+    if budget:
+        assert target.distribution(()) != target.distribution((0,))
+        assert draft.distribution(()) != draft.distribution((0,))
     assert_laws_equal(
         enumerate_target_law(target, (), budget, 9),
         enumerate_speculative_law(
