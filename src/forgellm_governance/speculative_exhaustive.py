@@ -38,9 +38,7 @@ def _validated_stored_law_entry(
     entry: object,
 ) -> tuple[tuple[int, ...], Fraction]:
     if not isinstance(entry, tuple) or len(entry) != 2:
-        raise LawNormalizationError(
-            "stored law entries must be sequence/mass pairs"
-        )
+        raise LawNormalizationError("stored law entries must be sequence/mass pairs")
     sequence, mass = entry
     try:
         validated = validate_prefix(sequence, name="sequence")
@@ -105,9 +103,7 @@ class ExactSequenceLaw:
             raise LawNormalizationError("sequence law requires positive support")
         total = sum(aggregate.values(), Fraction(0))
         if total != 1:
-            raise LawNormalizationError(
-                f"sequence law probabilities must sum exactly to one; observed {total}"
-            )
+            raise LawNormalizationError(f"sequence law probabilities must sum exactly to one; observed {total}")
         return cls(tuple(sorted(aggregate.items(), key=lambda item: item[0])))
 
     @property
@@ -302,9 +298,7 @@ def _validate_conditional_outcomes(
 ) -> None:
     total = sum((mass for _, mass in outcomes), Fraction(0))
     if total != 1:
-        raise LawNormalizationError(
-            f"conditional verification outcomes must sum exactly to one; observed {total}"
-        )
+        raise LawNormalizationError(f"conditional verification outcomes must sum exactly to one; observed {total}")
 
 
 def _verification_outcomes(
@@ -393,10 +387,7 @@ def _compose_round_outcomes(
             current_prefix + emitted,
             remaining - len(emitted),
         )
-        outcomes.extend(
-            (emitted + suffix, round_mass * suffix_mass)
-            for suffix, suffix_mass in suffix_law.probabilities
-        )
+        outcomes.extend((emitted + suffix, round_mass * suffix_mass) for suffix, suffix_mass in suffix_law.probabilities)
     return outcomes
 
 
