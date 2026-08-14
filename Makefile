@@ -2,6 +2,7 @@ PYTHON ?= python3
 export PYTHONPATH := src
 
 SPECULATIVE_SOURCES := \
+	src/forgellm_governance/__init__.py \
 	src/forgellm_governance/exact_distribution.py \
 	src/forgellm_governance/speculative_decoding.py \
 	src/forgellm_governance/speculative_models.py \

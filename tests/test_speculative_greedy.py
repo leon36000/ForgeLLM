@@ -24,9 +24,7 @@ def full_model(
     budget: int,
 ) -> FiniteTableModel:
     return FiniteTableModel.from_pairs(
-        (tuple(prefix), distribution)
-        for length in range(max(budget, 1))
-        for prefix in product(alphabet, repeat=length)
+        (tuple(prefix), distribution) for length in range(max(budget, 1)) for prefix in product(alphabet, repeat=length)
     )
 
 
@@ -69,9 +67,7 @@ def test_fully_matching_block_gets_target_bonus_when_budget_remains() -> None:
             ((0, 1), d((2, 1))),
         ]
     )
-    draft = FiniteTableModel.from_pairs(
-        [((), d((0, 1))), ((0,), d((1, 1)))]
-    )
+    draft = FiniteTableModel.from_pairs([((), d((0, 1))), ((0,), d((1, 1)))])
     assert greedy_speculative_decode(target, draft, (), 3, 2, 9) == (0, 1, 2)
 
 
@@ -86,16 +82,12 @@ def test_eos_stops_without_suffix_or_bonus() -> None:
 def test_mismatch_target_eos_has_precedence() -> None:
     eos = 9
     target = FiniteTableModel.from_pairs([((), d((eos, 1)))])
-    draft = FiniteTableModel.from_pairs(
-        [((), d((0, 1))), ((0,), d((1, 1)))]
-    )
+    draft = FiniteTableModel.from_pairs([((), d((0, 1))), ((0,), d((1, 1)))])
     assert greedy_speculative_decode(target, draft, (), 4, 2, eos) == (eos,)
 
 
 def test_non_empty_prefix_conditions_output_but_is_not_reemitted() -> None:
-    target = FiniteTableModel.from_pairs(
-        [((7,), d((0, 1))), ((7, 0), d((1, 1)))]
-    )
+    target = FiniteTableModel.from_pairs([((7,), d((0, 1))), ((7, 0), d((1, 1)))])
     draft = FiniteTableModel.from_pairs([((7,), d((0, 1)))])
     assert greedy_target_decode(target, (7,), 2, 9) == (0, 1)
     assert greedy_speculative_decode(target, draft, (7,), 2, 1, 9) == (0, 1)

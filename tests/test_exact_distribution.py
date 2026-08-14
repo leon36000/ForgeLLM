@@ -69,9 +69,7 @@ def test_random_tape_is_immutable_and_validated() -> None:
 
 
 def test_exact_sampling_uses_common_denominator_and_advances_once() -> None:
-    distribution = ExactDistribution.from_pairs(
-        [(0, Fraction(1, 2)), (1, Fraction(1, 3)), (2, Fraction(1, 6))]
-    )
+    distribution = ExactDistribution.from_pairs([(0, Fraction(1, 2)), (1, Fraction(1, 3)), (2, Fraction(1, 6))])
     assert distribution.sample(RandomTape((0,)))[0] == 0
     assert distribution.sample(RandomTape((2,)))[0] == 0
     token, advanced = distribution.sample(RandomTape((3, 99)))
@@ -94,9 +92,7 @@ def test_positive_residual_is_exact_for_partial_and_disjoint_support() -> None:
     residual = target.positive_residual(proposal)
     assert residual.probabilities == ((1, Fraction(1, 1)),)
 
-    disjoint = ExactDistribution.from_pairs([(9, 1)]).positive_residual(
-        ExactDistribution.from_pairs([(8, 1)])
-    )
+    disjoint = ExactDistribution.from_pairs([(9, 1)]).positive_residual(ExactDistribution.from_pairs([(8, 1)]))
     assert disjoint.probabilities == ((9, Fraction(1, 1)),)
 
 

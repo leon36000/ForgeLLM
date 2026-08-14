@@ -33,9 +33,7 @@ def test_sequence_law_aggregates_duplicates_and_requires_unit_mass() -> None:
     with pytest.raises(LawNormalizationError, match="sum exactly to one"):
         ExactSequenceLaw.from_pairs([((0,), Fraction(1, 2))])
     with pytest.raises(LawNormalizationError, match="non-negative"):
-        ExactSequenceLaw.from_pairs(
-            [((0,), Fraction(2)), ((1,), Fraction(-1))]
-        )
+        ExactSequenceLaw.from_pairs([((0,), Fraction(2)), ((1,), Fraction(-1))])
     with pytest.raises(LawNormalizationError, match="tuple"):
         ExactSequenceLaw.from_pairs(
             [([0], Fraction(1))]  # type: ignore[list-item]
@@ -47,9 +45,7 @@ def test_zero_budget_target_law_is_empty_point_mass_without_lookup() -> None:
         def distribution(self, prefix: tuple[int, ...]) -> ExactDistribution:
             raise AssertionError(prefix)
 
-    assert enumerate_target_law(NoLookup(), (), 0, 9) == ExactSequenceLaw.from_pairs(
-        [((), 1)]
-    )
+    assert enumerate_target_law(NoLookup(), (), 0, 9) == ExactSequenceLaw.from_pairs([((), 1)])
 
 
 def test_target_law_branches_exactly_and_stops_at_budget() -> None:

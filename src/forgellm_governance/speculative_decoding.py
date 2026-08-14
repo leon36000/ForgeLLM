@@ -36,29 +36,19 @@ class OneTokenDecision:
         validate_token_id(self.proposed_token, name="proposed_token")
         validate_token_id(self.emitted_token, name="emitted_token")
         if not isinstance(self.acceptance_probability, Fraction):
-            raise ProposalValidationError(
-                "acceptance_probability must be a Fraction"
-            )
+            raise ProposalValidationError("acceptance_probability must be a Fraction")
         if not 0 <= self.acceptance_probability <= 1:
-            raise ProposalValidationError(
-                "acceptance_probability must be between zero and one"
-            )
+            raise ProposalValidationError("acceptance_probability must be between zero and one")
         if not isinstance(self.accepted, bool):
             raise ProposalValidationError("accepted must be a boolean")
         if self.correction_kind not in {"accepted", "residual"}:
             raise ProposalValidationError("invalid correction_kind")
         if self.accepted and self.correction_kind != "accepted":
-            raise ProposalValidationError(
-                "accepted decision must use correction_kind accepted"
-            )
+            raise ProposalValidationError("accepted decision must use correction_kind accepted")
         if not self.accepted and self.correction_kind != "residual":
-            raise ProposalValidationError(
-                "rejected decision must use correction_kind residual"
-            )
+            raise ProposalValidationError("rejected decision must use correction_kind residual")
         if self.accepted and self.emitted_token != self.proposed_token:
-            raise ProposalValidationError(
-                "accepted decision must emit the proposed token"
-            )
+            raise ProposalValidationError("accepted decision must emit the proposed token")
 
 
 def exact_bernoulli(
@@ -70,9 +60,7 @@ def exact_bernoulli(
     if not isinstance(probability, Fraction):
         raise ProposalValidationError("probability must be a Fraction")
     if not 0 <= probability <= 1:
-        raise ProposalValidationError(
-            "probability must be between zero and one"
-        )
+        raise ProposalValidationError("probability must be between zero and one")
     if probability == 0:
         return False, tape
     if probability == 1:
@@ -92,8 +80,7 @@ def acceptance_probability(
     q_mass = proposal.probability(token)
     if q_mass <= 0:
         raise ProposalValidationError(
-            f"proposed token {token} must belong to positive support of "
-            "proposal distribution"
+            f"proposed token {token} must belong to positive support of proposal distribution"
         )
     p_mass = target.probability(token)
     return min(Fraction(1), p_mass / q_mass)
@@ -143,14 +130,10 @@ class ProposalRecord:
     def __post_init__(self) -> None:
         validate_prefix(self.prefix)
         if not isinstance(self.distribution, ExactDistribution):
-            raise ProposalValidationError(
-                "proposal distribution must be an ExactDistribution"
-            )
+            raise ProposalValidationError("proposal distribution must be an ExactDistribution")
         token = validate_token_id(self.token)
         if self.distribution.probability(token) <= 0:
-            raise ProposalValidationError(
-                "proposal token must belong to positive proposal support"
-            )
+            raise ProposalValidationError("proposal token must belong to positive proposal support")
 
 
 @dataclass(frozen=True, slots=True)
@@ -210,94 +193,53 @@ class SampledRoundResult:
         except ValueError as exc:
             raise ProposalValidationError(str(exc)) from exc
         if self.accepted_count > len(self.proposed_tokens):
-            raise ProposalValidationError(
-                "accepted_count exceeds proposed token count"
-            )
+            raise ProposalValidationError("accepted_count exceeds proposed token count")
         if len(self.emitted_tokens) > self.remaining_budget:
-            raise ProposalValidationError(
-                "round emitted more tokens than remaining budget"
-            )
-        if (
-            self.proposed_tokens[: self.accepted_count]
-            != self.emitted_tokens[: self.accepted_count]
-        ):
-            raise ProposalValidationError(
-                "accepted proposal prefix must equal emitted proposal prefix"
-            )
-        if any(
-            not isinstance(value, Fraction) or not 0 <= value <= 1
-            for value in self.acceptance_probabilities
-        ):
-            raise ProposalValidationError(
-                "acceptance probabilities must be Fractions between zero and one"
-            )
+            raise ProposalValidationError("round emitted more tokens than remaining budget")
+        if self.proposed_tokens[: self.accepted_count] != self.emitted_tokens[: self.accepted_count]:
+            raise ProposalValidationError("accepted proposal prefix must equal emitted proposal prefix")
+        if any(not isinstance(value, Fraction) or not 0 <= value <= 1 for value in self.acceptance_probabilities):
+            raise ProposalValidationError("acceptance probabilities must be Fractions between zero and one")
         if self.correction_kind == "residual":
             if self.accepted_count >= len(self.proposed_tokens):
-                raise ProposalValidationError(
-                    "residual correction requires a rejected proposal"
-                )
+                raise ProposalValidationError("residual correction requires a rejected proposal")
             if len(self.acceptance_probabilities) != self.accepted_count + 1:
-                raise ProposalValidationError(
-                    "residual branch must record through first rejection"
-                )
+                raise ProposalValidationError("residual branch must record through first rejection")
             if len(self.emitted_tokens) != self.accepted_count + 1:
-                raise ProposalValidationError(
-                    "residual branch emits accepted prefix plus one correction"
-                )
+                raise ProposalValidationError("residual branch emits accepted prefix plus one correction")
         elif self.correction_kind == "bonus":
             if self.accepted_count != len(self.proposed_tokens):
-                raise ProposalValidationError(
-                    "bonus requires every proposal to be accepted"
-                )
+                raise ProposalValidationError("bonus requires every proposal to be accepted")
             if len(self.acceptance_probabilities) != self.accepted_count:
-                raise ProposalValidationError(
-                    "bonus branch must record exactly every accepted proposal"
-                )
+                raise ProposalValidationError("bonus branch must record exactly every accepted proposal")
             if len(self.emitted_tokens) != len(self.proposed_tokens) + 1:
-                raise ProposalValidationError(
-                    "bonus branch emits proposals plus one target token"
-                )
+                raise ProposalValidationError("bonus branch emits proposals plus one target token")
         elif self.correction_kind == "none":
             if self.accepted_count != len(self.proposed_tokens):
-                raise ProposalValidationError(
-                    "none branch requires every generated proposal to be accepted"
-                )
+                raise ProposalValidationError("none branch requires every generated proposal to be accepted")
             if len(self.acceptance_probabilities) != self.accepted_count:
-                raise ProposalValidationError(
-                    "none branch must record exactly every accepted proposal"
-                )
+                raise ProposalValidationError("none branch must record exactly every accepted proposal")
             if self.emitted_tokens != self.proposed_tokens:
-                raise ProposalValidationError(
-                    "none branch can emit only all accepted proposals"
-                )
+                raise ProposalValidationError("none branch can emit only all accepted proposals")
         else:
             raise ProposalValidationError("invalid round correction_kind")
         contains_eos = self.eos_token_id in self.emitted_tokens
         if contains_eos and self.emitted_tokens[-1] != self.eos_token_id:
             raise ProposalValidationError("EOS must be the final emitted token")
         expected_termination: RoundTermination
-        if (
-            self.emitted_tokens
-            and self.emitted_tokens[-1] == self.eos_token_id
-        ):
+        if self.emitted_tokens and self.emitted_tokens[-1] == self.eos_token_id:
             expected_termination = "eos"
         elif self.correction_kind == "residual":
             expected_termination = "rejection"
         elif self.correction_kind == "bonus":
             expected_termination = "all_accepted"
-        elif (
-            not self.emitted_tokens
-            or len(self.emitted_tokens) == self.remaining_budget
-        ):
+        elif not self.emitted_tokens or len(self.emitted_tokens) == self.remaining_budget:
             expected_termination = "budget"
         else:
-            raise ProposalValidationError(
-                "fully accepted non-EOS block with remaining budget requires bonus"
-            )
+            raise ProposalValidationError("fully accepted non-EOS block with remaining budget requires bonus")
         if self.termination != expected_termination:
             raise ProposalValidationError(
-                f"termination {self.termination} inconsistent with branch; "
-                f"expected {expected_termination}"
+                f"termination {self.termination} inconsistent with branch; expected {expected_termination}"
             )
 
 
@@ -329,9 +271,7 @@ def sample_speculative_round(
     current_tape = tape
     for _ in range(proposal_limit):
         proposal_distribution = draft.distribution(proposal_prefix)
-        proposed_token, current_tape = proposal_distribution.sample(
-            current_tape
-        )
+        proposed_token, current_tape = proposal_distribution.sample(current_tape)
         record = ProposalRecord(
             proposal_prefix,
             proposal_distribution,
@@ -349,9 +289,7 @@ def sample_speculative_round(
 
     for record in records:
         if record.prefix != verification_prefix:
-            raise ProposalValidationError(
-                "proposal prefix does not match consecutive verification prefix"
-            )
+            raise ProposalValidationError("proposal prefix does not match consecutive verification prefix")
         target_distribution = target.distribution(verification_prefix)
         decision = decide_one_token(
             target_distribution,
@@ -371,9 +309,7 @@ def sample_speculative_round(
                     proposed_tokens=tuple(item.token for item in records),
                     accepted_count=accepted_count,
                     emitted_tokens=tuple(emitted),
-                    acceptance_probabilities=tuple(
-                        acceptance_probabilities
-                    ),
+                    acceptance_probabilities=tuple(acceptance_probabilities),
                     correction_kind="none",
                     termination="eos",
                     tape=current_tape,
@@ -383,11 +319,7 @@ def sample_speculative_round(
             continue
 
         emitted.append(decision.emitted_token)
-        termination: RoundTermination = (
-            "eos"
-            if decision.emitted_token == request.eos_token_id
-            else "rejection"
-        )
+        termination: RoundTermination = "eos" if decision.emitted_token == request.eos_token_id else "rejection"
         return SampledRoundResult(
             prefix=request.prefix,
             proposed_tokens=tuple(item.token for item in records),
@@ -425,9 +357,7 @@ def sample_speculative_round(
         emitted_tokens=tuple(emitted),
         acceptance_probabilities=tuple(acceptance_probabilities),
         correction_kind="bonus",
-        termination=(
-            "eos" if bonus == request.eos_token_id else "all_accepted"
-        ),
+        termination=("eos" if bonus == request.eos_token_id else "all_accepted"),
         tape=current_tape,
         remaining_budget=request.remaining_budget,
         eos_token_id=request.eos_token_id,

@@ -150,9 +150,7 @@ def test_acceptance_uses_recorded_q_without_requerying_draft() -> None:
         def distribution(self, prefix: tuple[int, ...]) -> ExactDistribution:
             self.calls.append(prefix)
             if len(self.calls) > 1:
-                raise AssertionError(
-                    "draft was queried during target verification"
-                )
+                raise AssertionError("draft was queried during target verification")
             return d((0, 3), (1, 1))
 
     draft = OneShotDraft()

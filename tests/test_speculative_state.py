@@ -154,11 +154,7 @@ def test_commit_all_accepted_without_correction_materializes_every_token() -> No
     )
     committed, closed = transaction.commit(round_result, 9)
     assert committed.output_tokens == (7, 0, 1)
-    assert (
-        committed.target_materialized
-        == committed.draft_materialized
-        == committed.output_tokens
-    )
+    assert committed.target_materialized == committed.draft_materialized == committed.output_tokens
     assert committed.pending_token is None
     assert committed.sampler_tokens == committed.grammar_tokens == committed.output_tokens
     assert closed.closed is True
@@ -213,11 +209,7 @@ def test_commit_bonus_leaves_bonus_pending_then_synchronizes() -> None:
     assert committed.target_materialized == (0, 1)
     assert committed.pending_token == 2
     synchronized = synchronize_pending(committed)
-    assert (
-        synchronized.target_materialized
-        == synchronized.draft_materialized
-        == synchronized.output_tokens
-    )
+    assert synchronized.target_materialized == synchronized.draft_materialized == synchronized.output_tokens
     assert synchronized.pending_token is None
     assert synchronize_pending(synchronized) is synchronized
 

@@ -52,9 +52,7 @@ def build_trace_document(
             "remaining_budget": request.remaining_budget,
         },
         "result": {
-            "acceptance_probabilities": [
-                fraction_document(value) for value in result.acceptance_probabilities
-            ],
+            "acceptance_probabilities": [fraction_document(value) for value in result.acceptance_probabilities],
             "accepted_count": result.accepted_count,
             "correction_kind": result.correction_kind,
             "emitted_tokens": list(result.emitted_tokens),
@@ -75,6 +73,4 @@ def canonical_trace_bytes(
     state: DecoderState | None = None,
 ) -> bytes:
     document = build_trace_document(request, result, state)
-    return (
-        json.dumps(document, indent=2, sort_keys=True, separators=(",", ": ")) + "\n"
-    ).encode("utf-8")
+    return (json.dumps(document, indent=2, sort_keys=True, separators=(",", ": ")) + "\n").encode("utf-8")

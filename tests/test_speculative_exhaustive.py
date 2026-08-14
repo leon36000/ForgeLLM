@@ -28,9 +28,7 @@ def full_prefix_model(
 ) -> FiniteTableModel:
     depth = max(budget, 1)
     return FiniteTableModel.from_pairs(
-        (tuple(prefix), distribution)
-        for length in range(depth)
-        for prefix in product(alphabet, repeat=length)
+        (tuple(prefix), distribution) for length in range(depth) for prefix in product(alphabet, repeat=length)
     )
 
 

@@ -54,10 +54,7 @@ def validate_prefix(prefix: object, *, name: str = "prefix") -> tuple[int, ...]:
 
     if not isinstance(prefix, tuple):
         raise DistributionValidationError(f"{name} must be a tuple")
-    return tuple(
-        validate_token_id(token, name=f"{name}[{index}]")
-        for index, token in enumerate(prefix)
-    )
+    return tuple(validate_token_id(token, name=f"{name}[{index}]") for index, token in enumerate(prefix))
 
 
 def _coerce_weight(weight: object) -> Fraction:
@@ -98,9 +95,7 @@ class RandomTape:
             raise RandomSourceError("random tape exhausted")
         value = self.draws[self.cursor]
         if value >= upper_bound:
-            raise RandomSourceError(
-                f"draw {value} is outside randbelow({upper_bound}); modulo reduction is forbidden"
-            )
+            raise RandomSourceError(f"draw {value} is outside randbelow({upper_bound}); modulo reduction is forbidden")
         return value, replace(self, cursor=self.cursor + 1)
 
 
@@ -119,9 +114,7 @@ class ExactDistribution:
         total = Fraction(0)
         for pair in self.probabilities:
             if not isinstance(pair, tuple) or len(pair) != 2:
-                raise DistributionValidationError(
-                    "stored probability entries must be token/probability pairs"
-                )
+                raise DistributionValidationError("stored probability entries must be token/probability pairs")
             token, probability = pair
             validate_token_id(token)
             if not isinstance(probability, Fraction):
@@ -133,9 +126,7 @@ class ExactDistribution:
         if tokens != sorted(tokens) or len(tokens) != len(set(tokens)):
             raise DistributionValidationError("stored support must be unique and sorted")
         if total != 1:
-            raise DistributionValidationError(
-                "stored probabilities must sum exactly to one"
-            )
+            raise DistributionValidationError("stored probabilities must sum exactly to one")
 
     @classmethod
     def from_pairs(
@@ -148,9 +139,7 @@ class ExactDistribution:
         for raw_pair in pairs:
             pair_count += 1
             if not isinstance(raw_pair, tuple) or len(raw_pair) != 2:
-                raise DistributionValidationError(
-                    "each distribution entry must be a token/weight pair"
-                )
+                raise DistributionValidationError("each distribution entry must be a token/weight pair")
             raw_token, raw_weight = raw_pair
             token = validate_token_id(raw_token)
             if token in seen:
@@ -160,14 +149,10 @@ class ExactDistribution:
             if weight > 0:
                 weighted.append((token, weight))
         if pair_count == 0:
-            raise DistributionValidationError(
-                "distribution requires at least one token/weight pair"
-            )
+            raise DistributionValidationError("distribution requires at least one token/weight pair")
         total = sum((weight for _, weight in weighted), Fraction(0))
         if total <= 0:
-            raise DistributionValidationError(
-                "distribution total weight must be positive"
-            )
+            raise DistributionValidationError("distribution total weight must be positive")
         return cls(
             tuple(
                 sorted(
@@ -201,8 +186,7 @@ class ExactDistribution:
         integer_weights = tuple(
             (
                 token,
-                probability.numerator
-                * (denominator // probability.denominator),
+                probability.numerator * (denominator // probability.denominator),
             )
             for token, probability in self.probabilities
         )
@@ -220,9 +204,7 @@ class ExactDistribution:
         proposal: ExactDistribution,
     ) -> ExactDistribution:
         if not isinstance(proposal, ExactDistribution):
-            raise DistributionValidationError(
-                "proposal must be an ExactDistribution"
-            )
+            raise DistributionValidationError("proposal must be an ExactDistribution")
         tokens = sorted(set(self.support()) | set(proposal.support()))
         residual = [
             (
@@ -235,7 +217,5 @@ class ExactDistribution:
             for token in tokens
         ]
         if sum((weight for _, weight in residual), Fraction(0)) == 0:
-            raise UnreachableResidualError(
-                "positive residual has zero total mass"
-            )
+            raise UnreachableResidualError("positive residual has zero total mass")
         return ExactDistribution.from_pairs(residual)

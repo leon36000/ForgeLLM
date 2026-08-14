@@ -46,9 +46,7 @@ class ExactSequenceLaw:
         total = Fraction(0)
         for entry in self.probabilities:
             if not isinstance(entry, tuple) or len(entry) != 2:
-                raise LawNormalizationError(
-                    "stored law entries must be sequence/mass pairs"
-                )
+                raise LawNormalizationError("stored law entries must be sequence/mass pairs")
             sequence, mass = entry
             try:
                 validated = validate_prefix(sequence, name="sequence")
@@ -57,19 +55,13 @@ class ExactSequenceLaw:
             if validated != sequence:
                 raise LawNormalizationError("stored sequence must be a tuple")
             if not isinstance(mass, Fraction) or mass <= 0:
-                raise LawNormalizationError(
-                    "stored sequence mass must be a positive Fraction"
-                )
+                raise LawNormalizationError("stored sequence mass must be a positive Fraction")
             sequences.append(sequence)
             total += mass
         if sequences != sorted(sequences) or len(sequences) != len(set(sequences)):
-            raise LawNormalizationError(
-                "stored sequences must be unique and sorted"
-            )
+            raise LawNormalizationError("stored sequences must be unique and sorted")
         if total != 1:
-            raise LawNormalizationError(
-                "sequence law probabilities must sum exactly to one"
-            )
+            raise LawNormalizationError("sequence law probabilities must sum exactly to one")
 
     @classmethod
     def from_pairs(
@@ -81,9 +73,7 @@ class ExactSequenceLaw:
         for raw in pairs:
             count += 1
             if not isinstance(raw, tuple) or len(raw) != 2:
-                raise LawNormalizationError(
-                    "law entries must be sequence/mass pairs"
-                )
+                raise LawNormalizationError("law entries must be sequence/mass pairs")
             raw_sequence, raw_mass = raw
             try:
                 sequence = validate_prefix(raw_sequence, name="sequence")
@@ -96,9 +86,7 @@ class ExactSequenceLaw:
             raise LawNormalizationError("sequence law requires positive support")
         total = sum(aggregate.values(), Fraction(0))
         if total != 1:
-            raise LawNormalizationError(
-                f"sequence law probabilities must sum exactly to one; observed {total}"
-            )
+            raise LawNormalizationError(f"sequence law probabilities must sum exactly to one; observed {total}")
         return cls(tuple(sorted(aggregate.items(), key=lambda item: item[0])))
 
     @property
@@ -252,10 +240,7 @@ def _verification_outcomes(
                 )
     total = sum((mass for _, mass in outcomes), Fraction(0))
     if total != 1:
-        raise LawNormalizationError(
-            "conditional verification outcomes must sum exactly to one; "
-            f"observed {total}"
-        )
+        raise LawNormalizationError(f"conditional verification outcomes must sum exactly to one; observed {total}")
     return tuple(outcomes)
 
 
@@ -281,9 +266,7 @@ def enumerate_speculative_round_law(
         )
     except DistributionValidationError as exc:
         raise LawNormalizationError(str(exc)) from exc
-    if validated_budget == 0 or (
-        validated_prefix and validated_prefix[-1] == eos
-    ):
+    if validated_budget == 0 or (validated_prefix and validated_prefix[-1] == eos):
         return ExactSequenceLaw.from_pairs([((), 1)])
 
     proposal_limit = min(validated_draft_length, validated_budget)
@@ -348,9 +331,7 @@ def enumerate_speculative_law(
         outcomes: list[tuple[tuple[int, ...], Fraction]] = []
         for emitted, round_mass in round_law.probabilities:
             if not emitted:
-                raise LawNormalizationError(
-                    "positive-budget speculative round emitted no token"
-                )
+                raise LawNormalizationError("positive-budget speculative round emitted no token")
             if emitted[-1] == eos or len(emitted) >= remaining:
                 outcomes.append((emitted, round_mass))
                 continue

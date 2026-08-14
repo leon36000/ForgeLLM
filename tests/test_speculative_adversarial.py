@@ -41,9 +41,7 @@ def full_model(
     budget: int,
 ) -> FiniteTableModel:
     return FiniteTableModel.from_pairs(
-        (tuple(prefix), distribution)
-        for length in range(max(budget, 1))
-        for prefix in product(alphabet, repeat=length)
+        (tuple(prefix), distribution) for length in range(max(budget, 1)) for prefix in product(alphabet, repeat=length)
     )
 
 
