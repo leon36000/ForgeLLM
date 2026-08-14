@@ -1,0 +1,119 @@
+schema_version: '1.0'
+task_id: P0-T08
+title: Build exact speculative-decoding reference semantics
+phase: P0
+status: in_progress
+charter_goals:
+- Preserve inference correctness independently of hardware optimization.
+- Establish falsifiable reference semantics before runtime implementation.
+- Make state ownership, commit and rollback boundaries explicit.
+goal: Implement a finite exact placement-independent oracle for stochastic and greedy speculative decoding, exhaustive target-law equality and transactional token-prefix state semantics.
+non_goals:
+- Download, load or execute a neural model or tokenizer.
+- Use floating-point logits as the exactness oracle.
+- Run hardware probes, inference benchmarks or performance experiments.
+- Implement the Rust runtime, C ABI, scheduler, accelerator backend, kernel or network path.
+- Implement tree speculation, Medusa, EAGLE, Transition Atlas or approximate verification.
+- Claim same-seed sequence identity or any performance improvement.
+inputs:
+- Owner authorization CA-03 / subagent-driven recorded on 2026-08-14.
+- Canonical S-0006 state.
+- PAP-SPECDEC and PAP-SPECSAMPLING primary sources.
+- CLM-047 scoped external claim.
+- CA-03 exact speculative-decoding research synthesis.
+- Owner-authorized exact speculative-decoding specification and implementation plan.
+outputs:
+- Immutable exact finite distribution and deterministic random-tape primitives.
+- One-token modified rejection-sampling kernel.
+- Finite table-defined autoregressive model reference.
+- Sampled speculative block-round semantics with EOS and budget handling.
+- Exact ordinary-target and speculative output-law enumerators.
+- Separate deterministic greedy oracle.
+- Transactional target/draft/auxiliary token-prefix state witnesses.
+- Canonical deterministic traces and adversarial tests.
+- Fresh specification and code-quality reviews plus hosted/post-merge evidence.
+allowed_paths:
+- src/forgellm_governance/exact_distribution.py
+- src/forgellm_governance/speculative_decoding.py
+- src/forgellm_governance/speculative_models.py
+- src/forgellm_governance/speculative_exhaustive.py
+- src/forgellm_governance/speculative_greedy.py
+- src/forgellm_governance/speculative_state.py
+- src/forgellm_governance/speculative_trace.py
+- src/forgellm_governance/__init__.py
+- tests/test_exact_distribution.py
+- tests/test_speculative_sampling.py
+- tests/test_speculative_round.py
+- tests/test_target_law.py
+- tests/test_speculative_exhaustive.py
+- tests/test_speculative_greedy.py
+- tests/test_speculative_state.py
+- tests/test_speculative_trace.py
+- tests/test_speculative_adversarial.py
+- docs/research/syntheses/CA-03-EXACT-SPECULATIVE-DECODING.md
+- docs/superpowers/specs/2026-08-14-exact-speculative-decoding-semantics.md
+- docs/superpowers/plans/2026-08-14-exact-speculative-decoding-reference.md
+- docs/speculative/EXACT_REFERENCE.md
+- docs/reviews/P0-T08-EXACT-SPECULATIVE-SEMANTICS-REVIEW.md
+- tasks/open/P0-T08-exact-speculative-decoding.yaml
+- tasks/closed/P0-T08-exact-speculative-decoding.yaml
+- docs/state/CURRENT_STATE.md
+- docs/state/HANDOFF.md
+- docs/roadmap/PHASE0_TASKS.md
+- chatgpt/mobile-core/03_FORGELLM_STATE_AND_DECISIONS.md
+- Makefile
+forbidden_actions:
+- Use float or Decimal for governed exact probability calculations.
+- Accept a proposal token with zero probability under its recorded q distribution.
+- Verify a proposal with a q distribution different from the one used to generate it.
+- Accept or commit any proposal after the first rejected position.
+- Sample a correction from a zero-mass residual.
+- Emit a bonus after EOS or after exhausting the output budget.
+- Commit rejected proposal or suffix state.
+- Mutate the original decoder state on cancellation or validation failure.
+- Treat same-seed sequence identity as the stochastic exactness oracle.
+- Access hardware, models, tokenizers, runtime, accelerator or network services.
+- Publish a speedup, latency, quality or production-readiness claim.
+acceptance_criteria:
+- ExactDistribution rejects invalid tokens/weights, normalizes exactly, orders support canonically and uses deterministic tie-breaking.
+- RandomTape rejects exhaustion and invalid draws; deterministic choices consume no draw.
+- The one-token modified rejection law equals the target distribution exactly for adversarial finite p/q pairs.
+- Sampled block rounds enforce consecutive acceptance, first-rejection correction, legal bonus, EOS and budget invariants.
+- Exact ordinary-target and speculative laws are equal for every required finite model, budget 0-4 and draft length 1-3.
+- Sharply different valid draft distributions preserve the same final target law.
+- Greedy speculative output equals ordinary target greedy output with smallest-token tie-breaking.
+- Transactional state tests prove accepted-prefix commit, rejected-suffix discard, pending correction/bonus, synchronization and exact cancellation rollback.
+- Canonical traces are deterministic and serialize rational values without floats, timestamps, hosts or random IDs.
+- All adversarial invalid inputs and inconsistent states fail closed with stable exception classes.
+- The focused CA-03 suite and complete make ci pass on the exact final pull-request head.
+- Fresh specification-compliance and code-quality reviews record ACCEPT after all BLOCKER/MAJOR findings are resolved.
+- Hosted Phase 0 and CodeQL succeed before merge, followed by successful post-merge verification.
+verification_commands:
+- python scripts/validate_task_packet.py tasks/open/P0-T08-exact-speculative-decoding.yaml --root .
+- python -m pytest -q tests/test_exact_distribution.py tests/test_speculative_sampling.py tests/test_speculative_round.py
+- python -m pytest -q tests/test_target_law.py tests/test_speculative_exhaustive.py tests/test_speculative_greedy.py
+- python -m pytest -q tests/test_speculative_state.py tests/test_speculative_trace.py tests/test_speculative_adversarial.py
+- python -m ruff check src scripts tests
+- python -m ruff format --check src scripts tests
+- make verify-speculative
+- make ci
+- git diff --check
+- git status --short
+evidence_requirements:
+- Record primary source IDs, owner authorization, base/reviewed/merge commits and exact plan revision.
+- Preserve exact finite model fixtures or constructors and all equality-of-law test ranges.
+- Record every review finding and its regression test or disposition.
+- Record focused/full test counts, hosted workflow run/job identifiers and post-merge gates.
+- State explicitly that equality of law is not same-seed identity and that no performance claim is established.
+- Do not close the task before post-merge Phase 0 and CodeQL evidence exists.
+dependencies:
+- P0-T07
+owner_role: Project owner and architecture authority
+reviewer_role: Separate fresh contexts for specification compliance and code quality
+risk_ids:
+- R-002
+- R-003
+- R-006
+- R-007
+claim_ids:
+- CLM-047
