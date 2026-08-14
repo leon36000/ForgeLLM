@@ -96,7 +96,7 @@ verification_commands:
 - python -m pytest -q tests/test_speculative_state.py tests/test_speculative_trace.py tests/test_speculative_adversarial.py
 - python -m ruff check src scripts tests
 - >-
-  python -m ruff format --check src/forgellm_governance/exact_distribution.py src/forgellm_governance/speculative_decoding.py src/forgellm_governance/speculative_models.py src/forgellm_governance/speculative_exhaustive.py src/forgellm_governance/speculative_greedy.py src/forgellm_governance/speculative_state.py src/forgellm_governance/speculative_trace.py tests/test_exact_distribution.py tests/test_speculative_sampling.py tests/test_speculative_round.py tests/test_target_law.py tests/test_speculative_exhaustive.py tests/test_speculative_greedy.py tests/test_speculative_state.py tests/test_speculative_trace.py tests/test_speculative_adversarial.py
+  python -m ruff format --check src/forgellm_governance/__init__.py src/forgellm_governance/exact_distribution.py src/forgellm_governance/speculative_decoding.py src/forgellm_governance/speculative_models.py src/forgellm_governance/speculative_exhaustive.py src/forgellm_governance/speculative_greedy.py src/forgellm_governance/speculative_state.py src/forgellm_governance/speculative_trace.py tests/test_exact_distribution.py tests/test_speculative_sampling.py tests/test_speculative_round.py tests/test_target_law.py tests/test_speculative_exhaustive.py tests/test_speculative_greedy.py tests/test_speculative_state.py tests/test_speculative_trace.py tests/test_speculative_adversarial.py
 - make verify-speculative
 - make ci
 - git diff --check
