@@ -109,12 +109,12 @@ def test_eos_inside_emitted_sequence_is_rejected_by_result_invariants() -> None:
     ):
         SampledRoundResult(
             prefix=(),
-            proposed_tokens=(9, 0),
-            accepted_count=2,
+            proposed_tokens=(9,),
+            accepted_count=1,
             emitted_tokens=(9, 0),
-            acceptance_probabilities=(Fraction(1), Fraction(1)),
-            correction_kind="none",
-            termination="budget",
+            acceptance_probabilities=(Fraction(1),),
+            correction_kind="bonus",
+            termination="all_accepted",
             tape=RandomTape(()),
             remaining_budget=2,
             eos_token_id=9,
