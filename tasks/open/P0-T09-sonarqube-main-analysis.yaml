@@ -1,0 +1,103 @@
+schema_version: '1.0'
+task_id: P0-T09
+title: Stabilize SonarQube Cloud analysis on protected main
+phase: P0
+status: draft
+charter_goals:
+- Preserve canonical project state in version control.
+- Prevent unverified external integrations from becoming a source of truth.
+- Make quality and security gates reproducible and directly observable.
+goal: Diagnose the SonarQube Cloud automatic main-branch analysis failure, select exactly one supported analysis method, and establish reproducible successful pull-request and main checks without suppressing findings.
+non_goals:
+- Modify speculative-decoding semantics or tests to satisfy a scanner.
+- Run model inference, hardware probes, benchmarks, runtime, ABI, backend, or kernel work.
+- Enable automatic and CI-based Sonar analysis concurrently.
+- Lower a quality gate or accept, suppress, or exclude findings merely to obtain a green result.
+- Commit a Sonar credential or unsanitized project-administration payload.
+- Claim repository-wide zero Sonar findings from a clean pull-request new-code gate.
+inputs:
+- Canonical S-0007 state at e669f5e1a6913005fbba8d34e9ba8bdfce91c460.
+- QG-01 tracking issue #26.
+- P0-T08 implementation and remediation evidence from pull requests #24 and #25.
+- SonarQube Cloud pull-request checks 94889986512 and 94892322303, both passed with zero new issues.
+- SonarQube Cloud main checks 94890528740 and 94892860919, both cancelled or failed without GitHub annotations.
+- Official SonarQube Cloud automatic-analysis, CI-based-analysis, troubleshooting, and project-binding documentation.
+- Owner authorization for P0-T09 and the selected analysis method is not yet recorded.
+- Authenticated read-only Sonar project administration and activity evidence is not yet available.
+outputs:
+- Sanitized machine-readable baseline of pull-request and main analysis evidence.
+- Read-only diagnosis and explicit failure classification.
+- "ADR selecting exactly one method: automatic_only or ci_based_only."
+- Minimal reviewed configuration for the selected method.
+- Regression checks for pinned actions, secret hygiene, and mutually exclusive method configuration where mechanically observable.
+- Successful Sonar pull-request and main analysis evidence on reviewed commits.
+- Fresh configuration/security review and separate closeout evidence.
+allowed_paths:
+- .sonarcloud.properties
+- sonar-project.properties
+- .github/workflows/sonar.yml
+- .github/workflows/phase0.yml
+- artifacts/governance/
+- docs/quality/
+- docs/adr/ADR-0004-sonarqube-analysis-method.md
+- docs/superpowers/plans/2026-08-14-sonarqube-main-analysis.md
+- docs/reviews/P0-T09-SONAR-MAIN-ANALYSIS-REVIEW.md
+- src/forgellm_governance/validation.py
+- tests/test_validation.py
+- tasks/open/P0-T09-sonarqube-main-analysis.yaml
+- tasks/closed/P0-T09-sonarqube-main-analysis.yaml
+- docs/state/CURRENT_STATE.md
+- docs/state/HANDOFF.md
+- docs/state/RISKS.md
+- docs/roadmap/PHASE0_TASKS.md
+- chatgpt/mobile-core/03_FORGELLM_STATE_AND_DECISIONS.md
+- Makefile
+forbidden_actions:
+- Change any Sonar or GitHub setting before owner authorization and read-only diagnosis evidence.
+- Run automatic analysis and a CI scanner against the same Sonar project concurrently.
+- Print, log, commit, or transmit SONAR_TOKEN outside the approved GitHub secret boundary.
+- Use an unpinned third-party GitHub Action.
+- Grant write permissions when read-only permissions satisfy the documented scanner requirement.
+- Treat an absent, skipped, cancelled, or annotation-free Sonar check as success.
+- Hide baseline debt or accept an issue without a reviewed disposition.
+- Weaken Phase 0, CodeQL, GitGuardian, dependency policy, branch protection, or P0-T08 exactness gates.
+acceptance_criteria:
+- Authenticated readback records the Sonar project binding, analysis method, last analysis method, failed main task status, quality gate, new-code definition, and relevant scope settings.
+- The failure is classified as configuration, binding or permission, source detection, platform limitation, transient service failure, or unknown due to unavailable evidence.
+- A reviewed ADR selects exactly one supported analysis method and documents rollback, secret surface, and the rejected alternative.
+- The repository cannot mechanically contain conflicting automatic-analysis and CI-scanner configuration under the selected method.
+- Any CI scanner action is pinned to an immutable commit and uses least-privilege workflow permissions.
+- No credential or private administrative payload is committed, and secret scanning remains green.
+- Phase 0, CodeQL, GitGuardian, and the selected Sonar pull-request analysis succeed on the exact final head.
+- The resulting protected main commit has a completed Sonar check with conclusion success, not cancelled, skipped, absent, or inferred.
+- A second controlled pull-request and main cycle succeeds when the original failure is classified transient.
+- A fresh configuration and security review records ACCEPT after every BLOCKER or MAJOR finding is resolved.
+- The closeout evidence states all remaining baseline debt and does not claim repository-wide zero issues unless directly proven.
+verification_commands:
+- python scripts/validate_task_packet.py tasks/open/P0-T09-sonarqube-main-analysis.yaml --root .
+- make ci
+- git grep -n -E 'SONAR_TOKEN|sonar\.projectKey|sonarcloud|sonarqube' -- . ':!docs/quality/*' ':!tasks/*'
+- git diff --check
+- git status --short
+evidence_requirements:
+- Record owner authorization, canonical base, implementation head, merge commit, and selected analysis method.
+- Preserve exact GitHub check and workflow identifiers for the failing baseline, final pull request, and final main commit.
+- Preserve sanitized Sonar binding, method, task, quality-gate, new-code, and scope readback or hashes of non-public administrative evidence.
+- Record every configuration change before and after, including Sonar UI changes not represented in Git.
+- Record scanner action SHA, workflow permissions, secret name, and token scope when CI-based analysis is selected without exposing the token value.
+- Record every Sonar finding and its fix or reviewed disposition; suppression is not an implicit disposition.
+- Record complete Phase 0, CodeQL, GitGuardian, Dependency Review, and Sonar outcomes.
+- Close issue #26 only after reproducible successful pull-request and main analyses.
+- Preserve P0-T04 and P0-T05 without modification.
+dependencies:
+- P0-T03
+- P0-T08
+owner_role: Project owner and SonarQube Cloud project administrator
+reviewer_role: Independent quality and security reviewer
+risk_ids:
+- R-004
+- R-006
+- R-007
+- R-013
+- R-014
+- R-015
