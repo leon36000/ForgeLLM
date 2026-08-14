@@ -1,0 +1,148 @@
+{
+  "compute_domains": [
+    {
+      "attached_memory_ids": [
+        "llc-0",
+        "numa-dram-0",
+        "pinned-host-0"
+      ],
+      "capabilities": [
+        "avx2",
+        "int8"
+      ],
+      "description": "Synthetic CPU core group sharing one LLC domain.",
+      "id": "cpu-cache-group-0",
+      "kind": "cpu_group",
+      "rate_ops_per_second": {
+        "int8_ops": 2000000000000,
+        "scalar_ops": 100000000000
+      }
+    },
+    {
+      "attached_memory_ids": [
+        "gpu-memory-0"
+      ],
+      "capabilities": [
+        "int8",
+        "tensor_ops"
+      ],
+      "description": "Synthetic GPU compute domain.",
+      "id": "gpu-0",
+      "kind": "gpu",
+      "rate_ops_per_second": {
+        "int8_ops": 100000000000000,
+        "tensor_ops": 200000000000000
+      }
+    }
+  ],
+  "description": "Synthetic product-neutral topology for deterministic tests; values are not measurements.",
+  "links": [
+    {
+      "bandwidth_bytes_per_second": 32000000000,
+      "bidirectional": true,
+      "capabilities": [
+        "dma"
+      ],
+      "description": "Synthetic direct transfer abstraction for compact GPU-to-LLC messages.",
+      "id": "pcie-gpu-llc",
+      "kind": "pcie",
+      "latency_ns": 800,
+      "source_id": "gpu-memory-0",
+      "target_id": "missing-memory"
+    },
+    {
+      "bandwidth_bytes_per_second": 32000000000,
+      "bidirectional": true,
+      "capabilities": [
+        "dma"
+      ],
+      "description": "Synthetic GPU-to-DRAM link.",
+      "id": "pcie-gpu-numa",
+      "kind": "pcie",
+      "latency_ns": 900,
+      "source_id": "gpu-memory-0",
+      "target_id": "numa-dram-0"
+    },
+    {
+      "bandwidth_bytes_per_second": 32000000000,
+      "bidirectional": true,
+      "capabilities": [
+        "dma"
+      ],
+      "description": "Synthetic GPU-to-pinned-host link.",
+      "id": "pcie-gpu-pinned",
+      "kind": "pcie",
+      "latency_ns": 700,
+      "source_id": "gpu-memory-0",
+      "target_id": "pinned-host-0"
+    }
+  ],
+  "memory_domains": [
+    {
+      "associativity": 16,
+      "bandwidth_bytes_per_second": 1000000000000,
+      "capabilities": [
+        "cache_residency_candidate"
+      ],
+      "capacity_bytes": 100663296,
+      "description": "Synthetic last-level cache domain.",
+      "id": "llc-0",
+      "kind": "llc",
+      "latency_ns": 20,
+      "line_size_bytes": 64,
+      "numa_node_id": 0,
+      "sharing_compute_ids": [
+        "cpu-cache-group-0"
+      ]
+    },
+    {
+      "bandwidth_bytes_per_second": 100000000000,
+      "capabilities": [],
+      "capacity_bytes": 68719476736,
+      "description": "Synthetic local DRAM domain.",
+      "id": "numa-dram-0",
+      "kind": "numa_dram",
+      "latency_ns": 90,
+      "numa_node_id": 0,
+      "sharing_compute_ids": [
+        "cpu-cache-group-0"
+      ]
+    },
+    {
+      "bandwidth_bytes_per_second": 50000000000,
+      "capabilities": [
+        "dma_visible"
+      ],
+      "capacity_bytes": 1073741824,
+      "description": "Synthetic pinned host transfer buffer domain.",
+      "id": "pinned-host-0",
+      "kind": "pinned_host",
+      "latency_ns": 120,
+      "numa_node_id": 0,
+      "sharing_compute_ids": [
+        "cpu-cache-group-0"
+      ]
+    },
+    {
+      "bandwidth_bytes_per_second": 1500000000000,
+      "capabilities": [
+        "dma_visible"
+      ],
+      "capacity_bytes": 25769803776,
+      "description": "Synthetic GPU local memory domain.",
+      "id": "gpu-memory-0",
+      "kind": "gpu_memory",
+      "latency_ns": 10,
+      "sharing_compute_ids": [
+        "gpu-0"
+      ]
+    }
+  ],
+  "schema_version": "1.0",
+  "source_kind": "synthetic",
+  "telemetry_capabilities": [
+    "llc_misses",
+    "memory_bandwidth"
+  ],
+  "topology_id": "synthetic-cache-draft-v1"
+}

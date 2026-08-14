@@ -2,7 +2,7 @@ schema_version: '1.0'
 task_id: P0-T07
 title: Build the synthetic cache-aware topology and placement simulator
 phase: P0
-status: draft
+status: in_progress
 charter_goals:
 - Establish reproducible baselines before optimization.
 - Make heterogeneous resource and memory placement explicit.
@@ -19,6 +19,7 @@ non_goals:
 - Promote external performance claims to ForgeLLM evidence.
 - Bypass the P0-T04 inventory or P0-T05 workload-profile gates.
 inputs:
+- Owner authorization P0-T07 / subagent-driven recorded on 2026-08-14.
 - Owner-approved cache-aware heterogeneous inference specification.
 - Cache-aware heterogeneous inference program plan.
 - Cache-aware topology and placement simulator implementation plan.

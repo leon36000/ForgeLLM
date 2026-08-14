@@ -1,0 +1,268 @@
+{
+  "$defs": {
+    "capability": {
+      "pattern": "^[a-z0-9][a-z0-9._:-]{0,95}$",
+      "type": "string"
+    },
+    "compute_domain": {
+      "additionalProperties": false,
+      "properties": {
+        "attached_memory_ids": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "capabilities": {
+          "items": {
+            "$ref": "#/$defs/capability"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "description": {
+          "maxLength": 500,
+          "minLength": 1,
+          "type": "string"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "kind": {
+          "enum": [
+            "cpu_group",
+            "gpu",
+            "accelerator"
+          ]
+        },
+        "rate_ops_per_second": {
+          "$ref": "#/$defs/rate_map"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "capabilities",
+        "rate_ops_per_second",
+        "attached_memory_ids"
+      ],
+      "type": "object"
+    },
+    "id": {
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+      "type": "string"
+    },
+    "link_domain": {
+      "additionalProperties": false,
+      "properties": {
+        "bandwidth_bytes_per_second": {
+          "$ref": "#/$defs/positive"
+        },
+        "bidirectional": {
+          "type": "boolean"
+        },
+        "capabilities": {
+          "items": {
+            "$ref": "#/$defs/capability"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "description": {
+          "maxLength": 500,
+          "minLength": 1,
+          "type": "string"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "kind": {
+          "enum": [
+            "cache_path",
+            "numa",
+            "pcie",
+            "peer",
+            "network",
+            "storage"
+          ]
+        },
+        "latency_ns": {
+          "$ref": "#/$defs/non_negative"
+        },
+        "source_id": {
+          "$ref": "#/$defs/id"
+        },
+        "target_id": {
+          "$ref": "#/$defs/id"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "source_id",
+        "target_id",
+        "bandwidth_bytes_per_second",
+        "latency_ns",
+        "bidirectional",
+        "capabilities"
+      ],
+      "type": "object"
+    },
+    "memory_domain": {
+      "additionalProperties": false,
+      "properties": {
+        "associativity": {
+          "maximum": 65536,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "bandwidth_bytes_per_second": {
+          "$ref": "#/$defs/positive"
+        },
+        "capabilities": {
+          "items": {
+            "$ref": "#/$defs/capability"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "capacity_bytes": {
+          "$ref": "#/$defs/positive"
+        },
+        "description": {
+          "maxLength": 500,
+          "minLength": 1,
+          "type": "string"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "kind": {
+          "enum": [
+            "l1",
+            "l2",
+            "llc",
+            "numa_dram",
+            "pinned_host",
+            "gpu_memory",
+            "storage",
+            "remote"
+          ]
+        },
+        "latency_ns": {
+          "$ref": "#/$defs/non_negative"
+        },
+        "line_size_bytes": {
+          "maximum": 65536,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "numa_node_id": {
+          "maximum": 65535,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "sharing_compute_ids": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "capacity_bytes",
+        "bandwidth_bytes_per_second",
+        "latency_ns",
+        "sharing_compute_ids",
+        "capabilities"
+      ],
+      "type": "object"
+    },
+    "non_negative": {
+      "maximum": 9007199254740991,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "positive": {
+      "maximum": 9007199254740991,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "rate_map": {
+      "additionalProperties": {
+        "$ref": "#/$defs/positive"
+      },
+      "minProperties": 1,
+      "propertyNames": {
+        "$ref": "#/$defs/capability"
+      },
+      "type": "object"
+    }
+  },
+  "$id": "https://forgellm.dev/schemas/topology.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "compute_domains": {
+      "items": {
+        "$ref": "#/$defs/compute_domain"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "description": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "type": "string"
+    },
+    "links": {
+      "items": {
+        "$ref": "#/$defs/link_domain"
+      },
+      "type": "array"
+    },
+    "memory_domains": {
+      "items": {
+        "$ref": "#/$defs/memory_domain"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "1.0"
+    },
+    "source_kind": {
+      "enum": [
+        "synthetic",
+        "observed"
+      ]
+    },
+    "telemetry_capabilities": {
+      "items": {
+        "$ref": "#/$defs/capability"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "topology_id": {
+      "$ref": "#/$defs/id"
+    }
+  },
+  "required": [
+    "schema_version",
+    "topology_id",
+    "source_kind",
+    "compute_domains",
+    "memory_domains",
+    "links",
+    "telemetry_capabilities"
+  ],
+  "title": "ForgeLLM resource topology",
+  "type": "object"
+}

@@ -1,0 +1,243 @@
+{
+  "$defs": {
+    "candidate": {
+      "additionalProperties": false,
+      "properties": {
+        "component_id": {
+          "$ref": "#/$defs/id"
+        },
+        "compute_domain_id": {
+          "$ref": "#/$defs/id"
+        },
+        "implementation_id": {
+          "$ref": "#/$defs/id"
+        },
+        "memory_domain_id": {
+          "$ref": "#/$defs/id"
+        }
+      },
+      "required": [
+        "component_id",
+        "implementation_id",
+        "compute_domain_id",
+        "memory_domain_id"
+      ],
+      "type": "object"
+    },
+    "component_plan": {
+      "additionalProperties": false,
+      "properties": {
+        "component_id": {
+          "$ref": "#/$defs/id"
+        },
+        "fallback": {
+          "$ref": "#/$defs/evaluated"
+        },
+        "legal_candidates": {
+          "items": {
+            "$ref": "#/$defs/evaluated"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "rejected_candidates": {
+          "items": {
+            "$ref": "#/$defs/rejected"
+          },
+          "type": "array"
+        },
+        "selected": {
+          "$ref": "#/$defs/evaluated"
+        },
+        "selection_reason": {
+          "maxLength": 500,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "component_id",
+        "selected",
+        "fallback",
+        "legal_candidates",
+        "rejected_candidates",
+        "selection_reason"
+      ],
+      "type": "object"
+    },
+    "cost": {
+      "additionalProperties": false,
+      "properties": {
+        "compute_ns": {
+          "$ref": "#/$defs/non_negative"
+        },
+        "input_transfer_ns": {
+          "$ref": "#/$defs/non_negative"
+        },
+        "output_transfer_ns": {
+          "$ref": "#/$defs/non_negative"
+        },
+        "resident_memory_ns": {
+          "$ref": "#/$defs/non_negative"
+        },
+        "synchronization_ns": {
+          "$ref": "#/$defs/non_negative"
+        },
+        "total_ns": {
+          "$ref": "#/$defs/non_negative"
+        },
+        "warmup_amortization_ns": {
+          "$ref": "#/$defs/non_negative"
+        }
+      },
+      "required": [
+        "compute_ns",
+        "resident_memory_ns",
+        "input_transfer_ns",
+        "output_transfer_ns",
+        "synchronization_ns",
+        "warmup_amortization_ns",
+        "total_ns"
+      ],
+      "type": "object"
+    },
+    "evaluated": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate": {
+          "$ref": "#/$defs/candidate"
+        },
+        "cost": {
+          "$ref": "#/$defs/cost"
+        },
+        "is_generic_fallback": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "candidate",
+        "cost",
+        "is_generic_fallback"
+      ],
+      "type": "object"
+    },
+    "id": {
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+      "type": "string"
+    },
+    "non_negative": {
+      "maximum": 9007199254740991,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "rejected": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate": {
+          "$ref": "#/$defs/candidate"
+        },
+        "codes": {
+          "items": {
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "details": {
+          "items": {
+            "maxLength": 500,
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "candidate",
+        "codes",
+        "details"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://forgellm.dev/schemas/placement-result.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "components": {
+      "items": {
+        "$ref": "#/$defs/component_plan"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "evidence_boundary": {
+      "const": "synthetic_only"
+    },
+    "inputs": {
+      "additionalProperties": false,
+      "properties": {
+        "components_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "topology_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "topology_sha256",
+        "components_sha256"
+      ],
+      "type": "object"
+    },
+    "objective": {
+      "const": "latency_ns"
+    },
+    "profile_id": {
+      "$ref": "#/$defs/id"
+    },
+    "schema_version": {
+      "const": "1.0"
+    },
+    "simulator_version": {
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "type": "string"
+    },
+    "topology_id": {
+      "$ref": "#/$defs/id"
+    },
+    "unsupported_cost_terms": {
+      "items": {
+        "enum": [
+          "acceptance_rate_feedback",
+          "cache_miss_penalty",
+          "energy",
+          "interference",
+          "multi_hop_routing",
+          "overlap",
+          "queueing"
+        ]
+      },
+      "type": "array",
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "schema_version",
+    "simulator_version",
+    "evidence_boundary",
+    "objective",
+    "topology_id",
+    "profile_id",
+    "inputs",
+    "unsupported_cost_terms",
+    "components"
+  ],
+  "title": "ForgeLLM synthetic placement result",
+  "type": "object"
+}

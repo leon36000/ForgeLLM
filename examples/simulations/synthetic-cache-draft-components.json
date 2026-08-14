@@ -1,0 +1,123 @@
+{
+  "schema_version": "1.0",
+  "profile_id": "cache-draft-components-v1",
+  "description": "Synthetic product-neutral cache-draft components; all sizes and operation counts are hypothetical.",
+  "components": [
+    {
+      "id": "confidence-head",
+      "description": "Synthetic compact confidence head.",
+      "phase": "draft",
+      "exactness_mode": "exact",
+      "immutable_bytes": 8388608,
+      "mutable_bytes_per_request": 4096,
+      "workspace_bytes": 1048576,
+      "input_domain_id": "gpu-memory-0",
+      "output_domain_id": "gpu-memory-0",
+      "input_bytes": 8192,
+      "output_bytes": 4096,
+      "synchronization_ns": 100,
+      "warmup_ns": 100000,
+      "warmup_amortization_requests": 100,
+      "fallback_implementation_id": "cpu-generic",
+      "implementations": [
+        {
+          "id": "cpu-llc",
+          "description": "Synthetic LLC-resident CPU implementation.",
+          "compute_kind": "cpu_group",
+          "rate_key": "int8_ops",
+          "operations": 100000000,
+          "bytes_read": 8388608,
+          "bytes_written": 4096,
+          "required_capabilities": ["int8"],
+          "allowed_memory_kinds": ["llc"],
+          "requires_residency": true,
+          "is_generic_fallback": false
+        },
+        {
+          "id": "cpu-generic",
+          "description": "Synthetic generic CPU fallback.",
+          "compute_kind": "cpu_group",
+          "rate_key": "int8_ops",
+          "operations": 100000000,
+          "bytes_read": 8388608,
+          "bytes_written": 4096,
+          "required_capabilities": ["int8"],
+          "allowed_memory_kinds": ["numa_dram", "pinned_host"],
+          "requires_residency": false,
+          "is_generic_fallback": true
+        },
+        {
+          "id": "gpu",
+          "description": "Synthetic accelerator implementation with intentionally higher setup work for this small component.",
+          "compute_kind": "gpu",
+          "rate_key": "int8_ops",
+          "operations": 10000000000,
+          "bytes_read": 8388608,
+          "bytes_written": 4096,
+          "required_capabilities": ["int8"],
+          "allowed_memory_kinds": ["gpu_memory"],
+          "requires_residency": false,
+          "is_generic_fallback": false
+        }
+      ]
+    },
+    {
+      "id": "markov-head",
+      "description": "Synthetic low-rank Markov draft head.",
+      "phase": "draft",
+      "exactness_mode": "exact",
+      "immutable_bytes": 67108864,
+      "mutable_bytes_per_request": 1048576,
+      "workspace_bytes": 4194304,
+      "input_domain_id": "gpu-memory-0",
+      "output_domain_id": "gpu-memory-0",
+      "input_bytes": 65536,
+      "output_bytes": 16384,
+      "synchronization_ns": 200,
+      "warmup_ns": 500000,
+      "warmup_amortization_requests": 200,
+      "fallback_implementation_id": "cpu-generic",
+      "implementations": [
+        {
+          "id": "cpu-llc",
+          "description": "Synthetic residency-sensitive CPU implementation.",
+          "compute_kind": "cpu_group",
+          "rate_key": "int8_ops",
+          "operations": 5000000000,
+          "bytes_read": 67108864,
+          "bytes_written": 16384,
+          "required_capabilities": ["int8"],
+          "allowed_memory_kinds": ["llc"],
+          "requires_residency": true,
+          "is_generic_fallback": false
+        },
+        {
+          "id": "cpu-generic",
+          "description": "Synthetic generic CPU fallback.",
+          "compute_kind": "cpu_group",
+          "rate_key": "int8_ops",
+          "operations": 5000000000,
+          "bytes_read": 67108864,
+          "bytes_written": 16384,
+          "required_capabilities": ["int8"],
+          "allowed_memory_kinds": ["numa_dram", "pinned_host"],
+          "requires_residency": false,
+          "is_generic_fallback": true
+        },
+        {
+          "id": "gpu",
+          "description": "Synthetic accelerator implementation.",
+          "compute_kind": "gpu",
+          "rate_key": "int8_ops",
+          "operations": 5000000000,
+          "bytes_read": 67108864,
+          "bytes_written": 16384,
+          "required_capabilities": ["int8"],
+          "allowed_memory_kinds": ["gpu_memory"],
+          "requires_residency": false,
+          "is_generic_fallback": false
+        }
+      ]
+    }
+  ]
+}
