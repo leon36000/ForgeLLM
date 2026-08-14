@@ -10,7 +10,7 @@ validate:
 	$(PYTHON) scripts/validate_task_packet.py examples/tasks/P0-T02.yaml --root .
 	$(PYTHON) scripts/validate_task_packet.py tasks/open/P0-T03-repository-hardening.yaml --root .
 	$(PYTHON) scripts/validate_task_packet.py tasks/open/P0-T04-first-hardware-inventory.yaml --root .
-	$(PYTHON) scripts/validate_task_packet.py tasks/open/P0-T07-cache-aware-placement-simulator.yaml --root .
+	$(PYTHON) scripts/validate_task_packet.py tasks/closed/P0-T07-cache-aware-placement-simulator.yaml --root .
 	$(PYTHON) scripts/validate_topology.py examples/simulations/synthetic-cache-draft-topology.json --root .
 	$(PYTHON) scripts/validate_component_profile.py examples/simulations/synthetic-cache-draft-components.json --root .
 	$(PYTHON) scripts/hash_mobile_context.py --root .
@@ -34,10 +34,7 @@ simulate-cache-draft:
 	  --topology examples/simulations/synthetic-cache-draft-topology.json \
 	  --components examples/simulations/synthetic-cache-draft-components.json \
 	  --output artifacts/simulations/synthetic-cache-draft-result.json
-	sha256sum \
-	  examples/simulations/synthetic-cache-draft-topology.json \
-	  examples/simulations/synthetic-cache-draft-components.json \
-	  artifacts/simulations/synthetic-cache-draft-result.json
+	sha256sum -c artifacts/simulations/P0-T07-evidence.sha256
 
 inventory:
 	$(PYTHON) scripts/hardware_inventory.py --output artifacts/hardware-local.json

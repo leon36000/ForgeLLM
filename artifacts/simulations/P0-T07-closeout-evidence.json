@@ -1,0 +1,76 @@
+{
+  "claims_not_established": [
+    "hardware performance",
+    "inference correctness",
+    "model support",
+    "runtime readiness",
+    "accelerator compatibility",
+    "energy efficiency"
+  ],
+  "evidence_boundary": "synthetic_only",
+  "owner_authorization": {
+    "mode": "subagent-driven",
+    "recorded_date": "2026-08-14"
+  },
+  "post_merge_gates": {
+    "codeql": {
+      "alert_details": "not_asserted",
+      "conclusion": "success",
+      "job_id": 94717633957,
+      "run_id": 31784610881
+    },
+    "phase0": {
+      "conclusion": "success",
+      "job_id": 94717633943,
+      "run_id": 31784610893
+    }
+  },
+  "pull_request_gates": {
+    "codeql": {
+      "alert_details": "not_asserted",
+      "conclusion": "success",
+      "job_id": 94716597658,
+      "run_id": 31784275655
+    },
+    "dependency_review": {
+      "conclusion": "skipped",
+      "required": false,
+      "run_id": 31784275656
+    },
+    "fresh_context_review": {
+      "review_id": 4935425596,
+      "verdict": "ACCEPT"
+    },
+    "phase0": {
+      "canonical_simulation_executed": true,
+      "conclusion": "success",
+      "job_id": 94716606110,
+      "run_id": 31784275654,
+      "tests_passed": 102
+    }
+  },
+  "schema_version": "1.0",
+  "source": {
+    "base_commit": "d5cd25bd9d6fc3f9cded27781c2051939dcdde85",
+    "merge_commit": "b0f3f241537b50de0dd3c0cb7bc2e6bf274a7034",
+    "pull_request": 20,
+    "repository": "leon36000/ForgeLLM",
+    "reviewed_head": "99c1c1488f622a6d4290e21a17ff313a1c3568c6"
+  },
+  "state_transition": "S-0005-to-S-0006",
+  "synthetic_artifacts": {
+    "components_sha256": "3aa6dcb2504aebee7c3db236abdd59867efe25296420bdc7e9ba1883061f4cb5",
+    "result_sha256": "e5eb661bb48eca62b778714670000f963922ca459cb8590b3717150993a921ae",
+    "topology_sha256": "6738d9596a2a9b9224a68e071a94463cdcbe7cff10a7cd30c4de29cd3381aa2f"
+  },
+  "task_id": "P0-T07",
+  "unsupported_cost_terms": [
+    "acceptance_rate_feedback",
+    "cache_miss_penalty",
+    "energy",
+    "interference",
+    "multi_hop_routing",
+    "overlap",
+    "queueing"
+  ]
+}
