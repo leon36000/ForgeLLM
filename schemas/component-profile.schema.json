@@ -1,0 +1,217 @@
+{
+  "$defs": {
+    "capability": {
+      "pattern": "^[a-z0-9][a-z0-9._:-]{0,95}$",
+      "type": "string"
+    },
+    "component": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "maxLength": 500,
+          "minLength": 1,
+          "type": "string"
+        },
+        "exactness_mode": {
+          "enum": [
+            "exact",
+            "approximate"
+          ]
+        },
+        "fallback_implementation_id": {
+          "$ref": "#/$defs/id"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "immutable_bytes": {
+          "$ref": "#/$defs/non_negative"
+        },
+        "implementations": {
+          "items": {
+            "$ref": "#/$defs/implementation"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "input_bytes": {
+          "$ref": "#/$defs/non_negative"
+        },
+        "input_domain_id": {
+          "$ref": "#/$defs/id"
+        },
+        "mutable_bytes_per_request": {
+          "$ref": "#/$defs/non_negative"
+        },
+        "output_bytes": {
+          "$ref": "#/$defs/non_negative"
+        },
+        "output_domain_id": {
+          "$ref": "#/$defs/id"
+        },
+        "phase": {
+          "enum": [
+            "prefill",
+            "decode",
+            "draft",
+            "verification",
+            "sampling",
+            "transfer"
+          ]
+        },
+        "synchronization_ns": {
+          "$ref": "#/$defs/non_negative"
+        },
+        "warmup_amortization_requests": {
+          "$ref": "#/$defs/positive"
+        },
+        "warmup_ns": {
+          "$ref": "#/$defs/non_negative"
+        },
+        "workspace_bytes": {
+          "$ref": "#/$defs/non_negative"
+        }
+      },
+      "required": [
+        "id",
+        "phase",
+        "exactness_mode",
+        "immutable_bytes",
+        "mutable_bytes_per_request",
+        "workspace_bytes",
+        "input_domain_id",
+        "output_domain_id",
+        "input_bytes",
+        "output_bytes",
+        "synchronization_ns",
+        "warmup_ns",
+        "warmup_amortization_requests",
+        "fallback_implementation_id",
+        "implementations"
+      ],
+      "type": "object"
+    },
+    "id": {
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+      "type": "string"
+    },
+    "implementation": {
+      "additionalProperties": false,
+      "properties": {
+        "allowed_memory_kinds": {
+          "items": {
+            "$ref": "#/$defs/memory_kind"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "bytes_read": {
+          "$ref": "#/$defs/non_negative"
+        },
+        "bytes_written": {
+          "$ref": "#/$defs/non_negative"
+        },
+        "compute_kind": {
+          "enum": [
+            "cpu_group",
+            "gpu",
+            "accelerator"
+          ]
+        },
+        "description": {
+          "maxLength": 500,
+          "minLength": 1,
+          "type": "string"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "is_generic_fallback": {
+          "type": "boolean"
+        },
+        "operations": {
+          "$ref": "#/$defs/non_negative"
+        },
+        "rate_key": {
+          "$ref": "#/$defs/capability"
+        },
+        "required_capabilities": {
+          "items": {
+            "$ref": "#/$defs/capability"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "requires_residency": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "compute_kind",
+        "rate_key",
+        "operations",
+        "bytes_read",
+        "bytes_written",
+        "required_capabilities",
+        "allowed_memory_kinds",
+        "requires_residency",
+        "is_generic_fallback"
+      ],
+      "type": "object"
+    },
+    "memory_kind": {
+      "enum": [
+        "l1",
+        "l2",
+        "llc",
+        "numa_dram",
+        "pinned_host",
+        "gpu_memory",
+        "storage",
+        "remote"
+      ]
+    },
+    "non_negative": {
+      "maximum": 9007199254740991,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "positive": {
+      "maximum": 9007199254740991,
+      "minimum": 1,
+      "type": "integer"
+    }
+  },
+  "$id": "https://forgellm.dev/schemas/component-profile.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "components": {
+      "items": {
+        "$ref": "#/$defs/component"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "description": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "type": "string"
+    },
+    "profile_id": {
+      "$ref": "#/$defs/id"
+    },
+    "schema_version": {
+      "const": "1.0"
+    }
+  },
+  "required": [
+    "schema_version",
+    "profile_id",
+    "components"
+  ],
+  "title": "ForgeLLM component placement profile",
+  "type": "object"
+}
