@@ -2,7 +2,7 @@ schema_version: '1.0'
 task_id: P0-T08
 title: Build exact speculative-decoding reference semantics
 phase: P0
-status: in_progress
+status: review
 charter_goals:
 - Preserve inference correctness independently of hardware optimization.
 - Establish falsifiable reference semantics before runtime implementation.
@@ -22,6 +22,11 @@ inputs:
 - CLM-047 scoped external claim.
 - CA-03 exact speculative-decoding research synthesis.
 - Owner-authorized exact speculative-decoding specification and implementation plan.
+- Implementation pull request #24 based on 1cd502609c7b05ac628057f79a9135b07c08e821.
+- Implementation-reviewed head 16efc462270a45f386a339aaeccef9d4d773b4a4.
+- Phase 0 run 31831427741 and job 94867790897 succeeded with 332 complete tests and 230 focused tests.
+- CodeQL run 31831427752 and job 94867791028 succeeded; alert count is not asserted.
+- Specification-compliance and code-quality verdicts are recorded as ACCEPT in docs/reviews/P0-T08-EXACT-SPECULATIVE-SEMANTICS-REVIEW.md.
 outputs:
 - Immutable exact finite distribution and deterministic random-tape primitives.
 - One-token modified rejection-sampling kernel.
