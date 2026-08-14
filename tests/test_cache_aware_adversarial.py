@@ -44,7 +44,7 @@ def _plans(root: Path, topology: Path, components: Path) -> str:
 
 def test_duplicate_id_across_domain_kinds_fails_closed(tmp_path: Path) -> None:
     root, topology, _ = _root(tmp_path)
-    data = json.loads(topology.read_text())
+    data = json.loads(topology.read_text(encoding="utf-8"))
     data["memory_domains"][0]["id"] = data["compute_domains"][0]["id"]
     _write(topology, data)
     with pytest.raises(TopologyValidationError, match="duplicate domain id"):
@@ -53,7 +53,7 @@ def test_duplicate_id_across_domain_kinds_fails_closed(tmp_path: Path) -> None:
 
 def test_unresolved_attachment_and_ambiguous_bidirectional_link_fail(tmp_path: Path) -> None:
     root, topology, _ = _root(tmp_path)
-    data = json.loads(topology.read_text())
+    data = json.loads(topology.read_text(encoding="utf-8"))
     data["compute_domains"][0]["attached_memory_ids"].append("missing-memory")
     duplicate = dict(data["links"][0])
     duplicate["id"] = "pcie-gpu-llc-duplicate"
@@ -69,7 +69,7 @@ def test_unresolved_attachment_and_ambiguous_bidirectional_link_fail(tmp_path: P
 @pytest.mark.parametrize("rate", [0, -1, 9_007_199_254_740_992])
 def test_invalid_or_unrepresentable_rate_is_schema_rejected(tmp_path: Path, rate: int) -> None:
     root, topology, _ = _root(tmp_path)
-    data = json.loads(topology.read_text())
+    data = json.loads(topology.read_text(encoding="utf-8"))
     data["compute_domains"][0]["rate_ops_per_second"]["int8_ops"] = rate
     _write(topology, data)
     with pytest.raises(TopologyValidationError):
@@ -78,7 +78,7 @@ def test_invalid_or_unrepresentable_rate_is_schema_rejected(tmp_path: Path, rate
 
 def test_missing_or_incapable_fallback_fails_before_selection(tmp_path: Path) -> None:
     root, topology, components = _root(tmp_path)
-    data = json.loads(components.read_text())
+    data = json.loads(components.read_text(encoding="utf-8"))
     confidence = next(item for item in data["components"] if item["id"] == "confidence-head")
     fallback = next(item for item in confidence["implementations"] if item["id"] == "cpu-generic")
     fallback["required_capabilities"].append("unknown-capability")
@@ -91,7 +91,7 @@ def test_missing_or_incapable_fallback_fails_before_selection(tmp_path: Path) ->
 
 def test_missing_direct_link_is_a_stable_rejection(tmp_path: Path) -> None:
     root, topology, components = _root(tmp_path)
-    topology_data = json.loads(topology.read_text())
+    topology_data = json.loads(topology.read_text(encoding="utf-8"))
     topology_data["links"] = [
         item for item in topology_data["links"] if item["target_id"] != "llc-0"
     ]
@@ -114,13 +114,13 @@ def test_missing_direct_link_is_a_stable_rejection(tmp_path: Path) -> None:
 def test_descriptions_and_unrelated_telemetry_do_not_change_plan(tmp_path: Path) -> None:
     root, topology, components = _root(tmp_path)
     baseline = _plans(root, topology, components)
-    topology_data = json.loads(topology.read_text())
+    topology_data = json.loads(topology.read_text(encoding="utf-8"))
     topology_data["description"] = "Arbitrary product description with no policy meaning."
     topology_data["telemetry_capabilities"].append("unrelated_counter")
     for item in topology_data["compute_domains"] + topology_data["memory_domains"]:
         item["description"] = f"Changed description for {item['id']}"
     _write(topology, topology_data)
-    component_data = json.loads(components.read_text())
+    component_data = json.loads(components.read_text(encoding="utf-8"))
     component_data["description"] = "Changed prose only."
     _write(components, component_data)
     assert _plans(root, topology, components) == baseline
@@ -129,11 +129,11 @@ def test_descriptions_and_unrelated_telemetry_do_not_change_plan(tmp_path: Path)
 def test_reordered_arrays_produce_the_same_selected_plan(tmp_path: Path) -> None:
     root, topology, components = _root(tmp_path)
     baseline = _plans(root, topology, components)
-    topology_data = json.loads(topology.read_text())
+    topology_data = json.loads(topology.read_text(encoding="utf-8"))
     for key in ("compute_domains", "memory_domains", "links", "telemetry_capabilities"):
         topology_data[key] = list(reversed(topology_data[key]))
     _write(topology, topology_data)
-    component_data = json.loads(components.read_text())
+    component_data = json.loads(components.read_text(encoding="utf-8"))
     component_data["components"] = list(reversed(component_data["components"]))
     for component in component_data["components"]:
         component["implementations"] = list(reversed(component["implementations"]))
@@ -143,7 +143,7 @@ def test_reordered_arrays_produce_the_same_selected_plan(tmp_path: Path) -> None
 
 def test_future_schema_version_fails_closed(tmp_path: Path) -> None:
     root, topology, _ = _root(tmp_path)
-    data = json.loads(topology.read_text())
+    data = json.loads(topology.read_text(encoding="utf-8"))
     data["schema_version"] = "2.0"
     _write(topology, data)
     with pytest.raises(TopologyValidationError):

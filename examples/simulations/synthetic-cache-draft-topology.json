@@ -1,0 +1,113 @@
+{
+  "schema_version": "1.0",
+  "topology_id": "synthetic-cache-draft-v1",
+  "source_kind": "synthetic",
+  "description": "Synthetic product-neutral topology for deterministic simulation; all capacities and rates are hypothetical and are not measured performance.",
+  "compute_domains": [
+    {
+      "id": "cpu-cache-group-0",
+      "kind": "cpu_group",
+      "description": "Synthetic CPU core group sharing one LLC domain.",
+      "capabilities": ["avx2", "int8"],
+      "rate_ops_per_second": {
+        "int8_ops": 2000000000000,
+        "scalar_ops": 100000000000
+      },
+      "attached_memory_ids": ["llc-0", "numa-dram-0", "pinned-host-0"]
+    },
+    {
+      "id": "gpu-0",
+      "kind": "gpu",
+      "description": "Synthetic accelerator compute domain.",
+      "capabilities": ["int8", "tensor_ops"],
+      "rate_ops_per_second": {
+        "int8_ops": 100000000000000,
+        "tensor_ops": 200000000000000
+      },
+      "attached_memory_ids": ["gpu-memory-0"]
+    }
+  ],
+  "memory_domains": [
+    {
+      "id": "llc-0",
+      "kind": "llc",
+      "description": "Synthetic last-level cache domain.",
+      "capacity_bytes": 100663296,
+      "bandwidth_bytes_per_second": 1000000000000,
+      "latency_ns": 20,
+      "sharing_compute_ids": ["cpu-cache-group-0"],
+      "capabilities": ["cache_residency_candidate"],
+      "line_size_bytes": 64,
+      "associativity": 16,
+      "numa_node_id": 0
+    },
+    {
+      "id": "numa-dram-0",
+      "kind": "numa_dram",
+      "description": "Synthetic local DRAM domain.",
+      "capacity_bytes": 68719476736,
+      "bandwidth_bytes_per_second": 100000000000,
+      "latency_ns": 90,
+      "sharing_compute_ids": ["cpu-cache-group-0"],
+      "capabilities": [],
+      "numa_node_id": 0
+    },
+    {
+      "id": "pinned-host-0",
+      "kind": "pinned_host",
+      "description": "Synthetic pinned host transfer buffer domain.",
+      "capacity_bytes": 1073741824,
+      "bandwidth_bytes_per_second": 50000000000,
+      "latency_ns": 120,
+      "sharing_compute_ids": ["cpu-cache-group-0"],
+      "capabilities": ["dma_visible"],
+      "numa_node_id": 0
+    },
+    {
+      "id": "gpu-memory-0",
+      "kind": "gpu_memory",
+      "description": "Synthetic accelerator-local memory domain.",
+      "capacity_bytes": 25769803776,
+      "bandwidth_bytes_per_second": 1500000000000,
+      "latency_ns": 10,
+      "sharing_compute_ids": ["gpu-0"],
+      "capabilities": ["dma_visible"]
+    }
+  ],
+  "links": [
+    {
+      "id": "pcie-gpu-llc",
+      "kind": "pcie",
+      "description": "Synthetic direct transfer abstraction for compact accelerator-memory to LLC messages.",
+      "source_id": "gpu-memory-0",
+      "target_id": "llc-0",
+      "bandwidth_bytes_per_second": 32000000000,
+      "latency_ns": 800,
+      "bidirectional": true,
+      "capabilities": ["dma"]
+    },
+    {
+      "id": "pcie-gpu-numa",
+      "kind": "pcie",
+      "description": "Synthetic accelerator-memory to DRAM link.",
+      "source_id": "gpu-memory-0",
+      "target_id": "numa-dram-0",
+      "bandwidth_bytes_per_second": 32000000000,
+      "latency_ns": 900,
+      "bidirectional": true,
+      "capabilities": ["dma"]
+    },
+    {
+      "id": "pcie-gpu-pinned",
+      "kind": "pcie",
+      "description": "Synthetic accelerator-memory to pinned-host link.",
+      "source_id": "gpu-memory-0",
+      "target_id": "pinned-host-0",
+      "bandwidth_bytes_per_second": 32000000000,
+      "latency_ns": 700,
+      "bidirectional": true,
+      "capabilities": ["dma"]
+    }
+  ],
+  "telemetry_capabilities": ["llc_misses", "memory_bandwidth"]
+}
