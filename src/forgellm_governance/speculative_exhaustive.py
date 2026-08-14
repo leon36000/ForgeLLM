@@ -387,7 +387,9 @@ def _compose_round_outcomes(
             current_prefix + emitted,
             remaining - len(emitted),
         )
-        outcomes.extend((emitted + suffix, round_mass * suffix_mass) for suffix, suffix_mass in suffix_law.probabilities)
+        outcomes.extend(
+            (emitted + suffix, round_mass * suffix_mass) for suffix, suffix_mass in suffix_law.probabilities
+        )
     return outcomes
 
 
