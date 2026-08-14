@@ -2,7 +2,7 @@ schema_version: '1.0'
 task_id: P0-T09
 title: Stabilize SonarQube Cloud analysis on protected main
 phase: P0
-status: draft
+status: in_progress
 charter_goals:
 - Preserve canonical project state in version control.
 - Prevent unverified external integrations from becoming a source of truth.
@@ -16,14 +16,17 @@ non_goals:
 - Commit a Sonar credential or unsanitized project-administration payload.
 - Claim repository-wide zero Sonar findings from a clean pull-request new-code gate.
 inputs:
-- Canonical S-0007 state at e669f5e1a6913005fbba8d34e9ba8bdfce91c460.
-- QG-01 tracking issue #26.
+- Owner authorization P0-T09 / subagent-driven recorded on 2026-08-14.
+- Canonical S-0007 main commit 1b1a3621fcdf4129268663c497cdcd53aed48c29.
+- QG-01 tracking issue #26 and authorization comment 5298369164.
+- Canonical QG-01 design and implementation plan merged by pull request #28.
 - P0-T08 implementation and remediation evidence from pull requests #24 and #25.
-- SonarQube Cloud pull-request checks 94889986512 and 94892322303, both passed with zero new issues.
-- SonarQube Cloud main checks 94890528740 and 94892860919, both cancelled or failed without GitHub annotations.
-- Official SonarQube Cloud automatic-analysis, CI-based-analysis, troubleshooting, and project-binding documentation.
-- Owner authorization for P0-T09 and the selected analysis method is not yet recorded.
+- SonarQube Cloud pull-request checks 94889986512, 94892322303, and 94894565075 passed with zero new issues.
+- SonarQube Cloud main checks 94890528740, 94892860919, and 94894966719 were cancelled or failed without GitHub annotations.
+- Official SonarQube Cloud automatic-analysis, CI-based-analysis, troubleshooting, Web API, and project-binding documentation.
+- Public GitHub check-run evidence and official documentation are available.
 - Authenticated read-only Sonar project administration and activity evidence is not yet available.
+- No analysis method has been selected.
 outputs:
 - Sanitized machine-readable baseline of pull-request and main analysis evidence.
 - Read-only diagnosis and explicit failure classification.
@@ -53,7 +56,7 @@ allowed_paths:
 - chatgpt/mobile-core/03_FORGELLM_STATE_AND_DECISIONS.md
 - Makefile
 forbidden_actions:
-- Change any Sonar or GitHub setting before owner authorization and read-only diagnosis evidence.
+- Change any Sonar or GitHub setting before read-only diagnosis evidence and a reviewed method-selection ADR.
 - Run automatic analysis and a CI scanner against the same Sonar project concurrently.
 - Print, log, commit, or transmit SONAR_TOKEN outside the approved GitHub secret boundary.
 - Use an unpinned third-party GitHub Action.
