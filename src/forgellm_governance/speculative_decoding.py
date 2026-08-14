@@ -56,6 +56,8 @@ def exact_bernoulli(
 ) -> tuple[bool, RandomTape]:
     """Sample an exact Bernoulli choice using an immutable integer tape."""
 
+    if not isinstance(tape, RandomTape):
+        raise ProposalValidationError("tape must be a RandomTape")
     if not isinstance(probability, Fraction):
         raise ProposalValidationError("probability must be a Fraction")
     if not 0 <= probability <= 1:
@@ -189,6 +191,8 @@ def _validate_round_primitives(result: SampledRoundResult) -> None:
         raise ProposalValidationError(str(exc)) from exc
     if not isinstance(result.tape, RandomTape):
         raise ProposalValidationError("tape must be a RandomTape")
+    if not isinstance(result.acceptance_probabilities, tuple):
+        raise ProposalValidationError("acceptance_probabilities must be a tuple")
     if any(not isinstance(value, Fraction) or not 0 <= value <= 1 for value in result.acceptance_probabilities):
         raise ProposalValidationError("acceptance probabilities must be Fractions between zero and one")
 
@@ -196,6 +200,8 @@ def _validate_round_primitives(result: SampledRoundResult) -> None:
 def _validate_round_structure(result: SampledRoundResult) -> None:
     if result.remaining_budget > 0 and not result.proposed_tokens:
         raise ProposalValidationError("positive budget requires at least one proposal")
+    if len(result.proposed_tokens) > result.remaining_budget:
+        raise ProposalValidationError("round proposed more tokens than remaining budget")
     if result.eos_token_id in result.proposed_tokens[:-1]:
         raise ProposalValidationError("EOS must be the final proposed token")
     if result.accepted_count > len(result.proposed_tokens):
