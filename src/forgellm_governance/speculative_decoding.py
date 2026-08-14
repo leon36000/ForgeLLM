@@ -21,6 +21,7 @@ class ProposalValidationError(ValueError):
 
 
 CorrectionKind = Literal["accepted", "residual"]
+RANDOM_TAPE_REQUIRED = "tape must be a RandomTape"
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,7 +37,7 @@ class OneTokenDecision:
         validate_token_id(self.proposed_token, name="proposed_token")
         validate_token_id(self.emitted_token, name="emitted_token")
         if not isinstance(self.tape, RandomTape):
-            raise ProposalValidationError("tape must be a RandomTape")
+            raise ProposalValidationError(RANDOM_TAPE_REQUIRED)
         if not isinstance(self.acceptance_probability, Fraction):
             raise ProposalValidationError("acceptance_probability must be a Fraction")
         if not 0 <= self.acceptance_probability <= 1:
@@ -63,7 +64,7 @@ def exact_bernoulli(
     """Sample an exact Bernoulli choice using an immutable integer tape."""
 
     if not isinstance(tape, RandomTape):
-        raise ProposalValidationError("tape must be a RandomTape")
+        raise ProposalValidationError(RANDOM_TAPE_REQUIRED)
     if not isinstance(probability, Fraction):
         raise ProposalValidationError("probability must be a Fraction")
     if not 0 <= probability <= 1:
@@ -196,11 +197,16 @@ def _validate_round_primitives(result: SampledRoundResult) -> None:
     except ValueError as exc:
         raise ProposalValidationError(str(exc)) from exc
     if not isinstance(result.tape, RandomTape):
-        raise ProposalValidationError("tape must be a RandomTape")
+        raise ProposalValidationError(RANDOM_TAPE_REQUIRED)
     if not isinstance(result.acceptance_probabilities, tuple):
         raise ProposalValidationError("acceptance_probabilities must be a tuple")
-    if any(not isinstance(value, Fraction) or not 0 <= value <= 1 for value in result.acceptance_probabilities):
-        raise ProposalValidationError("acceptance probabilities must be Fractions between zero and one")
+    if any(
+        not isinstance(value, Fraction) or not 0 <= value <= 1
+        for value in result.acceptance_probabilities
+    ):
+        raise ProposalValidationError(
+            "acceptance probabilities must be Fractions between zero and one"
+        )
 
 
 def _validate_round_structure(result: SampledRoundResult) -> None:
@@ -214,8 +220,13 @@ def _validate_round_structure(result: SampledRoundResult) -> None:
         raise ProposalValidationError("accepted_count exceeds proposed token count")
     if len(result.emitted_tokens) > result.remaining_budget:
         raise ProposalValidationError("round emitted more tokens than remaining budget")
-    if result.proposed_tokens[: result.accepted_count] != result.emitted_tokens[: result.accepted_count]:
-        raise ProposalValidationError("accepted proposal prefix must equal emitted proposal prefix")
+    if (
+        result.proposed_tokens[: result.accepted_count]
+        != result.emitted_tokens[: result.accepted_count]
+    ):
+        raise ProposalValidationError(
+            "accepted proposal prefix must equal emitted proposal prefix"
+        )
     if result.eos_token_id in result.emitted_tokens[:-1]:
         raise ProposalValidationError("EOS must be the final emitted token")
 
@@ -226,32 +237,49 @@ def _validate_residual_branch(result: SampledRoundResult) -> None:
     if len(result.acceptance_probabilities) != result.accepted_count + 1:
         raise ProposalValidationError("residual branch must record through first rejection")
     if result.acceptance_probabilities[-1] == 1:
-        raise ProposalValidationError("rejected proposal requires acceptance probability below one")
+        raise ProposalValidationError(
+            "rejected proposal requires acceptance probability below one"
+        )
     if len(result.emitted_tokens) != result.accepted_count + 1:
-        raise ProposalValidationError("residual branch emits accepted prefix plus one correction")
+        raise ProposalValidationError(
+            "residual branch emits accepted prefix plus one correction"
+        )
 
 
 def _validate_bonus_branch(result: SampledRoundResult) -> None:
     if result.accepted_count != len(result.proposed_tokens):
         raise ProposalValidationError("bonus requires every proposal to be accepted")
     if len(result.acceptance_probabilities) != result.accepted_count:
-        raise ProposalValidationError("bonus branch must record exactly every accepted proposal")
+        raise ProposalValidationError(
+            "bonus branch must record exactly every accepted proposal"
+        )
     if len(result.emitted_tokens) != len(result.proposed_tokens) + 1:
-        raise ProposalValidationError("bonus branch emits proposals plus one target token")
+        raise ProposalValidationError(
+            "bonus branch emits proposals plus one target token"
+        )
 
 
 def _validate_none_branch(result: SampledRoundResult) -> None:
     if result.accepted_count != len(result.proposed_tokens):
-        raise ProposalValidationError("none branch requires every generated proposal to be accepted")
+        raise ProposalValidationError(
+            "none branch requires every generated proposal to be accepted"
+        )
     if len(result.acceptance_probabilities) != result.accepted_count:
-        raise ProposalValidationError("none branch must record exactly every accepted proposal")
+        raise ProposalValidationError(
+            "none branch must record exactly every accepted proposal"
+        )
     if result.emitted_tokens != result.proposed_tokens:
         raise ProposalValidationError("none branch can emit only all accepted proposals")
 
 
 def _validate_round_branch(result: SampledRoundResult) -> None:
-    if any(probability == 0 for probability in result.acceptance_probabilities[: result.accepted_count]):
-        raise ProposalValidationError("accepted proposals require positive acceptance probability")
+    if any(
+        probability == 0
+        for probability in result.acceptance_probabilities[: result.accepted_count]
+    ):
+        raise ProposalValidationError(
+            "accepted proposals require positive acceptance probability"
+        )
     validators = {
         "residual": _validate_residual_branch,
         "bonus": _validate_bonus_branch,
@@ -273,13 +301,17 @@ def _expected_termination(result: SampledRoundResult) -> RoundTermination:
         return "all_accepted"
     if not result.emitted_tokens or len(result.emitted_tokens) == result.remaining_budget:
         return "budget"
-    raise ProposalValidationError("fully accepted non-EOS block with remaining budget requires bonus")
+    raise ProposalValidationError(
+        "fully accepted non-EOS block with remaining budget requires bonus"
+    )
 
 
 def _validate_round_termination(result: SampledRoundResult) -> None:
     expected = _expected_termination(result)
     if result.termination != expected:
-        raise ProposalValidationError(f"termination {result.termination} inconsistent with branch; expected {expected}")
+        raise ProposalValidationError(
+            f"termination {result.termination} inconsistent with branch; expected {expected}"
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -318,7 +350,10 @@ def _make_round_result(
     )
 
 
-def _empty_budget_result(request: SampledRoundRequest, tape: RandomTape) -> SampledRoundResult:
+def _empty_budget_result(
+    request: SampledRoundRequest,
+    tape: RandomTape,
+) -> SampledRoundResult:
     return _make_round_result(
         request,
         (),
@@ -343,7 +378,9 @@ def _generate_proposals(
     for _ in range(proposal_limit):
         proposal_distribution = draft.distribution(proposal_prefix)
         proposed_token, current_tape = proposal_distribution.sample(current_tape)
-        records.append(ProposalRecord(proposal_prefix, proposal_distribution, proposed_token))
+        records.append(
+            ProposalRecord(proposal_prefix, proposal_distribution, proposed_token)
+        )
         proposal_prefix = proposal_prefix + (proposed_token,)
         if proposed_token == request.eos_token_id:
             break
@@ -358,7 +395,9 @@ def _rejected_round_result(
     decision: OneTokenDecision,
 ) -> SampledRoundResult:
     emitted_tokens = accepted_tokens + (decision.emitted_token,)
-    termination: RoundTermination = "eos" if decision.emitted_token == request.eos_token_id else "rejection"
+    termination: RoundTermination = (
+        "eos" if decision.emitted_token == request.eos_token_id else "rejection"
+    )
     return _make_round_result(
         request,
         records,
@@ -402,7 +441,9 @@ def _verify_proposals(
     current_tape = tape
     for record in records:
         if record.prefix != verification_prefix:
-            raise ProposalValidationError("proposal prefix does not match consecutive verification prefix")
+            raise ProposalValidationError(
+                "proposal prefix does not match consecutive verification prefix"
+            )
         decision = decide_one_token(
             target.distribution(verification_prefix),
             record.distribution,
@@ -454,8 +495,12 @@ def _complete_all_accepted(
             "budget",
             accepted.tape,
         )
-    bonus, advanced = target.distribution(accepted.verification_prefix).sample(accepted.tape)
-    termination: RoundTermination = "eos" if bonus == request.eos_token_id else "all_accepted"
+    bonus, advanced = target.distribution(accepted.verification_prefix).sample(
+        accepted.tape
+    )
+    termination: RoundTermination = (
+        "eos" if bonus == request.eos_token_id else "all_accepted"
+    )
     return _make_round_result(
         request,
         records,
