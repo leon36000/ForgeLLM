@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from fractions import Fraction
 from math import lcm
-from typing import Iterable
 
 
 class DistributionValidationError(ValueError):
@@ -54,7 +54,10 @@ def validate_prefix(prefix: object, *, name: str = "prefix") -> tuple[int, ...]:
 
     if not isinstance(prefix, tuple):
         raise DistributionValidationError(f"{name} must be a tuple")
-    return tuple(validate_token_id(token, name=f"{name}[{index}]") for index, token in enumerate(prefix))
+    return tuple(
+        validate_token_id(token, name=f"{name}[{index}]")
+        for index, token in enumerate(prefix)
+    )
 
 
 def _coerce_weight(weight: object) -> Fraction:
@@ -86,7 +89,7 @@ class RandomTape:
             if draw < 0:
                 raise RandomSourceError(f"draw {index} must be non-negative")
 
-    def draw(self, upper_bound: int) -> tuple[int, "RandomTape"]:
+    def draw(self, upper_bound: int) -> tuple[int, RandomTape]:
         if isinstance(upper_bound, bool) or not isinstance(upper_bound, int):
             raise RandomSourceError("upper_bound must be a non-boolean integer")
         if upper_bound <= 0:
@@ -116,7 +119,9 @@ class ExactDistribution:
         total = Fraction(0)
         for pair in self.probabilities:
             if not isinstance(pair, tuple) or len(pair) != 2:
-                raise DistributionValidationError("stored probability entries must be token/probability pairs")
+                raise DistributionValidationError(
+                    "stored probability entries must be token/probability pairs"
+                )
             token, probability = pair
             validate_token_id(token)
             if not isinstance(probability, Fraction):
@@ -128,20 +133,24 @@ class ExactDistribution:
         if tokens != sorted(tokens) or len(tokens) != len(set(tokens)):
             raise DistributionValidationError("stored support must be unique and sorted")
         if total != 1:
-            raise DistributionValidationError("stored probabilities must sum exactly to one")
+            raise DistributionValidationError(
+                "stored probabilities must sum exactly to one"
+            )
 
     @classmethod
     def from_pairs(
         cls,
         pairs: Iterable[tuple[int, int | Fraction]],
-    ) -> "ExactDistribution":
+    ) -> ExactDistribution:
         seen: set[int] = set()
         weighted: list[tuple[int, Fraction]] = []
         pair_count = 0
         for raw_pair in pairs:
             pair_count += 1
             if not isinstance(raw_pair, tuple) or len(raw_pair) != 2:
-                raise DistributionValidationError("each distribution entry must be a token/weight pair")
+                raise DistributionValidationError(
+                    "each distribution entry must be a token/weight pair"
+                )
             raw_token, raw_weight = raw_pair
             token = validate_token_id(raw_token)
             if token in seen:
@@ -151,10 +160,14 @@ class ExactDistribution:
             if weight > 0:
                 weighted.append((token, weight))
         if pair_count == 0:
-            raise DistributionValidationError("distribution requires at least one token/weight pair")
+            raise DistributionValidationError(
+                "distribution requires at least one token/weight pair"
+            )
         total = sum((weight for _, weight in weighted), Fraction(0))
         if total <= 0:
-            raise DistributionValidationError("distribution total weight must be positive")
+            raise DistributionValidationError(
+                "distribution total weight must be positive"
+            )
         return cls(
             tuple(
                 sorted(
@@ -186,7 +199,11 @@ class ExactDistribution:
         for _, probability in self.probabilities:
             denominator = lcm(denominator, probability.denominator)
         integer_weights = tuple(
-            (token, probability.numerator * (denominator // probability.denominator))
+            (
+                token,
+                probability.numerator
+                * (denominator // probability.denominator),
+            )
             for token, probability in self.probabilities
         )
         total = sum(weight for _, weight in integer_weights)
@@ -198,14 +215,27 @@ class ExactDistribution:
                 return token, advanced
         raise AssertionError("unreachable categorical sampling state")
 
-    def positive_residual(self, proposal: "ExactDistribution") -> "ExactDistribution":
+    def positive_residual(
+        self,
+        proposal: ExactDistribution,
+    ) -> ExactDistribution:
         if not isinstance(proposal, ExactDistribution):
-            raise DistributionValidationError("proposal must be an ExactDistribution")
+            raise DistributionValidationError(
+                "proposal must be an ExactDistribution"
+            )
         tokens = sorted(set(self.support()) | set(proposal.support()))
         residual = [
-            (token, max(Fraction(0), self.probability(token) - proposal.probability(token)))
+            (
+                token,
+                max(
+                    Fraction(0),
+                    self.probability(token) - proposal.probability(token),
+                ),
+            )
             for token in tokens
         ]
         if sum((weight for _, weight in residual), Fraction(0)) == 0:
-            raise UnreachableResidualError("positive residual has zero total mass")
+            raise UnreachableResidualError(
+                "positive residual has zero total mass"
+            )
         return ExactDistribution.from_pairs(residual)
