@@ -4,28 +4,28 @@
 
 **Goal:** Build a finite exact Python oracle for stochastic and greedy speculative decoding, exhaustive equality-of-law verification and transactional token-prefix state semantics.
 
-**Architecture:** Immutable exact-distribution primitives form the base. A sampled one-token kernel and block-round function implement modified rejection sampling. Independent analytical enumerators compare speculative and ordinary target laws exactly. A separate greedy module and transactional prefix-state module avoid conflating stochastic semantics with deterministic decoding or production KV storage.
+**Architecture:** Immutable exact-distribution primitives form the base. A functional `RandomTape` makes every random transition explicit. A one-token kernel and sampled block-round function implement modified rejection sampling. Independent analytical enumerators compare speculative and ordinary target laws exactly. A separate greedy module and transactional prefix-state module avoid conflating stochastic semantics with deterministic decoding or production KV storage.
 
 **Tech Stack:** Python 3.11 standard library (`fractions`, `math`, `dataclasses`, `typing`), pytest 9, Ruff 0.16.2, existing ForgeLLM governance tooling. No new dependency.
 
 ## Global Constraints
 
 - Finite table-defined synthetic models only.
-- No floats in governed probability calculations.
+- No floats or `Decimal` in governed probability calculations.
 - No model download, tokenizer, neural inference or hardware access.
 - No Rust runtime, C ABI, backend, kernel or performance path.
 - `p` always denotes target and `q` proposal in ForgeLLM APIs/docs.
-- A proposal must retain the exact `q` used to sample it.
+- A proposal retains the exact `q` used to sample it.
 - No acceptance after first rejection.
 - No bonus after EOS or exhausted budget.
-- Equality of output law is the exactness oracle; same-seed identity is not.
-- Every mutable-looking operation returns immutable dataclasses/tuples.
+- Equality of output law is the stochastic exactness oracle; same-seed identity is not.
+- Every state transition returns frozen dataclasses/tuples and does not mutate its input.
 - Stable exception classes and deterministic diagnostics are required.
 - P0-T04 and P0-T05 remain unchanged.
 
 ---
 
-### Task 1: Implement exact finite distributions and deterministic random tapes
+### Task 1: Exact finite distributions and immutable random tapes
 
 **Files:**
 - Create: `src/forgellm_governance/exact_distribution.py`
@@ -34,22 +34,22 @@
 **Interfaces:**
 
 ```python
-Token = int
-
-class IntegerSource(Protocol):
-    def randbelow(self, upper_bound: int) -> int: ...
-
 @dataclass(frozen=True, slots=True)
 class RandomTape:
     draws: tuple[int, ...]
     cursor: int = 0
-    def randbelow(self, upper_bound: int) -> tuple[int, RandomTape]: ...
+    def draw(self, upper_bound: int) -> tuple[int, RandomTape]: ...
 
 @dataclass(frozen=True, slots=True)
 class ExactDistribution:
     probabilities: tuple[tuple[int, Fraction], ...]
+
     @classmethod
-    def from_pairs(cls, pairs: Iterable[tuple[int, int | Fraction]]) -> ExactDistribution: ...
+    def from_pairs(
+        cls,
+        pairs: Iterable[tuple[int, int | Fraction]],
+    ) -> ExactDistribution: ...
+
     def probability(self, token: int) -> Fraction: ...
     def support(self) -> tuple[int, ...]: ...
     def argmax(self) -> int: ...
@@ -57,16 +57,18 @@ class ExactDistribution:
     def positive_residual(self, proposal: ExactDistribution) -> ExactDistribution: ...
 ```
 
-- [ ] Write failing construction tests: duplicate token, bool token, negative token/weight, zero total, zero-entry removal, exact normalization, canonical order and frozen mutation.
-- [ ] Run `python -m pytest -q tests/test_exact_distribution.py` and confirm import/test failures.
-- [ ] Implement `DistributionValidationError`, `UnreachableResidualError`, canonical normalization and lookup/argmax.
-- [ ] Add failing `RandomTape` tests for exhaustion, invalid upper bound, out-of-range draw, deterministic no-draw distribution and exact rational categorical sampling.
-- [ ] Implement immutable tape advancement and common-denominator integer sampling; never use modulo reduction.
-- [ ] Add and pass residual tests for partial overlap, disjoint support, `p==q` and exact normalization.
-- [ ] Run focused tests, Ruff check and format check.
-- [ ] Commit: `feat(speculative): add exact finite distributions`.
+- [ ] **Step 1: Write failing construction tests.** Cover duplicate token IDs, bool/negative tokens, bool/negative weights, zero total, zero-entry removal, exact normalization, canonical support order and frozen mutation.
+- [ ] **Step 2: Run `python -m pytest -q tests/test_exact_distribution.py`.** Expected: import failure.
+- [ ] **Step 3: Implement `DistributionValidationError`, canonical `Fraction` normalization, lookup, support and smallest-token argmax.**
+- [ ] **Step 4: Write failing tape tests.** Cover invalid/non-integer upper bound, exhaustion, out-of-range draw, immutability and unchanged tape for deterministic choices.
+- [ ] **Step 5: Implement `RandomSourceError` and functional `RandomTape.draw`.** Do not apply modulo reduction.
+- [ ] **Step 6: Write failing exact sampling tests.** Use common-denominator rational distributions and assert returned advanced tape.
+- [ ] **Step 7: Implement exact categorical sampling.** A one-token distribution returns immediately without drawing.
+- [ ] **Step 8: Write and pass residual tests.** Cover partial overlap, disjoint support, exact normalization and `p==q -> UnreachableResidualError`.
+- [ ] **Step 9: Run focused pytest and Ruff check/format.**
+- [ ] **Step 10: Commit `feat(speculative): add exact finite distributions`.**
 
-### Task 2: Implement the one-token modified rejection kernel
+### Task 2: One-token modified rejection kernel
 
 **Files:**
 - Create: `src/forgellm_governance/speculative_decoding.py`
@@ -75,6 +77,11 @@ class ExactDistribution:
 **Interfaces:**
 
 ```python
+def exact_bernoulli(
+    probability: Fraction,
+    tape: RandomTape,
+) -> tuple[bool, RandomTape]: ...
+
 @dataclass(frozen=True, slots=True)
 class OneTokenDecision:
     proposed_token: int
@@ -85,7 +92,6 @@ class OneTokenDecision:
     tape: RandomTape
 
 
-def exact_bernoulli(probability: Fraction, tape: RandomTape) -> tuple[bool, RandomTape]: ...
 def decide_one_token(
     target: ExactDistribution,
     proposal: ExactDistribution,
@@ -94,15 +100,16 @@ def decide_one_token(
 ) -> OneTokenDecision: ...
 ```
 
-- [ ] Write failing tests for acceptance probability below/equal/above one, target-zero proposal, deterministic accept/reject and proposal outside positive `q` support.
-- [ ] Verify tests fail before implementation.
-- [ ] Implement `ProposalValidationError`, exact Bernoulli and acceptance branch.
-- [ ] Add failing residual-correction tests and implement normalized `(p-q)_+` sampling.
-- [ ] Add an exhaustive single-token law test that sums exact branch masses for every token and equals `p` for several adversarial `p/q` pairs.
-- [ ] Verify `p==q` never enters residual and consumes no acceptance draw when probability is one.
-- [ ] Run focused tests, Ruff and commit: `feat(speculative): add exact rejection kernel`.
+- [ ] **Step 1: Write failing exact-Bernoulli tests.** Zero/one consume no draw; proper fractions use `draw(denominator) < numerator`; invalid probabilities fail.
+- [ ] **Step 2: Implement exact Bernoulli with immutable tape.**
+- [ ] **Step 3: Write failing acceptance tests.** Cover `p(x)<q(x)`, `p(x)>=q(x)`, target-zero proposal and token outside positive `q` support.
+- [ ] **Step 4: Implement `ProposalValidationError`, acceptance probability and accepted branch.**
+- [ ] **Step 5: Write failing correction tests and implement `(p-q)_+` sampling.**
+- [ ] **Step 6: Add an exhaustive branch-mass test.** For each proposal token, multiply proposal, acceptance/rejection and residual masses; aggregate and assert exact equality with `p`.
+- [ ] **Step 7: Verify `p==q` never samples a residual or consumes an acceptance draw.**
+- [ ] **Step 8: Run focused tests/Ruff and commit `feat(speculative): add exact rejection kernel`.**
 
-### Task 3: Implement finite table models and sampled block rounds
+### Task 3: Finite table models and sampled block rounds
 
 **Files:**
 - Create: `src/forgellm_governance/speculative_models.py`
@@ -124,6 +131,13 @@ class ProposalRecord:
     token: int
 
 @dataclass(frozen=True, slots=True)
+class SampledRoundRequest:
+    prefix: tuple[int, ...]
+    draft_length: int
+    remaining_budget: int
+    eos_token_id: int
+
+@dataclass(frozen=True, slots=True)
 class SampledRoundResult:
     prefix: tuple[int, ...]
     proposed_tokens: tuple[int, ...]
@@ -135,20 +149,26 @@ class SampledRoundResult:
     tape: RandomTape
 
 
-def sample_speculative_round(... ) -> SampledRoundResult: ...
+def sample_speculative_round(
+    target: FiniteTableModel,
+    draft: FiniteTableModel,
+    request: SampledRoundRequest,
+    tape: RandomTape,
+) -> SampledRoundResult: ...
 ```
 
-- [ ] Write failing model-table tests for duplicate prefix, missing prefix, invalid prefix token and deterministic lookup.
-- [ ] Implement immutable canonical `FiniteTableModel` and `ModelTableError`.
-- [ ] Write failing zero-budget tests proving no model lookup and no tape consumption.
-- [ ] Implement autoregressive proposal generation bounded by `min(draft_length, budget)` and EOS.
-- [ ] Write failing left-to-right verification tests for all-accepted, first rejection, discarded suffix and recorded `q_i` usage.
-- [ ] Implement verification and one correction only.
-- [ ] Write failing bonus/EOS/budget tests and implement the legal bonus phase.
-- [ ] Assert every `SampledRoundResult` invariant in `__post_init__`.
-- [ ] Run focused tests, Ruff and commit: `feat(speculative): add sampled block rounds`.
+- [ ] **Step 1: Write failing table tests.** Duplicate/malformed prefixes and missing lookup must fail with `ModelTableError`.
+- [ ] **Step 2: Implement immutable canonical `FiniteTableModel`.**
+- [ ] **Step 3: Write request-validation and zero-budget tests.** Prove no table lookup or tape draw at budget zero.
+- [ ] **Step 4: Implement bounded autoregressive proposal generation.** Record exact `q_i`; stop after proposal EOS.
+- [ ] **Step 5: Write left-to-right verification tests.** Cover all accepted, first rejection, unused suffix and q-record mismatch protection.
+- [ ] **Step 6: Implement verification and exactly one correction at first rejection.**
+- [ ] **Step 7: Write bonus, EOS and budget tests.**
+- [ ] **Step 8: Implement bonus and explicit termination precedence:** EOS, then rejection, then budget, then all-accepted non-EOS bonus.
+- [ ] **Step 9: Validate every `SampledRoundResult` invariant in `__post_init__`.**
+- [ ] **Step 10: Run focused tests/Ruff and commit `feat(speculative): add sampled block rounds`.**
 
-### Task 4: Implement ordinary target-law enumeration
+### Task 4: Ordinary target-law enumeration
 
 **Files:**
 - Create: `src/forgellm_governance/speculative_exhaustive.py`
@@ -160,8 +180,13 @@ def sample_speculative_round(... ) -> SampledRoundResult: ...
 @dataclass(frozen=True, slots=True)
 class ExactSequenceLaw:
     probabilities: tuple[tuple[tuple[int, ...], Fraction], ...]
+
     @classmethod
-    def from_pairs(... ) -> ExactSequenceLaw: ...
+    def from_pairs(
+        cls,
+        pairs: Iterable[tuple[tuple[int, ...], Fraction]],
+    ) -> ExactSequenceLaw: ...
+
     def probability(self, sequence: tuple[int, ...]) -> Fraction: ...
 
 
@@ -173,14 +198,13 @@ def enumerate_target_law(
 ) -> ExactSequenceLaw: ...
 ```
 
-- [ ] Write failing law-normalization and duplicate-sequence aggregation tests.
-- [ ] Implement canonical exact sequence laws and `LawNormalizationError`.
-- [ ] Write failing target-recursion tests for budget 0, deterministic model, branching model and EOS termination.
-- [ ] Implement recursive enumeration with exact `Fraction` mass and missing-prefix failure.
-- [ ] Verify total law mass is exactly one and output lengths never exceed budget.
-- [ ] Run focused tests, Ruff and commit: `feat(speculative): enumerate exact target law`.
+- [ ] **Step 1: Write failing law-construction tests.** Aggregate duplicate sequence mass, reject negative mass and require exact total one.
+- [ ] **Step 2: Implement `LawNormalizationError` and canonical ordering.**
+- [ ] **Step 3: Write failing target-recursion tests.** Cover budget zero, deterministic/branching tables, EOS and missing prefix.
+- [ ] **Step 4: Implement exact recursive target enumeration.** Newly emitted sequence length never exceeds budget.
+- [ ] **Step 5: Run focused tests/Ruff and commit `feat(speculative): enumerate exact target law`.**
 
-### Task 5: Implement analytical speculative-law enumeration
+### Task 5: Analytical speculative-law enumeration
 
 **Files:**
 - Modify: `src/forgellm_governance/speculative_exhaustive.py`
@@ -199,20 +223,27 @@ def enumerate_speculative_round_law(
 ) -> ExactSequenceLaw: ...
 
 
-def enumerate_speculative_law(... ) -> ExactSequenceLaw: ...
+def enumerate_speculative_law(
+    target: FiniteTableModel,
+    draft: FiniteTableModel,
+    prefix: tuple[int, ...],
+    budget: int,
+    draft_length: int,
+    eos_token_id: int,
+) -> ExactSequenceLaw: ...
 ```
 
-- [ ] Write failing exact-law tests for a one-position model and compare to target law.
-- [ ] Implement exact proposal-path mass and consecutive acceptance mass.
-- [ ] Add failing first-rejection residual branch tests and implement correction mass.
-- [ ] Add failing all-accepted bonus tests and implement bonus mass.
-- [ ] Recursively compose rounds until budget/EOS.
-- [ ] Build finite adversarial table families and assert exact equality with target law for budgets 0–4 and draft lengths 1–3.
-- [ ] Add draft-perturbation tests showing identical final law with changed acceptance branches.
-- [ ] Verify laws sum exactly to one; no Monte Carlo or float is used.
-- [ ] Run focused tests, Ruff and commit: `feat(speculative): prove bounded speculative output law`.
+- [ ] **Step 1: Write a failing one-position target/speculative law equality test.**
+- [ ] **Step 2: Implement exact proposal-path and consecutive-acceptance mass.**
+- [ ] **Step 3: Add failing first-rejection residual tests and implement correction branches.**
+- [ ] **Step 4: Add failing fully-accepted bonus/EOS/budget tests and implement bonus branches.**
+- [ ] **Step 5: Compose rounds recursively until EOS/budget.**
+- [ ] **Step 6: Define adversarial finite table families.** Include p==q, partial/disjoint overlap, target-zero proposal, deterministic and prefix-dependent EOS cases.
+- [ ] **Step 7: Assert exact target/speculative law equality for budgets 0–4 and draft lengths 1–3.**
+- [ ] **Step 8: Perturb valid draft tables sharply and prove unchanged final target law.**
+- [ ] **Step 9: Run focused tests/Ruff and commit `feat(speculative): prove bounded speculative output law`.**
 
-### Task 6: Implement the separate greedy oracle
+### Task 6: Separate deterministic greedy oracle
 
 **Files:**
 - Create: `src/forgellm_governance/speculative_greedy.py`
@@ -221,18 +252,31 @@ def enumerate_speculative_law(... ) -> ExactSequenceLaw: ...
 **Interfaces:**
 
 ```python
-def greedy_target_decode(... ) -> tuple[int, ...]: ...
-def greedy_speculative_round(... ) -> tuple[int, ...]: ...
-def greedy_speculative_decode(... ) -> tuple[int, ...]: ...
+def greedy_target_decode(
+    target: FiniteTableModel,
+    prefix: tuple[int, ...],
+    budget: int,
+    eos_token_id: int,
+) -> tuple[int, ...]: ...
+
+
+def greedy_speculative_decode(
+    target: FiniteTableModel,
+    draft: FiniteTableModel,
+    prefix: tuple[int, ...],
+    budget: int,
+    draft_length: int,
+    eos_token_id: int,
+) -> tuple[int, ...]: ...
 ```
 
-- [ ] Write failing argmax tie tests requiring smallest-token selection.
-- [ ] Write failing matching-prefix, first-mismatch, fully-matched bonus, EOS and budget tests.
-- [ ] Implement target and speculative greedy functions without accepting a random source.
-- [ ] Exhaustively compare bounded greedy outputs for all synthetic table families and draft lengths.
-- [ ] Run focused tests, Ruff and commit: `feat(speculative): add deterministic greedy oracle`.
+- [ ] **Step 1: Write argmax tie tests requiring smallest-token selection.**
+- [ ] **Step 2: Write matching-prefix, first-mismatch, bonus, EOS and budget tests.**
+- [ ] **Step 3: Implement target and speculative greedy paths; accept no random tape.**
+- [ ] **Step 4: Exhaustively compare bounded greedy outputs for every synthetic table family/draft length.**
+- [ ] **Step 5: Run focused tests/Ruff and commit `feat(speculative): add deterministic greedy oracle`.**
 
-### Task 7: Implement transactional prefix-state witnesses
+### Task 7: Transactional prefix-state witnesses
 
 **Files:**
 - Create: `src/forgellm_governance/speculative_state.py`
@@ -249,85 +293,97 @@ class RoundTransaction:
     original: DecoderState
     proposed_tokens: tuple[int, ...]
     closed: bool = False
+
     @classmethod
-    def begin(cls, state: DecoderState, proposed_tokens: tuple[int, ...]) -> RoundTransaction: ...
-    def commit(self, result: SampledRoundResult, eos_token_id: int) -> tuple[DecoderState, RoundTransaction]: ...
+    def begin(
+        cls,
+        state: DecoderState,
+        proposed_tokens: tuple[int, ...],
+    ) -> RoundTransaction: ...
+
+    def commit(
+        self,
+        result: SampledRoundResult,
+        eos_token_id: int,
+    ) -> tuple[DecoderState, RoundTransaction]: ...
+
     def cancel(self) -> tuple[DecoderState, RoundTransaction]: ...
+
 
 def synchronize_pending(state: DecoderState) -> DecoderState: ...
 ```
 
-- [ ] Write failing `DecoderState` invariant tests.
-- [ ] Implement `StateInvariantError` and frozen-state validation.
-- [ ] Write failing begin/precondition/cancellation tests and implement exact rollback.
-- [ ] Add accepted-proposal materialization tests.
-- [ ] Add rejection tests proving rejected suffix never commits and correction becomes pending.
-- [ ] Add bonus and EOS pending/materialized cases.
-- [ ] Add `synchronize_pending` tests and reject starting a new round with pending state.
-- [ ] Reject double commit/cancel, result/proposal mismatch and invalid acceptance count.
-- [ ] Run focused tests, Ruff and commit: `feat(speculative): define transactional prefix state`.
+- [ ] **Step 1: Write failing state-invariant tests.** Target/draft materialized equality, auxiliary/output equality and pending-prefix relation.
+- [ ] **Step 2: Implement `StateInvariantError` and frozen validation.**
+- [ ] **Step 3: Write begin, pending/finished precondition and cancellation tests.**
+- [ ] **Step 4: Implement `RoundTransaction.begin` and exact rollback without original mutation.**
+- [ ] **Step 5: Add accepted-proposal materialization tests.**
+- [ ] **Step 6: Add rejection tests proving suffix discard and pending residual correction.**
+- [ ] **Step 7: Add bonus, accepted-EOS and pending-EOS cases.**
+- [ ] **Step 8: Implement/test `synchronize_pending`.**
+- [ ] **Step 9: Reject result/proposal mismatch, invalid acceptance count and double commit/cancel.**
+- [ ] **Step 10: Run focused tests/Ruff and commit `feat(speculative): define transactional prefix state`.**
 
-### Task 8: Add deterministic traces and adversarial integration tests
+### Task 8: Deterministic traces and adversarial integration
 
 **Files:**
 - Create: `src/forgellm_governance/speculative_trace.py`
-- Create: `tests/test_speculative_adversarial.py`
 - Create: `tests/test_speculative_trace.py`
+- Create: `tests/test_speculative_adversarial.py`
 - Modify: `src/forgellm_governance/__init__.py`
 
 **Interfaces:**
 
 ```python
-def canonical_trace_document(result: SampledRoundResult, state: DecoderState | None = None) -> dict[str, object]: ...
-def canonical_trace_bytes(... ) -> bytes: ...
+def canonical_trace_document(
+    result: SampledRoundResult,
+    state: DecoderState | None = None,
+) -> dict[str, object]: ...
+
+
+def canonical_trace_bytes(
+    result: SampledRoundResult,
+    state: DecoderState | None = None,
+) -> bytes: ...
 ```
 
-- [ ] Write failing deterministic rational-serialization tests using `{numerator, denominator}`.
-- [ ] Implement timestamp-free, host-free canonical trace serialization.
-- [ ] Add adversarial tests for bool/negative tokens, duplicate entries/prefixes, invalid draws, q mismatch, unreachable residual, missing model prefix, zero budget, EOS at every phase, cancellation and corrupted state.
-- [ ] Verify reordered table entries preserve semantic law and canonical traces where inputs are semantically identical.
-- [ ] Export only stable reference interfaces in `__init__.py`.
-- [ ] Run all CA-03 focused tests, Ruff and commit: `test(speculative): add adversarial exactness coverage`.
+- [ ] **Step 1: Write failing rational serialization tests using numerator/denominator objects.**
+- [ ] **Step 2: Implement canonical timestamp/host/path-free trace serialization.**
+- [ ] **Step 3: Add invalid token/weight/tape/proposal/residual/model-prefix/state adversarial tests.**
+- [ ] **Step 4: Add EOS-at-each-phase, zero-budget and cancellation adversarial tests.**
+- [ ] **Step 5: Verify semantic table reordering preserves exact laws and canonical traces.**
+- [ ] **Step 6: Export only stable oracle interfaces in `__init__.py`.**
+- [ ] **Step 7: Run focused tests/Ruff and commit `test(speculative): add adversarial exactness coverage`.**
 
-### Task 9: Integrate repository gates and documentation
+### Task 9: Repository gates and user documentation
 
 **Files:**
 - Modify: `Makefile`
 - Create: `docs/speculative/EXACT_REFERENCE.md`
 - Modify: `tasks/open/P0-T08-exact-speculative-decoding.yaml`
 
-- [ ] Add `verify-speculative` to `.PHONY` and execute all seven CA-03 test modules.
-- [ ] Add `verify-speculative` to `ci` without removing P0-T04 or P0-T07 gates.
-- [ ] Document notation, stochastic law, greedy separation, state boundaries and evidence limits.
-- [ ] Record focused command outputs and exact source/plan revisions in the task packet; keep status truthful (`in_progress` or `review`).
-- [ ] Run `make ci`, `git diff --check` and a clean-worktree check.
-- [ ] Commit: `ci(speculative): enforce exact reference gates`.
+- [ ] **Step 1: Add `.PHONY` target `verify-speculative`.** It runs all nine CA-03 test files explicitly.
+- [ ] **Step 2: Add `verify-speculative` to `ci` without removing existing simulator/hardware governance gates.**
+- [ ] **Step 3: Document notation, sampling law, greedy separation, transaction model and evidence limits.**
+- [ ] **Step 4: Record exact base/head/plan revisions and focused command results in the task packet; keep status truthful.**
+- [ ] **Step 5: Run focused tests, `make ci`, `git diff --check` and clean-worktree verification.**
+- [ ] **Step 6: Commit `ci(speculative): enforce exact reference gates`.**
 
-### Task 10: Fresh reviews, hosted verification and closeout
+### Task 10: Separate reviews, hosted verification and closeout
 
 **Files:**
 - Create: `docs/reviews/P0-T08-EXACT-SPECULATIVE-SEMANTICS-REVIEW.md`
 - Modify after evidence: task/state/handoff/roadmap/mobile files allowed by the packet.
 
-- [ ] Request a fresh specification-compliance review against the canonical spec and task packet.
-- [ ] Resolve every BLOCKER/MAJOR finding with a failing regression test first.
-- [ ] Request a separate code-quality review focused on probability arithmetic, branch mass, state invariants and deterministic errors.
-- [ ] Run the complete focused suite and `make ci` on the exact final head.
-- [ ] Open a PR; require hosted `Validate and test` and CodeQL success. Treat Dependency Review honestly according to policy.
-- [ ] Merge only after review and exact-head gates.
-- [ ] Verify post-merge Phase 0 and CodeQL on `main`.
-- [ ] Close P0-T08 in a separate state PR only after post-merge evidence exists.
+- [ ] **Step 1: Request a fresh specification-compliance review against the canonical spec and packet.**
+- [ ] **Step 2: Resolve every BLOCKER/MAJOR finding with a failing regression test first.**
+- [ ] **Step 3: Request a separate code-quality review focused on rational arithmetic, branch mass, state invariants and deterministic errors.**
+- [ ] **Step 4: Resolve findings and rerun the focused suite plus `make ci` on the exact final head.**
+- [ ] **Step 5: Open the implementation PR and require hosted `Validate and test` and CodeQL success; characterize Dependency Review honestly.**
+- [ ] **Step 6: Merge only after both reviews and exact-head gates.**
+- [ ] **Step 7: Verify post-merge Phase 0 and CodeQL on `main`.**
+- [ ] **Step 8: Close P0-T08 in a separate state PR after post-merge evidence exists.**
 
 ## Completion report
 
-The final report records:
-
-1. owner authorization and task packet;
-2. base, reviewed head and merge commits;
-3. exact arithmetic and law-equality tests;
-4. stochastic and greedy API boundaries;
-5. transactional state cases;
-6. focused/full/hosted gate identifiers;
-7. fresh review findings and resolutions;
-8. evidence limits and unsupported production behavior;
-9. next recommended work package.
+The final report records owner authorization, task packet, base/reviewed/merge commits, exact-law test ranges, stochastic and greedy API boundaries, transactional cases, focused/full/hosted gate IDs, review findings/resolutions, evidence limits and the next recommended work package.
