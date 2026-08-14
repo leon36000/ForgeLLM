@@ -84,9 +84,7 @@ def _one_token_output_law(
     target: ExactDistribution,
     proposal: ExactDistribution,
 ) -> dict[int, Fraction]:
-    output: dict[int, Fraction] = {
-        token: Fraction(0) for token in set(target.support()) | set(proposal.support())
-    }
+    output: dict[int, Fraction] = {token: Fraction(0) for token in set(target.support()) | set(proposal.support())}
     for proposed, q_mass in proposal.probabilities:
         p_mass = target.probability(proposed)
         alpha = min(Fraction(1), p_mass / q_mass)
