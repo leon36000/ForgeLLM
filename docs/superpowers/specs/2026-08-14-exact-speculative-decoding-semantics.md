@@ -70,11 +70,15 @@ class ExactDistribution:
     probabilities: tuple[tuple[int, Fraction], ...]
 
     @classmethod
-    def from_pairs(cls, pairs: Iterable[tuple[int, int | Fraction]]) -> ExactDistribution: ...
+    def from_pairs(
+        cls,
+        pairs: Iterable[tuple[int, int | Fraction]],
+    ) -> ExactDistribution: ...
+
     def probability(self, token: int) -> Fraction: ...
     def support(self) -> tuple[int, ...]: ...
     def argmax(self) -> int: ...
-    def sample(self, source: IntegerSource) -> int: ...
+    def sample(self, tape: RandomTape) -> tuple[int, RandomTape]: ...
     def positive_residual(self, proposal: ExactDistribution) -> ExactDistribution: ...
 ```
 
@@ -82,18 +86,32 @@ class ExactDistribution:
 
 `positive_residual(q)` computes and normalizes `max(0, self-q)`. It raises `UnreachableResidualError` when total positive residual is zero.
 
-### 5.3 Random source
+### 5.3 Immutable random tape
+
+The exact oracle uses one functional random source only:
 
 ```python
-class IntegerSource(Protocol):
-    def randbelow(self, upper_bound: int) -> int: ...
+@dataclass(frozen=True, slots=True)
+class RandomTape:
+    draws: tuple[int, ...]
+    cursor: int = 0
+
+    def draw(self, upper_bound: int) -> tuple[int, RandomTape]: ...
 ```
 
-`RandomTape` stores an immutable tuple of predetermined draws and a cursor. Every draw must satisfy `0 <= draw < upper_bound`; exhaustion and out-of-range values fail closed. No modulo reduction is allowed.
+Each call returns the selected integer and a new advanced tape. It never mutates the original tape.
 
-Exact categorical sampling converts rational probabilities to a common integer denominator and uses one bounded integer draw. A deterministic distribution consumes no draw.
+Rules:
 
-A Bernoulli probability of zero or one consumes no draw. Other exact Bernoulli choices use `randbelow(denominator) < numerator`.
+- `upper_bound` is a positive non-boolean integer;
+- the tape must have an unused draw;
+- the draw must satisfy `0 <= draw < upper_bound`;
+- out-of-range draws fail rather than using modulo reduction;
+- deterministic categorical distributions consume no draw;
+- exact Bernoulli probabilities zero and one consume no draw;
+- every other Bernoulli uses `draw(denominator) < numerator`.
+
+Exact categorical sampling converts rational probabilities to a common integer denominator and uses one bounded draw.
 
 ## 6. One-token modified rejection sampling
 
@@ -131,6 +149,12 @@ class SampledRoundRequest:
     eos_token_id: int
 ```
 
+Validation:
+
+- `draft_length` is a positive non-boolean integer;
+- `remaining_budget` is a non-negative non-boolean integer;
+- prefix and EOS token IDs follow token validation rules.
+
 A finite autoregressive model implements:
 
 ```python
@@ -140,7 +164,7 @@ class DistributionModel(Protocol):
 
 ### 7.1 Proposal phase
 
-- If `remaining_budget == 0`, return immediately without model or random-source access.
+- If `remaining_budget == 0`, return immediately without model or random-tape access.
 - Propose at most `min(draft_length, remaining_budget)` tokens autoregressively from the draft model.
 - Record `(prefix_before_token, q_i, x_i)` for every proposal.
 - Stop proposing after EOS.
@@ -172,17 +196,28 @@ class SampledRoundResult:
     acceptance_probabilities: tuple[Fraction, ...]
     correction_kind: Literal["none", "residual", "bonus"]
     termination: Literal["budget", "eos", "rejection", "all_accepted"]
+    tape: RandomTape
 ```
 
 Invariants:
 
 - `0 <= accepted_count <= len(proposed_tokens)`;
+- acceptance probabilities correspond exactly to verified proposals through the first rejection or accepted EOS;
 - accepted proposals equal the leading emitted proposal prefix;
 - `len(emitted_tokens) <= remaining_budget`;
 - `residual` emits exactly accepted prefix plus one correction;
 - `bonus` emits every proposal plus one target token;
 - EOS is the final emitted token when present;
-- zero budget yields empty proposal/emission and no random consumption.
+- zero budget yields empty proposal/emission and unchanged tape.
+
+Termination precedence is explicit:
+
+1. `eos` when the final emitted token is EOS, regardless of whether it was accepted, residual or bonus;
+2. `rejection` for a non-EOS residual correction;
+3. `budget` when zero budget or a fully accepted block consumes the remaining budget without bonus;
+4. `all_accepted` when a fully accepted non-EOS block emits a non-EOS bonus.
+
+`correction_kind` records how the final non-proposal token was produced and therefore remains independent of `termination`.
 
 ## 8. Exact output-law enumerator
 
@@ -192,11 +227,7 @@ Invariants:
 
 ### 8.2 Baseline law
 
-`enumerate_target_law(model, prefix, budget, eos_token_id)` recursively enumerates ordinary target decoding and returns:
-
-```python
-ExactSequenceLaw = tuple[tuple[tuple[int, ...], Fraction], ...]
-```
+`enumerate_target_law(model, prefix, budget, eos_token_id)` recursively enumerates ordinary target decoding and returns an immutable `ExactSequenceLaw`.
 
 Sequences contain only newly emitted tokens. Probabilities are exact, canonical and sum to one.
 
@@ -226,7 +257,7 @@ For each finite adversarial model family, assert exact equality of baseline and 
 - prefix-dependent distributions;
 - EOS at proposal, rejection-correction and bonus positions.
 
-Equality is a map equality over all emitted sequences and exact rational masses.
+Equality is map equality over all emitted sequences and exact rational masses.
 
 ## 9. Separate greedy oracle
 
@@ -240,7 +271,7 @@ Equality is a map equality over all emitted sequences and exact rational masses.
 4. on first mismatch emits target argmax and stops that round;
 5. after a fully matching non-EOS block emits one target argmax bonus if budget remains.
 
-No random source is accepted by the greedy API. For every finite table model, bounded output must equal `greedy_target_decode` exactly.
+No random tape is accepted by the greedy API. For every finite table model, bounded output must equal `greedy_target_decode` exactly.
 
 ## 10. Transactional state semantics
 
@@ -300,7 +331,7 @@ Stable exception classes:
 - `StateInvariantError`;
 - `TransactionStateError`.
 
-Expected validation failures must produce concise diagnostics rather than partial outputs or silent fallback.
+Expected validation failures produce concise diagnostics rather than partial outputs or silent fallback.
 
 ## 13. Testing and promotion gates
 
