@@ -35,6 +35,8 @@ class OneTokenDecision:
     def __post_init__(self) -> None:
         validate_token_id(self.proposed_token, name="proposed_token")
         validate_token_id(self.emitted_token, name="emitted_token")
+        if not isinstance(self.tape, RandomTape):
+            raise ProposalValidationError("tape must be a RandomTape")
         if not isinstance(self.acceptance_probability, Fraction):
             raise ProposalValidationError("acceptance_probability must be a Fraction")
         if not 0 <= self.acceptance_probability <= 1:
@@ -192,6 +194,12 @@ class SampledRoundResult:
             validate_token_id(self.eos_token_id, name="eos_token_id")
         except ValueError as exc:
             raise ProposalValidationError(str(exc)) from exc
+        if not isinstance(self.tape, RandomTape):
+            raise ProposalValidationError("tape must be a RandomTape")
+        if self.remaining_budget > 0 and not self.proposed_tokens:
+            raise ProposalValidationError("positive budget requires at least one proposal")
+        if self.eos_token_id in self.proposed_tokens[:-1]:
+            raise ProposalValidationError("EOS must be the final proposed token")
         if self.accepted_count > len(self.proposed_tokens):
             raise ProposalValidationError("accepted_count exceeds proposed token count")
         if len(self.emitted_tokens) > self.remaining_budget:
