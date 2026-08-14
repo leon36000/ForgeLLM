@@ -24,7 +24,7 @@ lint:
 
 verify: validate test
 
-ci: lint verify
+ci: lint verify simulate-cache-draft
 
 mobile-hashes:
 	$(PYTHON) scripts/hash_mobile_context.py --root .
