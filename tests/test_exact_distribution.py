@@ -48,7 +48,7 @@ def test_argmax_uses_smallest_token_on_tie() -> None:
 
 
 def test_random_tape_is_immutable_and_validated() -> None:
-    tape = RandomTape((1, 0))
+    tape = RandomTape((1, 1))
     value, advanced = tape.draw(2)
     assert value == 1
     assert tape.cursor == 0
