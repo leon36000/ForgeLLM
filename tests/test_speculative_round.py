@@ -252,7 +252,7 @@ def test_none_branch_cannot_hide_unverified_proposal_suffix() -> None:
             correction_kind="none",
             termination="budget",
             tape=RandomTape(()),
-            remaining_budget=1,
+            remaining_budget=2,
             eos_token_id=9,
         )
 
