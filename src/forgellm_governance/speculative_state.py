@@ -50,23 +50,14 @@ class DecoderState:
         if not isinstance(self.finished, bool):
             raise StateInvariantError("finished must be a boolean")
         if self.target_materialized != self.draft_materialized:
-            raise StateInvariantError(
-                "target and draft materialized prefixes must be identical"
-            )
-        if (
-            self.sampler_tokens != self.output_tokens
-            or self.grammar_tokens != self.output_tokens
-        ):
-            raise StateInvariantError(
-                "sampler and grammar state must equal emitted output"
-            )
+            raise StateInvariantError("target and draft materialized prefixes must be identical")
+        if self.sampler_tokens != self.output_tokens or self.grammar_tokens != self.output_tokens:
+            raise StateInvariantError("sampler and grammar state must equal emitted output")
         expected_output = self.target_materialized
         if self.pending_token is not None:
             expected_output = expected_output + (self.pending_token,)
         if self.output_tokens != expected_output:
-            raise StateInvariantError(
-                "output must equal materialized prefix plus at most one pending token"
-            )
+            raise StateInvariantError("output must equal materialized prefix plus at most one pending token")
 
     @property
     def materialized_prefix(self) -> tuple[int, ...]:
@@ -81,9 +72,7 @@ class RoundTransaction:
 
     def __post_init__(self) -> None:
         if not isinstance(self.original, DecoderState):
-            raise TransactionStateError(
-                "transaction original must be a DecoderState"
-            )
+            raise TransactionStateError("transaction original must be a DecoderState")
         try:
             validate_prefix(self.proposed_tokens, name="proposed_tokens")
         except DistributionValidationError as exc:
@@ -91,17 +80,11 @@ class RoundTransaction:
         if not isinstance(self.closed, bool):
             raise TransactionStateError("closed must be a boolean")
         if not self.proposed_tokens:
-            raise TransactionStateError(
-                "round must contain at least one proposed token"
-            )
+            raise TransactionStateError("round must contain at least one proposed token")
         if self.original.finished:
-            raise TransactionStateError(
-                "cannot begin a round from finished state"
-            )
+            raise TransactionStateError("cannot begin a round from finished state")
         if self.original.pending_token is not None:
-            raise TransactionStateError(
-                "cannot begin a round while a correction token is pending"
-            )
+            raise TransactionStateError("cannot begin a round while a correction token is pending")
 
     @classmethod
     def begin(
@@ -117,17 +100,13 @@ class RoundTransaction:
         eos_token_id: int,
     ) -> tuple[DecoderState, RoundTransaction]:
         if not isinstance(result, SampledRoundResult):
-            raise TransactionStateError(
-                "result must be a SampledRoundResult"
-            )
+            raise TransactionStateError("result must be a SampledRoundResult")
         try:
             eos = validate_token_id(eos_token_id, name="eos_token_id")
         except DistributionValidationError as exc:
             raise TransactionStateError(str(exc)) from exc
         if eos != result.eos_token_id:
-            raise TransactionStateError(
-                "commit eos_token_id does not match round result"
-            )
+            raise TransactionStateError("commit eos_token_id does not match round result")
         return commit_round(self, result)
 
     def cancel(self) -> tuple[DecoderState, RoundTransaction]:
@@ -143,9 +122,7 @@ def begin_round(
     if state.finished:
         raise TransactionStateError("cannot begin a round from finished state")
     if state.pending_token is not None:
-        raise TransactionStateError(
-            "cannot begin a round while a correction token is pending"
-        )
+        raise TransactionStateError("cannot begin a round while a correction token is pending")
     try:
         proposals = validate_prefix(
             proposed_tokens,
@@ -154,9 +131,7 @@ def begin_round(
     except DistributionValidationError as exc:
         raise TransactionStateError(str(exc)) from exc
     if not proposals:
-        raise TransactionStateError(
-            "round must contain at least one proposed token"
-        )
+        raise TransactionStateError("round must contain at least one proposed token")
     return RoundTransaction(
         original=state,
         proposed_tokens=proposals,
@@ -180,31 +155,21 @@ def commit_round(
         raise TransactionStateError("result must be a SampledRoundResult")
     original = transaction.original
     if result.prefix != original.output_tokens:
-        raise TransactionStateError(
-            "round result prefix does not equal transaction original output"
-        )
+        raise TransactionStateError("round result prefix does not equal transaction original output")
     if result.proposed_tokens != transaction.proposed_tokens:
-        raise TransactionStateError(
-            "round result proposed tokens do not equal transaction proposals"
-        )
+        raise TransactionStateError("round result proposed tokens do not equal transaction proposals")
 
     accepted_prefix = result.proposed_tokens[: result.accepted_count]
     materialized = original.target_materialized + accepted_prefix
     pending: int | None = None
     if result.correction_kind in {"residual", "bonus"}:
         if not result.emitted_tokens:
-            raise TransactionStateError(
-                "correction branch must emit a final token"
-            )
+            raise TransactionStateError("correction branch must emit a final token")
         pending = result.emitted_tokens[-1]
     else:
-        expected_materialized = (
-            original.target_materialized + result.emitted_tokens
-        )
+        expected_materialized = original.target_materialized + result.emitted_tokens
         if materialized != expected_materialized:
-            raise TransactionStateError(
-                "non-correction branch must materialize every emitted token"
-            )
+            raise TransactionStateError("non-correction branch must materialize every emitted token")
 
     output = original.output_tokens + result.emitted_tokens
     finished = bool(output and output[-1] == result.eos_token_id)
