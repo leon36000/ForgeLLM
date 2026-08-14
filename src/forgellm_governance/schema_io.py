@@ -28,6 +28,15 @@ def _json_pointer(parts: object) -> str:
     return "/" + "/".join(escaped) if escaped else ""
 
 
+def _reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate JSON object key: {key}")
+        result[key] = value
+    return result
+
+
 def load_json_mapping(path: Path) -> Mapping[str, Any]:
     """Load one UTF-8 JSON object, rejecting malformed or non-object roots."""
 
@@ -39,7 +48,7 @@ def load_json_mapping(path: Path) -> Mapping[str, Any]:
         raise ValueError(f"file is not valid UTF-8: {path}") from exc
 
     try:
-        value = json.loads(text)
+        value = json.loads(text, object_pairs_hook=_reject_duplicate_keys)
     except json.JSONDecodeError as exc:
         raise ValueError(f"invalid JSON at line {exc.lineno}, column {exc.colno}: {exc.msg}") from exc
     if not isinstance(value, Mapping):
@@ -101,6 +110,8 @@ def resolve_artifact_output(root: Path, path: Path) -> Path:
 
     root_resolved = root.resolve(strict=True)
     artifacts_root = root_resolved / "artifacts"
+    if artifacts_root.is_symlink():
+        raise ValueError("artifacts directory cannot be a symlink")
     artifacts_root.mkdir(parents=False, exist_ok=True)
     candidate = path if path.is_absolute() else root_resolved / path
 
