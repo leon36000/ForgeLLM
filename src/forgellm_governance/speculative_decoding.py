@@ -205,7 +205,10 @@ def _validate_round_structure(result: SampledRoundResult) -> None:
         raise ProposalValidationError("accepted_count exceeds proposed token count")
     if len(result.emitted_tokens) > result.remaining_budget:
         raise ProposalValidationError("round emitted more tokens than remaining budget")
-    if result.proposed_tokens[: result.accepted_count] != result.emitted_tokens[: result.accepted_count]:
+    if (
+        result.proposed_tokens[: result.accepted_count]
+        != result.emitted_tokens[: result.accepted_count]
+    ):
         raise ProposalValidationError("accepted proposal prefix must equal emitted proposal prefix")
     if result.eos_token_id in result.emitted_tokens[:-1]:
         raise ProposalValidationError("EOS must be the final emitted token")
@@ -393,7 +396,9 @@ def _verify_proposals(
     current_tape = tape
     for record in records:
         if record.prefix != verification_prefix:
-            raise ProposalValidationError("proposal prefix does not match consecutive verification prefix")
+            raise ProposalValidationError(
+                "proposal prefix does not match consecutive verification prefix"
+            )
         decision = decide_one_token(
             target.distribution(verification_prefix),
             record.distribution,
@@ -445,8 +450,12 @@ def _complete_all_accepted(
             "budget",
             accepted.tape,
         )
-    bonus, advanced = target.distribution(accepted.verification_prefix).sample(accepted.tape)
-    termination: RoundTermination = "eos" if bonus == request.eos_token_id else "all_accepted"
+    bonus, advanced = target.distribution(accepted.verification_prefix).sample(
+        accepted.tape
+    )
+    termination: RoundTermination = (
+        "eos" if bonus == request.eos_token_id else "all_accepted"
+    )
     return _make_round_result(
         request,
         records,
