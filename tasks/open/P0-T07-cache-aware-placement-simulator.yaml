@@ -52,6 +52,7 @@ allowed_paths:
 - tests/
 - examples/simulations/
 - docs/simulations/
+- artifacts/simulations/
 - docs/reviews/P0-T07-CACHE-AWARE-SIMULATOR-REVIEW.md
 - tasks/open/P0-T07-cache-aware-placement-simulator.yaml
 - tasks/closed/
@@ -114,5 +115,3 @@ risk_ids:
 - R-006
 - R-007
 - R-013
-claim_ids:
-- CLM-010
