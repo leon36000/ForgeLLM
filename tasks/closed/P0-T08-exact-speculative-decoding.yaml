@@ -2,7 +2,7 @@ schema_version: '1.0'
 task_id: P0-T08
 title: Build exact speculative-decoding reference semantics
 phase: P0
-status: review
+status: complete
 charter_goals:
 - Preserve inference correctness independently of hardware optimization.
 - Establish falsifiable reference semantics before runtime implementation.
@@ -23,10 +23,18 @@ inputs:
 - CA-03 exact speculative-decoding research synthesis.
 - Owner-authorized exact speculative-decoding specification and implementation plan.
 - Implementation pull request #24 based on 1cd502609c7b05ac628057f79a9135b07c08e821.
-- Implementation-reviewed head 16efc462270a45f386a339aaeccef9d4d773b4a4.
-- Phase 0 run 31831427741 and job 94867790897 succeeded with 332 complete tests and 230 focused tests.
-- CodeQL run 31831427752 and job 94867791028 succeeded; alert count is not asserted.
-- Specification-compliance and code-quality verdicts are recorded as ACCEPT in docs/reviews/P0-T08-EXACT-SPECULATIVE-SEMANTICS-REVIEW.md.
+- Final implementation head 16d65288b34a9f2f91a4c67182aab13ddfb5e17d.
+- Implementation merge e6c9d1ae30f1b5e161a56bf8c9b4fa25c823fe24.
+- Specification-compliance review 4940413742 and code-quality review 4940415259 recorded ACCEPT.
+- Remediation pull request #25, final head a7f508fe1fa4787b889445c5e5986339b508217a and merge e81c1c0ad0b161844569df46ee62246c9de56698.
+- Phase 0 implementation run 31831781322 and job 94868927648 succeeded with 332 complete tests and 230 focused tests.
+- CodeQL implementation run 31831781266 and job 94868926709 succeeded.
+- Phase 0 remediation run 31838436974 and job 94889874946 succeeded.
+- CodeQL remediation run 31838436902 and job 94889874310 succeeded.
+- SonarQube Cloud PR check 94889986512 passed with 0 new issues and 0 security hotspots.
+- Final-main Phase 0 run 31838603770 and job 94890388826 succeeded.
+- Final-main CodeQL run 31838603775 and job 94890388594 succeeded.
+- Sonar main-branch discrepancy is tracked by QG-01 / issue #26 and is not misrepresented as resolved.
 outputs:
 - Immutable exact finite distribution and deterministic random-tape primitives.
 - One-token modified rejection-sampling kernel.
@@ -36,7 +44,7 @@ outputs:
 - Separate deterministic greedy oracle.
 - Transactional target/draft/auxiliary token-prefix state witnesses.
 - Canonical deterministic traces and adversarial tests.
-- Fresh specification and code-quality reviews plus hosted/post-merge evidence.
+- Fresh specification, code-quality and Sonar-remediation reviews plus exact-head and post-merge evidence.
 allowed_paths:
 - src/forgellm_governance/exact_distribution.py
 - src/forgellm_governance/speculative_decoding.py
@@ -91,11 +99,12 @@ acceptance_criteria:
 - Canonical traces are deterministic and serialize rational values without floats, timestamps, hosts or random IDs.
 - All adversarial invalid inputs and inconsistent states fail closed with stable exception classes.
 - All P0-T08-owned Python source and test files pass Ruff format verification without changing pre-existing files outside the task packet.
-- The focused CA-03 suite and complete make ci pass on the exact final pull-request head.
+- The focused CA-03 suite and complete make ci pass on the exact final implementation and remediation heads.
 - Fresh specification-compliance and code-quality reviews record ACCEPT after all BLOCKER/MAJOR findings are resolved.
-- Hosted Phase 0 and CodeQL succeed before merge, followed by successful post-merge verification.
+- SonarQube Cloud reports no new issue on the final remediation PR head.
+- Hosted Phase 0 and CodeQL succeeded before and after both implementation and remediation merges.
 verification_commands:
-- python scripts/validate_task_packet.py tasks/open/P0-T08-exact-speculative-decoding.yaml --root .
+- python scripts/validate_task_packet.py tasks/closed/P0-T08-exact-speculative-decoding.yaml --root .
 - python -m pytest -q tests/test_exact_distribution.py tests/test_speculative_sampling.py tests/test_speculative_round.py
 - python -m pytest -q tests/test_target_law.py tests/test_speculative_exhaustive.py tests/test_speculative_greedy.py
 - python -m pytest -q tests/test_speculative_state.py tests/test_speculative_trace.py tests/test_speculative_adversarial.py
@@ -107,17 +116,18 @@ verification_commands:
 - git diff --check
 - git status --short
 evidence_requirements:
-- Record primary source IDs, owner authorization, base/reviewed/merge commits and exact plan revision.
-- Preserve exact finite model fixtures or constructors and all equality-of-law test ranges.
-- Record every review finding and its regression test or disposition.
-- Record focused/full test counts, hosted workflow run/job identifiers and post-merge gates.
-- Record that Ruff format verification is intentionally limited to task-owned files because repository-wide historical formatting debt is outside P0-T08 allowed paths.
-- State explicitly that equality of law is not same-seed identity and that no performance claim is established.
-- Do not close the task before post-merge Phase 0 and CodeQL evidence exists.
+- Primary source IDs, owner authorization, base, implementation head/merge, remediation head/merge and exact plan revision are recorded.
+- Exact finite model constructors and all equality-of-law test ranges are preserved.
+- Every review and Sonar finding and its regression test or disposition is recorded.
+- Focused/full test counts, hosted workflow run/job identifiers, Sonar PR result and post-merge gates are recorded.
+- Ruff format verification is intentionally limited to task-owned files because repository-wide historical formatting debt is outside P0-T08 allowed paths.
+- Equality of law is explicitly distinguished from same-seed identity and no performance claim is established.
+- Sonar `main`-analysis failure is tracked truthfully rather than suppressed.
+- P0-T04 and P0-T05 remain unchanged.
 dependencies:
 - P0-T07
 owner_role: Project owner and architecture authority
-reviewer_role: Separate fresh contexts for specification compliance and code quality
+reviewer_role: Separate fresh contexts for specification compliance, code quality and Sonar remediation
 risk_ids:
 - R-002
 - R-003

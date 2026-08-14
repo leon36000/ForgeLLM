@@ -1,81 +1,81 @@
 # ForgeLLM Handoff
 
-**From state:** S-0006  
-**To work:** CA-03 — exact speculative-decoding reference semantics  
+**From state:** S-0007  
+**To work:** owner decision — designate P0-T04 host or authorize a bounded QG-01 investigation  
 **Generated:** 2026-08-14
 
 ## Canonical status
 
 - repository: `leon36000/ForgeLLM`;
 - protected default branch: `main`;
-- P0-T07 merge: `b0f3f241537b50de0dd3c0cb7bc2e6bf274a7034`;
 - P0-T07: complete;
+- P0-T08 / CA-03: complete;
 - P0-T04: blocked only on owner host designation;
-- CA-03: owner-authorized for subagent-driven execution;
-- hardware/model/runtime work under CA-03: forbidden.
+- P0-T05/P0-T06: blocked behind inventory and workload/SLO gates;
+- QG-01 / issue #26: proposed Sonar `main`-analysis investigation, not yet a task packet;
+- no future model, runtime or research implementation is automatically authorized.
 
-## P0-T07 evidence
-
-Final pull-request head `99c1c1488f622a6d4290e21a17ff313a1c3568c6`:
-
-- Phase 0 `31784275654` / `94716606110`: success;
-- 102 tests passed;
-- canonical synthetic scenario executed;
-- CodeQL `31784275655` / `94716597658`: success;
-- Dependency Review `31784275656`: skipped;
-- fresh-context verdict: `ACCEPT`.
-
-Post-merge on `b0f3f241537b50de0dd3c0cb7bc2e6bf274a7034`:
-
-- Phase 0 `31784610893` / `94717633943`: success;
-- CodeQL `31784610881` / `94717633957`: success.
-
-Synthetic hashes:
+## P0-T08 evidence
 
 ```text
-6738d9596a2a9b9224a68e071a94463cdcbe7cff10a7cd30c4de29cd3381aa2f  topology
-3aa6dcb2504aebee7c3db236abdd59867efe25296420bdc7e9ba1883061f4cb5  component profile
-e5eb661bb48eca62b778714670000f963922ca459cb8590b3717150993a921ae  generated result
+Implementation PR       #24
+Base                    1cd502609c7b05ac628057f79a9135b07c08e821
+Reviewed head           16d65288b34a9f2f91a4c67182aab13ddfb5e17d
+Implementation merge    e6c9d1ae30f1b5e161a56bf8c9b4fa25c823fe24
+Phase 0 implementation  31831781322 / 94868927648
+Tests complete          332 passed
+Tests focused           230 passed
+CodeQL implementation   31831781266 / 94868926709
+Spec review             4940413742 / ACCEPT
+Code-quality review     4940415259 / ACCEPT
+Remediation PR          #25
+Remediation head        a7f508fe1fa4787b889445c5e5986339b508217a
+Remediation merge       e81c1c0ad0b161844569df46ee62246c9de56698
+Phase 0 remediation     31838436974 / 94889874946
+CodeQL remediation      31838436902 / 94889874310
+Sonar PR gate           94889986512 / PASSED / 0 new issues
+Phase 0 final main      31838603770 / 94890388826
+CodeQL final main       31838603775 / 94890388594
+Evidence boundary       finite_exact_reference
 ```
 
-The machine-readable closeout is `artifacts/simulations/P0-T07-closeout-evidence.json`.
+Dependency Review was skipped by repository policy. CodeQL success does not assert zero repository-wide alerts.
 
-## CA-03 required scope
+## SonarQube Cloud truth boundary
 
-CA-03 must produce a placement-independent exact reference for speculative decoding.
+PR #25 passed the SonarQube Cloud Quality Gate with 0 new issues and 0 security hotspots. Automatic analysis of `main` at the remediation merge was nevertheless reported as cancelled / failed by check `94890528740`, with no GitHub annotations. Issue #26 tracks that discrepancy. Do not reinterpret the PR result as proof that branch analysis is functioning.
 
-### Required semantics
+## Exact oracle now available
 
-1. An exact finite distribution representation with explicit normalization.
-2. Proposal sampling from `q`.
-3. Per-token acceptance probability `min(1, p(x)/q(x))`.
-4. On rejection, sampling from normalized positive residual `(p-q)_+`.
-5. A target bonus token when all proposals are accepted and budget/EOS permit.
-6. A separate greedy oracle with deterministic tie-breaking.
-7. Transactional target/draft KV and auxiliary state:
-   - retain only accepted proposal state;
-   - discard rejected proposal suffix state;
-   - treat replacement/bonus token state according to the next target evaluation boundary;
-   - roll back atomically on cancellation.
-8. Exhaustive finite probability-law tests against ordinary target decoding.
-9. Explicit handling of zero-probability proposal entries, EOS and output budget.
-10. No same-seed sequence-identity claim; exactness means equality of output law, not identical random-number consumption.
+Stable reference surfaces include:
 
-## Required process
+- `ExactDistribution` and `RandomTape`;
+- exact one-token acceptance/rejection;
+- sampled speculative rounds;
+- `FiniteTableModel`;
+- exact target/speculative law enumerators;
+- deterministic greedy target/speculative oracles;
+- `DecoderState` and `RoundTransaction`;
+- canonical trace documents and bytes;
+- `make verify-speculative`.
 
-1. Review primary sources and register scoped claims.
-2. Commit a written CA-03 specification.
-3. Write a detailed TDD implementation plan.
-4. Create a schema-valid P0 task packet with explicit allowed paths.
-5. Implement by isolated tasks.
-6. Review specification compliance and code quality separately.
-7. Run exact-head hosted Phase 0 and CodeQL gates.
-8. Update state only after merge and post-merge verification.
+## Semantics future implementations must preserve
 
-## Evidence boundary
+1. `p` is target and `q` is the recorded proposal distribution.
+2. Acceptance is `min(1, p(x)/q(x))`.
+3. The first rejection samples normalized `(p-q)_+` and discards the remaining proposal suffix.
+4. A target bonus is legal only after a fully accepted non-EOS block with budget remaining.
+5. EOS terminates output immediately.
+6. Stochastic exactness means equality of output law, not identical random-number consumption.
+7. Greedy decoding has a separate deterministic oracle.
+8. Accepted proposal state commits; rejected suffix state does not.
+9. Residual/bonus output may be one pending token until synchronization.
+10. Cancellation restores the original state witness exactly.
 
-CA-03 may use finite table-defined synthetic target/draft models. It may not download a model, run a GPU, benchmark performance or implement the production runtime.
+## Evidence limits
 
-## Parallel hardware task
+Do not infer real-model, floating-point, KV-tensor, hardware, performance, batching, distributed or production behavior from CA-03.
 
-P0-T04 may start later when the owner designates one host and mode. CA-03 does not satisfy, replace or weaken the hardware and workload gates.
+## Next owner decision
+
+The current operational task remains P0-T04. To start it, provide one project-safe host label and execution mode. QG-01 can be authorized separately to investigate SonarQube Cloud branch analysis without mixing it with hardware or runtime work.
