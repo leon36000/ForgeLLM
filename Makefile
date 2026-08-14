@@ -34,6 +34,10 @@ simulate-cache-draft:
 	  --topology examples/simulations/synthetic-cache-draft-topology.json \
 	  --components examples/simulations/synthetic-cache-draft-components.json \
 	  --output artifacts/simulations/synthetic-cache-draft-result.json
+	sha256sum \
+	  examples/simulations/synthetic-cache-draft-topology.json \
+	  examples/simulations/synthetic-cache-draft-components.json \
+	  artifacts/simulations/synthetic-cache-draft-result.json
 
 inventory:
 	$(PYTHON) scripts/hardware_inventory.py --output artifacts/hardware-local.json
