@@ -15,14 +15,16 @@ from forgellm_governance.speculative_decoding import (
     SampledRoundRequest,
     SampledRoundResult,
     decide_one_token,
+    exact_bernoulli,
 )
 from forgellm_governance.speculative_exhaustive import (
     enumerate_speculative_law,
     enumerate_target_law,
 )
-from forgellm_governance.speculative_models import FiniteTableModel
+from forgellm_governance.speculative_models import FiniteTableModel, ModelTableError
 from forgellm_governance.speculative_state import (
     DecoderState,
+    RoundTransaction,
     TransactionStateError,
     begin_round,
     cancel_round,
@@ -57,9 +59,19 @@ def test_random_tape_never_reduces_out_of_range_draw_modulo_bound() -> None:
         RandomTape((7,)).draw(3)
 
 
+def test_exact_bernoulli_requires_random_tape_for_deterministic_choice() -> None:
+    with pytest.raises(ProposalValidationError, match="tape must be a RandomTape"):
+        exact_bernoulli(Fraction(1), object())  # type: ignore[arg-type]
+
+
 def test_zero_weight_duplicate_cannot_hide_duplicate_token_identity() -> None:
     with pytest.raises(ValueError, match="duplicate token"):
         ExactDistribution.from_pairs([(0, 0), (0, 1)])
+
+
+def test_direct_empty_finite_table_construction_fails_closed() -> None:
+    with pytest.raises(ModelTableError, match="at least one"):
+        FiniteTableModel(())
 
 
 def test_recorded_q_support_is_mandatory_for_proposed_token() -> None:
@@ -121,6 +133,38 @@ def test_eos_inside_emitted_sequence_is_rejected_by_result_invariants() -> None:
         )
 
 
+def test_round_result_requires_immutable_acceptance_probability_tuple() -> None:
+    with pytest.raises(ProposalValidationError, match="must be a tuple"):
+        SampledRoundResult(
+            prefix=(),
+            proposed_tokens=(0,),
+            accepted_count=1,
+            emitted_tokens=(0,),
+            acceptance_probabilities=[Fraction(1)],  # type: ignore[arg-type]
+            correction_kind="none",
+            termination="budget",
+            tape=RandomTape(()),
+            remaining_budget=1,
+            eos_token_id=9,
+        )
+
+
+def test_round_result_cannot_record_more_proposals_than_budget() -> None:
+    with pytest.raises(ProposalValidationError, match="proposed more tokens than remaining budget"):
+        SampledRoundResult(
+            prefix=(),
+            proposed_tokens=(0, 1),
+            accepted_count=0,
+            emitted_tokens=(2,),
+            acceptance_probabilities=(Fraction(0),),
+            correction_kind="residual",
+            termination="rejection",
+            tape=RandomTape(()),
+            remaining_budget=1,
+            eos_token_id=9,
+        )
+
+
 def test_state_transaction_cannot_be_committed_or_cancelled_twice() -> None:
     transaction = begin_round(clean_state(), (0,))
     result = SampledRoundResult(
@@ -140,6 +184,25 @@ def test_state_transaction_cannot_be_committed_or_cancelled_twice() -> None:
         commit_round(closed, result)
     with pytest.raises(TransactionStateError, match="closed"):
         cancel_round(closed)
+
+
+def test_direct_open_transaction_rejects_non_executable_original_state() -> None:
+    finished = DecoderState((9,), (9,), (9,), None, (9,), (9,), True)
+    with pytest.raises(TransactionStateError, match="finished"):
+        RoundTransaction(finished, (0,))
+
+    pending = DecoderState((7,), (), (), 7, (7,), (7,), False)
+    with pytest.raises(TransactionStateError, match="pending"):
+        RoundTransaction(pending, (0,))
+
+    with pytest.raises(TransactionStateError, match="at least one"):
+        RoundTransaction(clean_state(), ())
+
+
+def test_transaction_method_rejects_non_result_with_stable_error() -> None:
+    transaction = RoundTransaction.begin(clean_state(), (0,))
+    with pytest.raises(TransactionStateError, match="result must be a SampledRoundResult"):
+        transaction.commit(object(), 9)  # type: ignore[arg-type]
 
 
 def test_trace_rejects_request_result_budget_and_prefix_mismatch() -> None:
