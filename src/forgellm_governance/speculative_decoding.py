@@ -46,8 +46,14 @@ class OneTokenDecision:
         expected_kind: CorrectionKind = "accepted" if self.accepted else "residual"
         if self.correction_kind != expected_kind:
             raise ProposalValidationError(f"decision must use correction_kind {expected_kind}")
+        if self.accepted and self.acceptance_probability == 0:
+            raise ProposalValidationError("accepted decision requires positive acceptance probability")
+        if not self.accepted and self.acceptance_probability == 1:
+            raise ProposalValidationError("rejected decision requires acceptance probability below one")
         if self.accepted and self.emitted_token != self.proposed_token:
             raise ProposalValidationError("accepted decision must emit the proposed token")
+        if not self.accepted and self.emitted_token == self.proposed_token:
+            raise ProposalValidationError("residual decision cannot emit the proposed token")
 
 
 def exact_bernoulli(
@@ -219,6 +225,8 @@ def _validate_residual_branch(result: SampledRoundResult) -> None:
         raise ProposalValidationError("residual correction requires a rejected proposal")
     if len(result.acceptance_probabilities) != result.accepted_count + 1:
         raise ProposalValidationError("residual branch must record through first rejection")
+    if result.acceptance_probabilities[-1] == 1:
+        raise ProposalValidationError("rejected proposal requires acceptance probability below one")
     if len(result.emitted_tokens) != result.accepted_count + 1:
         raise ProposalValidationError("residual branch emits accepted prefix plus one correction")
 
@@ -242,6 +250,8 @@ def _validate_none_branch(result: SampledRoundResult) -> None:
 
 
 def _validate_round_branch(result: SampledRoundResult) -> None:
+    if any(probability == 0 for probability in result.acceptance_probabilities[: result.accepted_count]):
+        raise ProposalValidationError("accepted proposals require positive acceptance probability")
     validators = {
         "residual": _validate_residual_branch,
         "bonus": _validate_bonus_branch,
