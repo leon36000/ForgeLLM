@@ -1,7 +1,7 @@
 PYTHON ?= python3
 export PYTHONPATH := src
 
-.PHONY: validate test lint verify ci mobile-hashes inventory snapshot clean
+.PHONY: validate test lint verify ci mobile-hashes simulate-cache-draft inventory snapshot clean
 
 validate:
 	$(PYTHON) scripts/validate_project_state.py --root .
@@ -9,6 +9,10 @@ validate:
 	$(PYTHON) scripts/validate_benchmark.py examples/benchmarks/valid-example.json --root .
 	$(PYTHON) scripts/validate_task_packet.py examples/tasks/P0-T02.yaml --root .
 	$(PYTHON) scripts/validate_task_packet.py tasks/open/P0-T03-repository-hardening.yaml --root .
+	$(PYTHON) scripts/validate_task_packet.py tasks/open/P0-T04-first-hardware-inventory.yaml --root .
+	$(PYTHON) scripts/validate_task_packet.py tasks/open/P0-T07-cache-aware-placement-simulator.yaml --root .
+	$(PYTHON) scripts/validate_topology.py examples/simulations/synthetic-cache-draft-topology.json --root .
+	$(PYTHON) scripts/validate_component_profile.py examples/simulations/synthetic-cache-draft-components.json --root .
 	$(PYTHON) scripts/hash_mobile_context.py --root .
 	bash -n scripts/bootstrap_core_ubuntu.sh
 
@@ -24,6 +28,12 @@ ci: lint verify
 
 mobile-hashes:
 	$(PYTHON) scripts/hash_mobile_context.py --root .
+
+simulate-cache-draft:
+	$(PYTHON) scripts/simulate_placement.py --root . \
+	  --topology examples/simulations/synthetic-cache-draft-topology.json \
+	  --components examples/simulations/synthetic-cache-draft-components.json \
+	  --output artifacts/simulations/synthetic-cache-draft-result.json
 
 inventory:
 	$(PYTHON) scripts/hardware_inventory.py --output artifacts/hardware-local.json
