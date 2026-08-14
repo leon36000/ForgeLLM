@@ -38,7 +38,9 @@ def _validated_stored_law_entry(
     entry: object,
 ) -> tuple[tuple[int, ...], Fraction]:
     if not isinstance(entry, tuple) or len(entry) != 2:
-        raise LawNormalizationError("stored law entries must be sequence/mass pairs")
+        raise LawNormalizationError(
+            "stored law entries must be sequence/mass pairs"
+        )
     sequence, mass = entry
     try:
         validated = validate_prefix(sequence, name="sequence")
@@ -251,12 +253,28 @@ def _advance_verification(
     )
     accepted_mass = state.continuation_mass * alpha
     if accepted_mass == 0:
-        return _VerificationState(state.accepted_tokens, state.prefix, Fraction(0), True), outcomes
+        return (
+            _VerificationState(
+                state.accepted_tokens,
+                state.prefix,
+                Fraction(0),
+                True,
+            ),
+            outcomes,
+        )
     accepted_tokens = state.accepted_tokens + (record.token,)
     accepted_prefix = state.prefix + (record.token,)
     if record.token == eos_token_id:
         eos_outcome = ((accepted_tokens, accepted_mass),)
-        return _VerificationState(accepted_tokens, accepted_prefix, Fraction(0), True), outcomes + eos_outcome
+        return (
+            _VerificationState(
+                accepted_tokens,
+                accepted_prefix,
+                Fraction(0),
+                True,
+            ),
+            outcomes + eos_outcome,
+        )
     return _VerificationState(accepted_tokens, accepted_prefix, accepted_mass), outcomes
 
 
