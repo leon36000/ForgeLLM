@@ -2,7 +2,7 @@ schema_version: '1.0'
 task_id: P0-T08
 title: Build exact speculative-decoding reference semantics
 phase: P0
-status: in_progress
+status: review
 charter_goals:
 - Preserve inference correctness independently of hardware optimization.
 - Establish falsifiable reference semantics before runtime implementation.
@@ -22,6 +22,11 @@ inputs:
 - CLM-047 scoped external claim.
 - CA-03 exact speculative-decoding research synthesis.
 - Owner-authorized exact speculative-decoding specification and implementation plan.
+- Implementation pull request #24 based on 1cd502609c7b05ac628057f79a9135b07c08e821.
+- Implementation-reviewed head 16efc462270a45f386a339aaeccef9d4d773b4a4.
+- Phase 0 run 31831427741 and job 94867790897 succeeded with 332 complete tests and 230 focused tests.
+- CodeQL run 31831427752 and job 94867791028 succeeded; alert count is not asserted.
+- Specification-compliance and code-quality verdicts are recorded as ACCEPT in docs/reviews/P0-T08-EXACT-SPECULATIVE-SEMANTICS-REVIEW.md.
 outputs:
 - Immutable exact finite distribution and deterministic random-tape primitives.
 - One-token modified rejection-sampling kernel.
@@ -85,6 +90,7 @@ acceptance_criteria:
 - Transactional state tests prove accepted-prefix commit, rejected-suffix discard, pending correction/bonus, synchronization and exact cancellation rollback.
 - Canonical traces are deterministic and serialize rational values without floats, timestamps, hosts or random IDs.
 - All adversarial invalid inputs and inconsistent states fail closed with stable exception classes.
+- All P0-T08-owned Python source and test files pass Ruff format verification without changing pre-existing files outside the task packet.
 - The focused CA-03 suite and complete make ci pass on the exact final pull-request head.
 - Fresh specification-compliance and code-quality reviews record ACCEPT after all BLOCKER/MAJOR findings are resolved.
 - Hosted Phase 0 and CodeQL succeed before merge, followed by successful post-merge verification.
@@ -94,7 +100,8 @@ verification_commands:
 - python -m pytest -q tests/test_target_law.py tests/test_speculative_exhaustive.py tests/test_speculative_greedy.py
 - python -m pytest -q tests/test_speculative_state.py tests/test_speculative_trace.py tests/test_speculative_adversarial.py
 - python -m ruff check src scripts tests
-- python -m ruff format --check src scripts tests
+- >-
+  python -m ruff format --check src/forgellm_governance/__init__.py src/forgellm_governance/exact_distribution.py src/forgellm_governance/speculative_decoding.py src/forgellm_governance/speculative_models.py src/forgellm_governance/speculative_exhaustive.py src/forgellm_governance/speculative_greedy.py src/forgellm_governance/speculative_state.py src/forgellm_governance/speculative_trace.py tests/test_exact_distribution.py tests/test_speculative_sampling.py tests/test_speculative_round.py tests/test_target_law.py tests/test_speculative_exhaustive.py tests/test_speculative_greedy.py tests/test_speculative_state.py tests/test_speculative_trace.py tests/test_speculative_adversarial.py
 - make verify-speculative
 - make ci
 - git diff --check
@@ -104,6 +111,7 @@ evidence_requirements:
 - Preserve exact finite model fixtures or constructors and all equality-of-law test ranges.
 - Record every review finding and its regression test or disposition.
 - Record focused/full test counts, hosted workflow run/job identifiers and post-merge gates.
+- Record that Ruff format verification is intentionally limited to task-owned files because repository-wide historical formatting debt is outside P0-T08 allowed paths.
 - State explicitly that equality of law is not same-seed identity and that no performance claim is established.
 - Do not close the task before post-merge Phase 0 and CodeQL evidence exists.
 dependencies:

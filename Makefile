@@ -1,7 +1,30 @@
 PYTHON ?= python3
 export PYTHONPATH := src
 
-.PHONY: validate test lint verify ci mobile-hashes simulate-cache-draft inventory snapshot clean
+SPECULATIVE_SOURCES := \
+	src/forgellm_governance/__init__.py \
+	src/forgellm_governance/exact_distribution.py \
+	src/forgellm_governance/speculative_decoding.py \
+	src/forgellm_governance/speculative_models.py \
+	src/forgellm_governance/speculative_exhaustive.py \
+	src/forgellm_governance/speculative_greedy.py \
+	src/forgellm_governance/speculative_state.py \
+	src/forgellm_governance/speculative_trace.py
+
+SPECULATIVE_TESTS := \
+	tests/test_exact_distribution.py \
+	tests/test_speculative_sampling.py \
+	tests/test_speculative_round.py \
+	tests/test_target_law.py \
+	tests/test_speculative_exhaustive.py \
+	tests/test_speculative_greedy.py \
+	tests/test_speculative_state.py \
+	tests/test_speculative_trace.py \
+	tests/test_speculative_adversarial.py
+
+SPECULATIVE_FILES := $(SPECULATIVE_SOURCES) $(SPECULATIVE_TESTS)
+
+.PHONY: validate test lint verify verify-speculative ci mobile-hashes simulate-cache-draft inventory snapshot clean
 
 validate:
 	$(PYTHON) scripts/validate_project_state.py --root .
@@ -22,10 +45,14 @@ test:
 
 lint:
 	$(PYTHON) -m ruff check src scripts tests
+	$(PYTHON) -m ruff format --check $(SPECULATIVE_FILES)
 
 verify: validate test
 
-ci: lint verify simulate-cache-draft
+verify-speculative:
+	$(PYTHON) -m pytest -q $(SPECULATIVE_TESTS)
+
+ci: lint verify verify-speculative simulate-cache-draft
 
 mobile-hashes:
 	$(PYTHON) scripts/hash_mobile_context.py --root .
