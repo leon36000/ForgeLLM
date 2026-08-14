@@ -189,10 +189,7 @@ def _validate_round_primitives(result: SampledRoundResult) -> None:
         raise ProposalValidationError(str(exc)) from exc
     if not isinstance(result.tape, RandomTape):
         raise ProposalValidationError("tape must be a RandomTape")
-    if any(
-        not isinstance(value, Fraction) or not 0 <= value <= 1
-        for value in result.acceptance_probabilities
-    ):
+    if any(not isinstance(value, Fraction) or not 0 <= value <= 1 for value in result.acceptance_probabilities):
         raise ProposalValidationError("acceptance probabilities must be Fractions between zero and one")
 
 
@@ -205,10 +202,7 @@ def _validate_round_structure(result: SampledRoundResult) -> None:
         raise ProposalValidationError("accepted_count exceeds proposed token count")
     if len(result.emitted_tokens) > result.remaining_budget:
         raise ProposalValidationError("round emitted more tokens than remaining budget")
-    if (
-        result.proposed_tokens[: result.accepted_count]
-        != result.emitted_tokens[: result.accepted_count]
-    ):
+    if result.proposed_tokens[: result.accepted_count] != result.emitted_tokens[: result.accepted_count]:
         raise ProposalValidationError("accepted proposal prefix must equal emitted proposal prefix")
     if result.eos_token_id in result.emitted_tokens[:-1]:
         raise ProposalValidationError("EOS must be the final emitted token")
@@ -269,9 +263,7 @@ def _expected_termination(result: SampledRoundResult) -> RoundTermination:
 def _validate_round_termination(result: SampledRoundResult) -> None:
     expected = _expected_termination(result)
     if result.termination != expected:
-        raise ProposalValidationError(
-            f"termination {result.termination} inconsistent with branch; expected {expected}"
-        )
+        raise ProposalValidationError(f"termination {result.termination} inconsistent with branch; expected {expected}")
 
 
 @dataclass(frozen=True, slots=True)
@@ -350,9 +342,7 @@ def _rejected_round_result(
     decision: OneTokenDecision,
 ) -> SampledRoundResult:
     emitted_tokens = accepted_tokens + (decision.emitted_token,)
-    termination: RoundTermination = (
-        "eos" if decision.emitted_token == request.eos_token_id else "rejection"
-    )
+    termination: RoundTermination = "eos" if decision.emitted_token == request.eos_token_id else "rejection"
     return _make_round_result(
         request,
         records,
@@ -396,9 +386,7 @@ def _verify_proposals(
     current_tape = tape
     for record in records:
         if record.prefix != verification_prefix:
-            raise ProposalValidationError(
-                "proposal prefix does not match consecutive verification prefix"
-            )
+            raise ProposalValidationError("proposal prefix does not match consecutive verification prefix")
         decision = decide_one_token(
             target.distribution(verification_prefix),
             record.distribution,
@@ -450,12 +438,8 @@ def _complete_all_accepted(
             "budget",
             accepted.tape,
         )
-    bonus, advanced = target.distribution(accepted.verification_prefix).sample(
-        accepted.tape
-    )
-    termination: RoundTermination = (
-        "eos" if bonus == request.eos_token_id else "all_accepted"
-    )
+    bonus, advanced = target.distribution(accepted.verification_prefix).sample(accepted.tape)
+    termination: RoundTermination = "eos" if bonus == request.eos_token_id else "all_accepted"
     return _make_round_result(
         request,
         records,
