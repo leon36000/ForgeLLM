@@ -37,7 +37,7 @@ python scripts/simulate_placement.py \
   --output artifacts/simulations/synthetic-cache-draft-result.json
 ```
 
-The CLI writes atomically and only beneath `artifacts/`. Traversal and symlink escapes fail closed.
+The CLI writes atomically and only beneath `artifacts/`. Traversal and symlink escapes fail closed. The Make target also prints SHA-256 values for the topology, component profile, and generated result.
 
 ## Cost accounting
 
@@ -55,7 +55,7 @@ total_ns, implementation_id, compute_domain_id, memory_domain_id
 
 The result retains the selected candidate, every legal candidate and full cost breakdown, the best legal generic fallback, every rejected candidate with stable reason codes, SHA-256 hashes of both inputs, and `evidence_boundary: synthetic_only`.
 
-The same validated inputs produce byte-identical JSON output regardless of input array ordering or the requested artifact filename.
+Repeated execution with byte-identical inputs produces byte-identical JSON regardless of the requested artifact filename. Reordering semantically unordered input arrays preserves the selected plan and ranking, while the complete result legitimately records different input hashes because the input bytes changed.
 
 ## Unsupported terms
 
