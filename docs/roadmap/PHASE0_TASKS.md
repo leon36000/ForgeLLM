@@ -10,7 +10,23 @@
 | P0-T06 | blocked on P0-T05 | write P1 baseline implementation plan | reviewed profile specification |
 | P0-T07 | complete | synthetic cache-aware topology and placement simulator | PR #20; 102 tests; PR/post-merge gates |
 | P0-T08 / CA-03 | complete | finite exact speculative-decoding reference semantics | PR #24 + remediation PR #25; 332 complete and 230 focused tests; dual review; PR/post-merge gates |
-| QG-01 | proposed, packet required | stabilize SonarQube Cloud automatic analysis on `main` | issue #26; authenticated branch-analysis evidence required |
+| P0-T09 / QG-01 | in progress — read-only block | stabilize SonarQube Cloud analysis on protected `main` | owner authorization recorded; public baseline complete; authenticated Sonar readback required |
+
+## P0-T09 current gate
+
+- owner command: `autorise P0-T09 / subagent-driven`;
+- canonical base: `1b1a3621fcdf4129268663c497cdcd53aed48c29`;
+- branch: `feat/p0-t09-sonar-diagnosis`;
+- task packet: `tasks/open/P0-T09-sonarqube-main-analysis.yaml`;
+- baseline JSON: `artifacts/governance/P0-T09-sonar-baseline.json`;
+- baseline report: `docs/quality/P0-T09-SONAR-BASELINE.md`;
+- configuration changes: none;
+- failure classification: `unknown_due_to_missing_authenticated_evidence`;
+- method selection: `not_selected`.
+
+Public evidence shows three successive PR quality-gate successes followed by cancelled `main` Sonar checks with zero GitHub annotations. Phase 0 and CodeQL passed on all corresponding commits. The canonical tree contains no Sonar scanner workflow or properties file.
+
+The next gate is owner-authenticated read-only Sonar project evidence: binding, Analysis Method, failed activity/task message, quality gate, new-code definition, scope settings, plan/tier, and external scanner confirmation. ADR-0004 may select `automatic_only` or `ci_based_only` only after this readback. The methods may not run concurrently.
 
 ## P0-T08 final evidence
 
@@ -28,13 +44,7 @@
 - Phase 0 remediation `31838436974` / `94889874946`: success;
 - CodeQL remediation `31838436902` / `94889874310`: success;
 - SonarQube Cloud PR check `94889986512`: Quality Gate passed, 0 new issues, 0 security hotspots;
-- final-main Phase 0 `31838603770` / `94890388826`: success;
-- final-main CodeQL `31838603775` / `94890388594`: success;
 - evidence boundary: `finite_exact_reference`.
-
-## SonarQube Cloud caveat
-
-Automatic `main` analysis check `94890528740` was cancelled / failed without GitHub annotations after the clean remediation merge. Issue #26 tracks the discrepancy. P0-T08 closes because its required Phase 0, CodeQL, exact-law and dual-review gates passed and the production Sonar findings were remediated under a clean PR quality gate; no claim is made that Sonar branch analysis is healthy.
 
 ## P0-T04 entry condition
 
