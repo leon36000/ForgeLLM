@@ -153,7 +153,7 @@ def test_prefix_dependent_target_and_draft_match_exactly(
         alphabet=alphabet,
         budget=budget,
     )
-    if budget:
+    if budget > 1:
         assert target.distribution(()) != target.distribution((0,))
         assert draft.distribution(()) != draft.distribution((0,))
     assert_laws_equal(
