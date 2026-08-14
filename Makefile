@@ -11,6 +11,7 @@ validate:
 	$(PYTHON) scripts/validate_task_packet.py tasks/open/P0-T03-repository-hardening.yaml --root .
 	$(PYTHON) scripts/validate_task_packet.py tasks/open/P0-T04-first-hardware-inventory.yaml --root .
 	$(PYTHON) scripts/validate_task_packet.py tasks/closed/P0-T07-cache-aware-placement-simulator.yaml --root .
+	$(PYTHON) scripts/validate_task_packet.py tasks/open/P0-T08-exact-speculative-decoding.yaml --root .
 	$(PYTHON) scripts/validate_topology.py examples/simulations/synthetic-cache-draft-topology.json --root .
 	$(PYTHON) scripts/validate_component_profile.py examples/simulations/synthetic-cache-draft-components.json --root .
 	$(PYTHON) scripts/hash_mobile_context.py --root .
