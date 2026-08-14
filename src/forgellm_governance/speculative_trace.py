@@ -30,7 +30,7 @@ def _state_document(state: DecoderState) -> dict[str, Any]:
     }
 
 
-def build_trace_document(
+def canonical_trace_document(
     request: SampledRoundRequest,
     result: SampledRoundResult,
     state: DecoderState | None = None,
@@ -67,10 +67,20 @@ def build_trace_document(
     }
 
 
+def build_trace_document(
+    request: SampledRoundRequest,
+    result: SampledRoundResult,
+    state: DecoderState | None = None,
+) -> dict[str, Any]:
+    """Compatibility wrapper for the canonical trace document API."""
+
+    return canonical_trace_document(request, result, state)
+
+
 def canonical_trace_bytes(
     request: SampledRoundRequest,
     result: SampledRoundResult,
     state: DecoderState | None = None,
 ) -> bytes:
-    document = build_trace_document(request, result, state)
+    document = canonical_trace_document(request, result, state)
     return (json.dumps(document, indent=2, sort_keys=True, separators=(",", ": ")) + "\n").encode("utf-8")
