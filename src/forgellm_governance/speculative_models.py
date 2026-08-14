@@ -25,6 +25,8 @@ class FiniteTableModel:
     def __post_init__(self) -> None:
         if not isinstance(self.table, tuple):
             raise ModelTableError("table must be a tuple")
+        if not self.table:
+            raise ModelTableError("finite table requires at least one prefix")
         prefixes: list[tuple[int, ...]] = []
         for entry in self.table:
             if not isinstance(entry, tuple) or len(entry) != 2:
