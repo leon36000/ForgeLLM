@@ -1,0 +1,70 @@
+{
+  "analysis_method": {
+    "automatic_analysis_compatibility": null,
+    "automatic_analysis_enabled": null,
+    "last_analysis_method": null,
+    "readback_timestamp_utc": null,
+    "source": "SonarQube Cloud Administration > Analysis Method"
+  },
+  "binding": {
+    "bound_repository": null,
+    "binding_status": null,
+    "project_key": "leon36000_ForgeLLM",
+    "provider": "GitHub",
+    "readback_timestamp_utc": null
+  },
+  "external_scanner_confirmation": {
+    "external_ci_name": null,
+    "external_ci_submits_to_project": null,
+    "readback_basis": null
+  },
+  "failed_main_analysis": {
+    "analysis_or_task_id": null,
+    "commit": null,
+    "error_category": null,
+    "error_message_sanitized": null,
+    "readback_timestamp_utc": null,
+    "source": "SonarQube Cloud Project Activity or authenticated Web API",
+    "status": null
+  },
+  "new_code": {
+    "definition": null,
+    "parameter": null,
+    "readback_timestamp_utc": null
+  },
+  "plan": {
+    "features_relevant_to_main_and_pull_requests": [],
+    "plan_name": null,
+    "readback_timestamp_utc": null
+  },
+  "privacy": {
+    "administrative_payload_committed": false,
+    "emails_removed": true,
+    "token_values_removed": true,
+    "user_names_removed": true
+  },
+  "project": {
+    "organization_key_or_public_slug": null,
+    "project_key": "leon36000_ForgeLLM",
+    "sonar_instance": "https://sonarcloud.io"
+  },
+  "quality_gate": {
+    "conditions": [],
+    "name": null,
+    "project_status": null,
+    "readback_timestamp_utc": null
+  },
+  "schema_version": "1.0",
+  "scope": {
+    "automatic_analysis_properties_file_present": false,
+    "coverage_exclusions": [],
+    "duplication_exclusions": [],
+    "issue_exclusions": [],
+    "issue_ignore_multicriteria": [],
+    "source_exclusions": [],
+    "source_inclusions": [],
+    "test_exclusions": [],
+    "test_inclusions": []
+  },
+  "task_id": "P0-T09"
+}

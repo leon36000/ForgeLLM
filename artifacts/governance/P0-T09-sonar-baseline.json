@@ -1,0 +1,251 @@
+{
+  "administrative_evidence": {
+    "authenticated_readback_available": false,
+    "captured_payload_hashes": [],
+    "missing_fields": [
+      "analysis_method_setting",
+      "automatic_analysis_compatibility",
+      "bound_repository_readback",
+      "failed_main_analysis_task_message",
+      "last_analysis_method",
+      "new_code_definition",
+      "project_plan_or_tier",
+      "project_quality_gate_definition",
+      "project_scope_settings"
+    ],
+    "reason": "No authenticated SonarQube Cloud project-administration or activity session is available to the executing agent. Administrative API services require authorization."
+  },
+  "authorization": {
+    "mode": "subagent-driven",
+    "owner_command": "autorise P0-T09 / subagent-driven",
+    "recorded_date": "2026-08-14",
+    "tracking_comment_id": 5298369164
+  },
+  "baseline_classification": {
+    "configuration_changes_made": false,
+    "failure_classification": "unknown_due_to_missing_authenticated_evidence",
+    "method_selection": "not_selected",
+    "observed_pattern": "pull_request_analysis_succeeds_while_main_analysis_is_cancelled",
+    "read_only_gate": "blocked_after_public_evidence",
+    "repository_code_regression_established": false
+  },
+  "canonical_source": {
+    "commit": "1b1a3621fcdf4129268663c497cdcd53aed48c29",
+    "repository": "leon36000/ForgeLLM",
+    "tree": "3996362aa40dd951a3a4cd97b87ad9cb1988b710"
+  },
+  "evidence_boundary": "quality_governance_read_only",
+  "github_evidence": [
+    {
+      "codeql": {
+        "conclusion": "success",
+        "job_id": 94868926709,
+        "run_id": 31831781266
+      },
+      "commit": "16d65288b34a9f2f91a4c67182aab13ddfb5e17d",
+      "context": "pull_request_24_implementation",
+      "phase0": {
+        "complete_tests_passed": 332,
+        "conclusion": "success",
+        "focused_tests_passed": 230,
+        "job_id": 94868927648,
+        "run_id": 31831781322
+      },
+      "sonar": {
+        "annotations": {
+          "production_failures": 2,
+          "test_warnings": 34,
+          "total": 36
+        },
+        "check_id": 94869018087,
+        "conclusion": "cancelled",
+        "details_scope": "pullRequest=24",
+        "output_title": "SonarQube Cloud analysis failed"
+      }
+    },
+    {
+      "codeql": {
+        "conclusion": "success",
+        "job_id": 94889874310,
+        "run_id": 31838436902
+      },
+      "commit": "a7f508fe1fa4787b889445c5e5986339b508217a",
+      "context": "pull_request_25_remediation",
+      "phase0": {
+        "conclusion": "success",
+        "job_id": 94889874946,
+        "run_id": 31838436974
+      },
+      "sonar": {
+        "accepted_issues": 0,
+        "annotations": 0,
+        "check_id": 94889986512,
+        "conclusion": "success",
+        "details_scope": "pullRequest=25",
+        "new_issues": 0,
+        "output_title": "Quality Gate passed",
+        "security_hotspots": 0
+      }
+    },
+    {
+      "codeql": {
+        "conclusion": "success",
+        "job_id": 94890388594,
+        "run_id": 31838603775
+      },
+      "commit": "e81c1c0ad0b161844569df46ee62246c9de56698",
+      "context": "main_after_remediation",
+      "phase0": {
+        "conclusion": "success",
+        "job_id": 94890388826,
+        "run_id": 31838603770
+      },
+      "sonar": {
+        "annotations": 0,
+        "check_id": 94890528740,
+        "conclusion": "cancelled",
+        "details_scope": "branch=main",
+        "output_title": "SonarQube Cloud analysis failed"
+      }
+    },
+    {
+      "codeql": {
+        "conclusion": "success",
+        "job_id": 94892223260,
+        "run_id": 31839210430
+      },
+      "commit": "5c1f7c6cfa6e7bdfb680783d92beb7da211d4def",
+      "context": "pull_request_27_closeout",
+      "phase0": {
+        "complete_tests_passed": 332,
+        "conclusion": "success",
+        "focused_tests_passed": 230,
+        "job_id": 94892223177,
+        "run_id": 31839210388
+      },
+      "sonar": {
+        "accepted_issues": 0,
+        "annotations": 0,
+        "check_id": 94892322303,
+        "conclusion": "success",
+        "details_scope": "pullRequest=27",
+        "new_issues": 0,
+        "output_title": "Quality Gate passed",
+        "security_hotspots": 0
+      }
+    },
+    {
+      "codeql": {
+        "conclusion": "success",
+        "job_id": 94892716896,
+        "run_id": 31839376533
+      },
+      "commit": "e669f5e1a6913005fbba8d34e9ba8bdfce91c460",
+      "context": "main_after_closeout",
+      "phase0": {
+        "conclusion": "success",
+        "job_id": 94892716693,
+        "run_id": 31839376502
+      },
+      "sonar": {
+        "annotations": 0,
+        "check_id": 94892860919,
+        "conclusion": "cancelled",
+        "details_scope": "branch=main",
+        "output_title": "SonarQube Cloud analysis failed"
+      }
+    },
+    {
+      "codeql": {
+        "conclusion": "success",
+        "job_id": 94894486492,
+        "run_id": 31839968116
+      },
+      "commit": "f60373b368059656a130c7ece93988265d1a58dc",
+      "context": "pull_request_28_planning",
+      "phase0": {
+        "conclusion": "success",
+        "job_id": 94894486941,
+        "run_id": 31839968145
+      },
+      "sonar": {
+        "accepted_issues": 0,
+        "annotations": 0,
+        "check_id": 94894565075,
+        "conclusion": "success",
+        "details_scope": "pullRequest=28",
+        "new_issues": 0,
+        "output_title": "Quality Gate passed",
+        "security_hotspots": 0
+      }
+    },
+    {
+      "codeql": {
+        "conclusion": "success",
+        "job_id": 94894917968,
+        "run_id": 31840108966
+      },
+      "commit": "1b1a3621fcdf4129268663c497cdcd53aed48c29",
+      "context": "main_after_planning",
+      "phase0": {
+        "conclusion": "success",
+        "job_id": 94894917794,
+        "run_id": 31840108959
+      },
+      "sonar": {
+        "annotations": 0,
+        "check_id": 94894966719,
+        "conclusion": "cancelled",
+        "details_scope": "branch=main",
+        "output_title": "SonarQube Cloud analysis failed"
+      }
+    }
+  ],
+  "project": {
+    "github_app": "sonarqubecloud",
+    "github_app_id": 12526,
+    "project_key": "leon36000_ForgeLLM",
+    "sonar_instance": "https://sonarcloud.io"
+  },
+  "repository_configuration_readback": {
+    "canonical_tree_search": {
+      "ci_sonar_workflow_present": false,
+      "sonar_project_properties_present": false,
+      "sonarcloud_properties_present": false,
+      "search_basis": "Git tree path inventory at canonical_source.tree"
+    },
+    "external_ci_submitting_to_same_project": "unknown",
+    "inference": "The GitHub SonarQube Cloud app is producing analyses without a committed scanner configuration, which is consistent with automatic analysis but does not authenticate the Analysis Method setting."
+  },
+  "schema_version": "1.0",
+  "sonar_findings_from_pull_request_24": {
+    "production_findings": [
+      {
+        "annotation_level": "failure",
+        "path": "src/forgellm_governance/speculative_decoding.py",
+        "rule_summary": "Define a constant instead of duplicating the RandomTape validation literal.",
+        "start_line": 39
+      },
+      {
+        "annotation_level": "failure",
+        "path": "src/forgellm_governance/speculative_exhaustive.py",
+        "rule_summary": "Return one consistent outcome container shape from the completion helper.",
+        "start_line": 277
+      }
+    ],
+    "test_findings": {
+      "annotation_level": "warning",
+      "count": 34,
+      "paths": [
+        "tests/test_exact_distribution.py",
+        "tests/test_speculative_adversarial.py",
+        "tests/test_speculative_round.py",
+        "tests/test_speculative_sampling.py",
+        "tests/test_speculative_state.py",
+        "tests/test_target_law.py"
+      ],
+      "rule_summary": "Refactor exception tests so only one invocation can throw inside the assertion context."
+    }
+  },
+  "task_id": "P0-T09"
+}
