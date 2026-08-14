@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from fractions import Fraction
 
 from .exact_distribution import (
     DistributionValidationError,
+    ExactDistribution,
     validate_non_negative_int,
     validate_positive_int,
     validate_prefix,
@@ -33,6 +34,50 @@ def _coerce_mass(value: object) -> Fraction:
     return mass
 
 
+def _validated_stored_law_entry(
+    entry: object,
+) -> tuple[tuple[int, ...], Fraction]:
+    if not isinstance(entry, tuple) or len(entry) != 2:
+        raise LawNormalizationError("stored law entries must be sequence/mass pairs")
+    sequence, mass = entry
+    try:
+        validated = validate_prefix(sequence, name="sequence")
+    except DistributionValidationError as exc:
+        raise LawNormalizationError(str(exc)) from exc
+    if validated != sequence:
+        raise LawNormalizationError("stored sequence must be a tuple")
+    if not isinstance(mass, Fraction) or mass <= 0:
+        raise LawNormalizationError("stored sequence mass must be a positive Fraction")
+    return validated, mass
+
+
+def _validate_stored_law(
+    probabilities: tuple[tuple[tuple[int, ...], Fraction], ...],
+) -> None:
+    if not isinstance(probabilities, tuple) or not probabilities:
+        raise LawNormalizationError("sequence law support cannot be empty")
+    validated = tuple(_validated_stored_law_entry(entry) for entry in probabilities)
+    sequences = tuple(sequence for sequence, _ in validated)
+    if sequences != tuple(sorted(sequences)) or len(sequences) != len(set(sequences)):
+        raise LawNormalizationError("stored sequences must be unique and sorted")
+    total = sum((mass for _, mass in validated), Fraction(0))
+    if total != 1:
+        raise LawNormalizationError("sequence law probabilities must sum exactly to one")
+
+
+def _validated_law_pair(
+    raw: object,
+) -> tuple[tuple[int, ...], Fraction]:
+    if not isinstance(raw, tuple) or len(raw) != 2:
+        raise LawNormalizationError("law entries must be sequence/mass pairs")
+    raw_sequence, raw_mass = raw
+    try:
+        sequence = validate_prefix(raw_sequence, name="sequence")
+    except DistributionValidationError as exc:
+        raise LawNormalizationError(str(exc)) from exc
+    return sequence, _coerce_mass(raw_mass)
+
+
 @dataclass(frozen=True, slots=True)
 class ExactSequenceLaw:
     """Canonical finite probability law over emitted token tuples."""
@@ -40,28 +85,7 @@ class ExactSequenceLaw:
     probabilities: tuple[tuple[tuple[int, ...], Fraction], ...]
 
     def __post_init__(self) -> None:
-        if not isinstance(self.probabilities, tuple) or not self.probabilities:
-            raise LawNormalizationError("sequence law support cannot be empty")
-        sequences: list[tuple[int, ...]] = []
-        total = Fraction(0)
-        for entry in self.probabilities:
-            if not isinstance(entry, tuple) or len(entry) != 2:
-                raise LawNormalizationError("stored law entries must be sequence/mass pairs")
-            sequence, mass = entry
-            try:
-                validated = validate_prefix(sequence, name="sequence")
-            except DistributionValidationError as exc:
-                raise LawNormalizationError(str(exc)) from exc
-            if validated != sequence:
-                raise LawNormalizationError("stored sequence must be a tuple")
-            if not isinstance(mass, Fraction) or mass <= 0:
-                raise LawNormalizationError("stored sequence mass must be a positive Fraction")
-            sequences.append(sequence)
-            total += mass
-        if sequences != sorted(sequences) or len(sequences) != len(set(sequences)):
-            raise LawNormalizationError("stored sequences must be unique and sorted")
-        if total != 1:
-            raise LawNormalizationError("sequence law probabilities must sum exactly to one")
+        _validate_stored_law(self.probabilities)
 
     @classmethod
     def from_pairs(
@@ -72,21 +96,16 @@ class ExactSequenceLaw:
         count = 0
         for raw in pairs:
             count += 1
-            if not isinstance(raw, tuple) or len(raw) != 2:
-                raise LawNormalizationError("law entries must be sequence/mass pairs")
-            raw_sequence, raw_mass = raw
-            try:
-                sequence = validate_prefix(raw_sequence, name="sequence")
-            except DistributionValidationError as exc:
-                raise LawNormalizationError(str(exc)) from exc
-            mass = _coerce_mass(raw_mass)
+            sequence, mass = _validated_law_pair(raw)
             if mass:
                 aggregate[sequence] = aggregate.get(sequence, Fraction(0)) + mass
         if count == 0 or not aggregate:
             raise LawNormalizationError("sequence law requires positive support")
         total = sum(aggregate.values(), Fraction(0))
         if total != 1:
-            raise LawNormalizationError(f"sequence law probabilities must sum exactly to one; observed {total}")
+            raise LawNormalizationError(
+                f"sequence law probabilities must sum exactly to one; observed {total}"
+            )
         return cls(tuple(sorted(aggregate.items(), key=lambda item: item[0])))
 
     @property
@@ -183,6 +202,93 @@ def _enumerate_proposal_paths(
     return tuple(paths)
 
 
+@dataclass(frozen=True, slots=True)
+class _VerificationState:
+    accepted_tokens: tuple[int, ...]
+    prefix: tuple[int, ...]
+    continuation_mass: Fraction
+    stopped: bool = False
+
+
+def _residual_outcomes(
+    target: ExactDistribution,
+    proposal: ExactDistribution,
+    accepted_tokens: tuple[int, ...],
+    rejection_mass: Fraction,
+) -> tuple[tuple[tuple[int, ...], Fraction], ...]:
+    if rejection_mass == 0:
+        return ()
+    residual = target.positive_residual(proposal)
+    return tuple(
+        (
+            accepted_tokens + (correction,),
+            rejection_mass * correction_mass,
+        )
+        for correction, correction_mass in residual.probabilities
+    )
+
+
+def _advance_verification(
+    target: DistributionModel,
+    record: ProposalRecord,
+    state: _VerificationState,
+    eos_token_id: int,
+) -> tuple[_VerificationState, tuple[tuple[tuple[int, ...], Fraction], ...]]:
+    if record.prefix != state.prefix:
+        raise LawNormalizationError("proposal path prefix is not consecutive")
+    target_distribution = target.distribution(state.prefix)
+    alpha = acceptance_probability(
+        target_distribution,
+        record.distribution,
+        record.token,
+    )
+    rejection_mass = state.continuation_mass * (1 - alpha)
+    outcomes = _residual_outcomes(
+        target_distribution,
+        record.distribution,
+        state.accepted_tokens,
+        rejection_mass,
+    )
+    accepted_mass = state.continuation_mass * alpha
+    if accepted_mass == 0:
+        return _VerificationState(state.accepted_tokens, state.prefix, Fraction(0), True), outcomes
+    accepted_tokens = state.accepted_tokens + (record.token,)
+    accepted_prefix = state.prefix + (record.token,)
+    if record.token == eos_token_id:
+        eos_outcome = ((accepted_tokens, accepted_mass),)
+        return _VerificationState(accepted_tokens, accepted_prefix, Fraction(0), True), outcomes + eos_outcome
+    return _VerificationState(accepted_tokens, accepted_prefix, accepted_mass), outcomes
+
+
+def _completion_outcomes(
+    target: DistributionModel,
+    state: _VerificationState,
+    remaining_budget: int,
+) -> tuple[tuple[tuple[int, ...], Fraction], ...]:
+    if state.stopped or state.continuation_mass == 0:
+        return ()
+    if len(state.accepted_tokens) >= remaining_budget:
+        return ((state.accepted_tokens, state.continuation_mass),)
+    bonus_distribution = target.distribution(state.prefix)
+    return tuple(
+        (
+            state.accepted_tokens + (bonus,),
+            state.continuation_mass * bonus_mass,
+        )
+        for bonus, bonus_mass in bonus_distribution.probabilities
+    )
+
+
+def _validate_conditional_outcomes(
+    outcomes: list[tuple[tuple[int, ...], Fraction]],
+) -> None:
+    total = sum((mass for _, mass in outcomes), Fraction(0))
+    if total != 1:
+        raise LawNormalizationError(
+            f"conditional verification outcomes must sum exactly to one; observed {total}"
+        )
+
+
 def _verification_outcomes(
     target: DistributionModel,
     prefix: tuple[int, ...],
@@ -190,57 +296,20 @@ def _verification_outcomes(
     remaining_budget: int,
     eos_token_id: int,
 ) -> tuple[tuple[tuple[int, ...], Fraction], ...]:
-    emitted_accepted: tuple[int, ...] = ()
-    verification_prefix = prefix
-    continuation_mass = Fraction(1)
+    state = _VerificationState((), prefix, Fraction(1))
     outcomes: list[tuple[tuple[int, ...], Fraction]] = []
-
     for record in records:
-        if continuation_mass == 0:
-            break
-        if record.prefix != verification_prefix:
-            raise LawNormalizationError("proposal path prefix is not consecutive")
-        target_distribution = target.distribution(verification_prefix)
-        alpha = acceptance_probability(
-            target_distribution,
-            record.distribution,
-            record.token,
+        state, new_outcomes = _advance_verification(
+            target,
+            record,
+            state,
+            eos_token_id,
         )
-        rejection_mass = continuation_mass * (1 - alpha)
-        if rejection_mass:
-            residual = target_distribution.positive_residual(record.distribution)
-            for correction, correction_mass in residual.probabilities:
-                outcomes.append(
-                    (
-                        emitted_accepted + (correction,),
-                        rejection_mass * correction_mass,
-                    )
-                )
-        continuation_mass *= alpha
-        if continuation_mass == 0:
+        outcomes.extend(new_outcomes)
+        if state.stopped:
             break
-        emitted_accepted = emitted_accepted + (record.token,)
-        verification_prefix = verification_prefix + (record.token,)
-        if record.token == eos_token_id:
-            outcomes.append((emitted_accepted, continuation_mass))
-            continuation_mass = Fraction(0)
-            break
-
-    if continuation_mass:
-        if len(emitted_accepted) >= remaining_budget:
-            outcomes.append((emitted_accepted, continuation_mass))
-        else:
-            bonus_distribution = target.distribution(verification_prefix)
-            for bonus, bonus_mass in bonus_distribution.probabilities:
-                outcomes.append(
-                    (
-                        emitted_accepted + (bonus,),
-                        continuation_mass * bonus_mass,
-                    )
-                )
-    total = sum((mass for _, mass in outcomes), Fraction(0))
-    if total != 1:
-        raise LawNormalizationError(f"conditional verification outcomes must sum exactly to one; observed {total}")
+    outcomes.extend(_completion_outcomes(target, state, remaining_budget))
+    _validate_conditional_outcomes(outcomes)
     return tuple(outcomes)
 
 
@@ -288,6 +357,31 @@ def enumerate_speculative_round_law(
     return ExactSequenceLaw.from_pairs(outcomes)
 
 
+def _compose_round_outcomes(
+    current_prefix: tuple[int, ...],
+    remaining: int,
+    eos_token_id: int,
+    round_law: ExactSequenceLaw,
+    recurse: Callable[[tuple[int, ...], int], ExactSequenceLaw],
+) -> list[tuple[tuple[int, ...], Fraction]]:
+    outcomes: list[tuple[tuple[int, ...], Fraction]] = []
+    for emitted, round_mass in round_law.probabilities:
+        if not emitted:
+            raise LawNormalizationError("positive-budget speculative round emitted no token")
+        if emitted[-1] == eos_token_id or len(emitted) >= remaining:
+            outcomes.append((emitted, round_mass))
+            continue
+        suffix_law = recurse(
+            current_prefix + emitted,
+            remaining - len(emitted),
+        )
+        outcomes.extend(
+            (emitted + suffix, round_mass * suffix_mass)
+            for suffix, suffix_mass in suffix_law.probabilities
+        )
+    return outcomes
+
+
 def enumerate_speculative_law(
     target: DistributionModel,
     draft: DistributionModel,
@@ -328,19 +422,13 @@ def enumerate_speculative_law(
             validated_draft_length,
             eos,
         )
-        outcomes: list[tuple[tuple[int, ...], Fraction]] = []
-        for emitted, round_mass in round_law.probabilities:
-            if not emitted:
-                raise LawNormalizationError("positive-budget speculative round emitted no token")
-            if emitted[-1] == eos or len(emitted) >= remaining:
-                outcomes.append((emitted, round_mass))
-                continue
-            suffix_law = rec(
-                current_prefix + emitted,
-                remaining - len(emitted),
-            )
-            for suffix, suffix_mass in suffix_law.probabilities:
-                outcomes.append((emitted + suffix, round_mass * suffix_mass))
+        outcomes = _compose_round_outcomes(
+            current_prefix,
+            remaining,
+            eos,
+            round_law,
+            rec,
+        )
         law = ExactSequenceLaw.from_pairs(outcomes)
         memo[key] = law
         return law
