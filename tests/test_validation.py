@@ -9,8 +9,8 @@ from forgellm_governance.validation import (
     scan_for_secrets,
     validate_benchmark_file,
     validate_project,
-    validate_research_catalogs,
     validate_repository_automation,
+    validate_research_catalogs,
     validate_task_packet_file,
 )
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import FrozenInstanceError
 import json
+from dataclasses import FrozenInstanceError
 from pathlib import Path
 
 import pytest
@@ -86,7 +86,7 @@ def test_direct_link_ambiguity_is_rejected(tmp_path: Path) -> None:
 
     with pytest.raises(TopologyValidationError) as caught:
         load_topology(path, tmp_path)
-    assert any("ambiguous direct link" in issue.messae for issue in caught.value.issues)
+    assert any("ambiguous direct link" in issue.message for issue in caught.value.issues)
 
 
 def test_tuple_order_follows_source_order() -> None:

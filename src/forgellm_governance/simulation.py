@@ -9,7 +9,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from .components import ComponentProfileDocument, load_component_document
+from .components import load_component_document
 from .cost_model import CostBreakdown, PlacementCandidate
 from .legality import RejectedCandidate
 from .planner import ComponentPlan, EvaluatedCandidate, plan_components
