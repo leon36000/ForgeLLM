@@ -21,6 +21,7 @@ class ProposalValidationError(ValueError):
 
 
 CorrectionKind = Literal["accepted", "residual"]
+RANDOM_TAPE_REQUIRED = "tape must be a RandomTape"
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,7 +37,7 @@ class OneTokenDecision:
         validate_token_id(self.proposed_token, name="proposed_token")
         validate_token_id(self.emitted_token, name="emitted_token")
         if not isinstance(self.tape, RandomTape):
-            raise ProposalValidationError("tape must be a RandomTape")
+            raise ProposalValidationError(RANDOM_TAPE_REQUIRED)
         if not isinstance(self.acceptance_probability, Fraction):
             raise ProposalValidationError("acceptance_probability must be a Fraction")
         if not 0 <= self.acceptance_probability <= 1:
@@ -63,7 +64,7 @@ def exact_bernoulli(
     """Sample an exact Bernoulli choice using an immutable integer tape."""
 
     if not isinstance(tape, RandomTape):
-        raise ProposalValidationError("tape must be a RandomTape")
+        raise ProposalValidationError(RANDOM_TAPE_REQUIRED)
     if not isinstance(probability, Fraction):
         raise ProposalValidationError("probability must be a Fraction")
     if not 0 <= probability <= 1:
@@ -196,7 +197,7 @@ def _validate_round_primitives(result: SampledRoundResult) -> None:
     except ValueError as exc:
         raise ProposalValidationError(str(exc)) from exc
     if not isinstance(result.tape, RandomTape):
-        raise ProposalValidationError("tape must be a RandomTape")
+        raise ProposalValidationError(RANDOM_TAPE_REQUIRED)
     if not isinstance(result.acceptance_probabilities, tuple):
         raise ProposalValidationError("acceptance_probabilities must be a tuple")
     if any(not isinstance(value, Fraction) or not 0 <= value <= 1 for value in result.acceptance_probabilities):

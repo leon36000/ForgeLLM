@@ -278,19 +278,19 @@ def _completion_outcomes(
     target: DistributionModel,
     state: _VerificationState,
     remaining_budget: int,
-) -> tuple[tuple[tuple[int, ...], Fraction], ...]:
+) -> list[tuple[tuple[int, ...], Fraction]]:
     if state.stopped or state.continuation_mass == 0:
-        return ()
+        return []
     if len(state.accepted_tokens) >= remaining_budget:
-        return ((state.accepted_tokens, state.continuation_mass),)
+        return [(state.accepted_tokens, state.continuation_mass)]
     bonus_distribution = target.distribution(state.prefix)
-    return tuple(
+    return [
         (
             state.accepted_tokens + (bonus,),
             state.continuation_mass * bonus_mass,
         )
         for bonus, bonus_mass in bonus_distribution.probabilities
-    )
+    ]
 
 
 def _validate_conditional_outcomes(
