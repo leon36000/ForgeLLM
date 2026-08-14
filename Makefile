@@ -1,7 +1,7 @@
 PYTHON ?= python3
 export PYTHONPATH := src
 
-.PHONY: validate test lint verify ci mobile-hashes simulate-cache-draft inventory snapshot clean
+.PHONY: validate test lint verify verify-speculative ci mobile-hashes simulate-cache-draft inventory snapshot clean
 
 validate:
 	$(PYTHON) scripts/validate_project_state.py --root .
@@ -22,10 +22,23 @@ test:
 
 lint:
 	$(PYTHON) -m ruff check src scripts tests
+	$(PYTHON) -m ruff format --check src scripts tests
 
 verify: validate test
 
-ci: lint verify simulate-cache-draft
+verify-speculative:
+	$(PYTHON) -m pytest -q \
+	  tests/test_exact_distribution.py \
+	  tests/test_speculative_sampling.py \
+	  tests/test_speculative_round.py \
+	  tests/test_target_law.py \
+	  tests/test_speculative_exhaustive.py \
+	  tests/test_speculative_greedy.py \
+	  tests/test_speculative_state.py \
+	  tests/test_speculative_trace.py \
+	  tests/test_speculative_adversarial.py
+
+ci: lint verify verify-speculative simulate-cache-draft
 
 mobile-hashes:
 	$(PYTHON) scripts/hash_mobile_context.py --root .

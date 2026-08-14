@@ -18,7 +18,9 @@ def d(*pairs: tuple[int, int | Fraction]) -> ExactDistribution:
     return ExactDistribution.from_pairs(pairs)
 
 
-def model(*rows: tuple[tuple[int, ...], ExactDistribution]) -> FiniteTableModel:
+def model(
+    *rows: tuple[tuple[int, ...], ExactDistribution],
+) -> FiniteTableModel:
     return FiniteTableModel.from_pairs(rows)
 
 
@@ -30,13 +32,36 @@ def test_finite_table_model_is_canonical_and_lookup_is_deterministic() -> None:
         table.distribution((9,))
 
 
+def test_finite_table_requires_rows_and_exact_distribution_values() -> None:
+    with pytest.raises(ModelTableError, match="at least one"):
+        FiniteTableModel.from_pairs([])
+    with pytest.raises(ModelTableError, match="ExactDistribution"):
+        FiniteTableModel.from_pairs([((), object())])  # type: ignore[list-item]
+
+
 def test_finite_table_rejects_duplicate_and_invalid_prefixes() -> None:
     with pytest.raises(ModelTableError, match="duplicate prefix"):
         model(((), d((0, 1))), ((), d((1, 1))))
     with pytest.raises(ModelTableError, match="prefix.*tuple"):
-        FiniteTableModel.from_pairs([([0], d((1, 1)))])  # type: ignore[list-item]
+        FiniteTableModel.from_pairs(
+            [([0], d((1, 1)))]  # type: ignore[list-item]
+        )
     with pytest.raises(ModelTableError, match="non-boolean integer"):
         model(((True,), d((1, 1))))  # type: ignore[arg-type]
+    with pytest.raises(ModelTableError):
+        FiniteTableModel.from_pairs(
+            [((0, "x"), d((0, 1)))]  # type: ignore[list-item]
+        )
+
+
+def test_stored_table_order_must_remain_canonical() -> None:
+    with pytest.raises(ModelTableError, match="unique and sorted"):
+        FiniteTableModel(
+            (
+                ((1,), d((2, 1))),
+                ((), d((1, 1))),
+            )
+        )
 
 
 class NoLookupModel:
@@ -47,9 +72,14 @@ class NoLookupModel:
 def test_zero_budget_performs_no_model_lookup_or_random_draw() -> None:
     tape = RandomTape(())
     result = sample_speculative_round(
-        NoLookupModel(),  # type: ignore[arg-type]
-        NoLookupModel(),  # type: ignore[arg-type]
-        SampledRoundRequest(prefix=(), draft_length=2, remaining_budget=0, eos_token_id=9),
+        NoLookupModel(),
+        NoLookupModel(),
+        SampledRoundRequest(
+            prefix=(),
+            draft_length=2,
+            remaining_budget=0,
+            eos_token_id=9,
+        ),
         tape,
     )
     assert result.proposed_tokens == ()
@@ -70,12 +100,16 @@ def test_zero_budget_performs_no_model_lookup_or_random_draw() -> None:
     ],
 )
 def test_round_request_rejects_invalid_fields(kwargs: dict[str, object]) -> None:
-    with pytest.raises((ProposalValidationError, ValueError)):
+    with pytest.raises(ProposalValidationError):
         SampledRoundRequest(prefix=(), **kwargs)  # type: ignore[arg-type]
 
 
 def test_all_accepted_block_emits_target_bonus() -> None:
-    target = model(((), d((0, 1))), ((0,), d((1, 1))), ((0, 1), d((2, 1))))
+    target = model(
+        ((), d((0, 1))),
+        ((0,), d((1, 1))),
+        ((0, 1), d((2, 1))),
+    )
     draft = model(((), d((0, 1))), ((0,), d((1, 1))))
     result = sample_speculative_round(
         target,
@@ -108,7 +142,7 @@ def test_first_rejection_emits_one_residual_and_discards_generated_suffix() -> N
     assert result.termination == "rejection"
 
 
-def test_acceptance_uses_recorded_q_and_does_not_requery_draft_during_verification() -> None:
+def test_acceptance_uses_recorded_q_without_requerying_draft() -> None:
     class OneShotDraft:
         def __init__(self) -> None:
             self.calls: list[tuple[int, ...]] = []
@@ -116,14 +150,16 @@ def test_acceptance_uses_recorded_q_and_does_not_requery_draft_during_verificati
         def distribution(self, prefix: tuple[int, ...]) -> ExactDistribution:
             self.calls.append(prefix)
             if len(self.calls) > 1:
-                raise AssertionError("draft was queried during target verification")
+                raise AssertionError(
+                    "draft was queried during target verification"
+                )
             return d((0, 3), (1, 1))
 
     draft = OneShotDraft()
     target = model(((), d((0, 1), (1, 1))))
     result = sample_speculative_round(
         target,
-        draft,  # type: ignore[arg-type]
+        draft,
         SampledRoundRequest((), 1, 1, 9),
         RandomTape((0, 0)),
     )
@@ -190,7 +226,7 @@ def test_bonus_eos_has_eos_precedence() -> None:
     assert result.termination == "eos"
 
 
-def test_result_invariants_reject_inconsistent_branch() -> None:
+def test_result_invariants_reject_inconsistent_accepted_prefix() -> None:
     with pytest.raises(ProposalValidationError, match="accepted proposal prefix"):
         SampledRoundResult(
             prefix=(),
@@ -202,5 +238,37 @@ def test_result_invariants_reject_inconsistent_branch() -> None:
             termination="budget",
             tape=RandomTape(()),
             remaining_budget=1,
+            eos_token_id=9,
+        )
+
+
+def test_none_branch_cannot_hide_unverified_proposal_suffix() -> None:
+    with pytest.raises(ProposalValidationError, match="every generated proposal"):
+        SampledRoundResult(
+            prefix=(),
+            proposed_tokens=(0, 1),
+            accepted_count=1,
+            emitted_tokens=(0,),
+            acceptance_probabilities=(Fraction(1),),
+            correction_kind="none",
+            termination="budget",
+            tape=RandomTape(()),
+            remaining_budget=1,
+            eos_token_id=9,
+        )
+
+
+def test_bonus_branch_requires_exact_acceptance_probability_count() -> None:
+    with pytest.raises(ProposalValidationError, match="exactly every accepted"):
+        SampledRoundResult(
+            prefix=(),
+            proposed_tokens=(0,),
+            accepted_count=1,
+            emitted_tokens=(0, 2),
+            acceptance_probabilities=(Fraction(1), Fraction(1)),
+            correction_kind="bonus",
+            termination="all_accepted",
+            tape=RandomTape(()),
+            remaining_budget=2,
             eos_token_id=9,
         )

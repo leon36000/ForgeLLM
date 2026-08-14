@@ -20,16 +20,16 @@ from .speculative_decoding import (
 )
 
 
-class SequenceLawError(ValueError):
-    """Raised when an exact finite output law is malformed or cannot be enumerated."""
+class LawNormalizationError(ValueError):
+    """Raised when an exact finite output law is malformed or cannot normalize."""
 
 
 def _coerce_mass(value: object) -> Fraction:
     if isinstance(value, bool) or not isinstance(value, (int, Fraction)):
-        raise SequenceLawError("sequence mass must be an int or Fraction")
+        raise LawNormalizationError("sequence mass must be an int or Fraction")
     mass = Fraction(value)
     if mass < 0:
-        raise SequenceLawError("sequence mass must be non-negative")
+        raise LawNormalizationError("sequence mass must be non-negative")
     return mass
 
 
@@ -41,31 +41,33 @@ class ExactSequenceLaw:
 
     def __post_init__(self) -> None:
         if not isinstance(self.probabilities, tuple) or not self.probabilities:
-            raise SequenceLawError("sequence law support cannot be empty")
+            raise LawNormalizationError("sequence law support cannot be empty")
         sequences: list[tuple[int, ...]] = []
         total = Fraction(0)
         for entry in self.probabilities:
             if not isinstance(entry, tuple) or len(entry) != 2:
-                raise SequenceLawError(
+                raise LawNormalizationError(
                     "stored law entries must be sequence/mass pairs"
                 )
             sequence, mass = entry
             try:
                 validated = validate_prefix(sequence, name="sequence")
             except DistributionValidationError as exc:
-                raise SequenceLawError(str(exc)) from exc
+                raise LawNormalizationError(str(exc)) from exc
             if validated != sequence:
-                raise SequenceLawError("stored sequence must be a tuple")
+                raise LawNormalizationError("stored sequence must be a tuple")
             if not isinstance(mass, Fraction) or mass <= 0:
-                raise SequenceLawError(
+                raise LawNormalizationError(
                     "stored sequence mass must be a positive Fraction"
                 )
             sequences.append(sequence)
             total += mass
         if sequences != sorted(sequences) or len(sequences) != len(set(sequences)):
-            raise SequenceLawError("stored sequences must be unique and sorted")
+            raise LawNormalizationError(
+                "stored sequences must be unique and sorted"
+            )
         if total != 1:
-            raise SequenceLawError(
+            raise LawNormalizationError(
                 "sequence law probabilities must sum exactly to one"
             )
 
@@ -79,20 +81,22 @@ class ExactSequenceLaw:
         for raw in pairs:
             count += 1
             if not isinstance(raw, tuple) or len(raw) != 2:
-                raise SequenceLawError("law entries must be sequence/mass pairs")
+                raise LawNormalizationError(
+                    "law entries must be sequence/mass pairs"
+                )
             raw_sequence, raw_mass = raw
             try:
                 sequence = validate_prefix(raw_sequence, name="sequence")
             except DistributionValidationError as exc:
-                raise SequenceLawError(str(exc)) from exc
+                raise LawNormalizationError(str(exc)) from exc
             mass = _coerce_mass(raw_mass)
             if mass:
                 aggregate[sequence] = aggregate.get(sequence, Fraction(0)) + mass
         if count == 0 or not aggregate:
-            raise SequenceLawError("sequence law requires positive support")
+            raise LawNormalizationError("sequence law requires positive support")
         total = sum(aggregate.values(), Fraction(0))
         if total != 1:
-            raise SequenceLawError(
+            raise LawNormalizationError(
                 f"sequence law probabilities must sum exactly to one; observed {total}"
             )
         return cls(tuple(sorted(aggregate.items(), key=lambda item: item[0])))
@@ -105,7 +109,7 @@ class ExactSequenceLaw:
         try:
             validated = validate_prefix(sequence, name="sequence")
         except DistributionValidationError as exc:
-            raise SequenceLawError(str(exc)) from exc
+            raise LawNormalizationError(str(exc)) from exc
         for item_sequence, mass in self.probabilities:
             if item_sequence == validated:
                 return mass
@@ -124,7 +128,7 @@ def _validate_common(
             validate_token_id(eos_token_id, name="eos_token_id"),
         )
     except DistributionValidationError as exc:
-        raise SequenceLawError(str(exc)) from exc
+        raise LawNormalizationError(str(exc)) from exc
 
 
 def enumerate_target_law(
@@ -207,7 +211,7 @@ def _verification_outcomes(
         if continuation_mass == 0:
             break
         if record.prefix != verification_prefix:
-            raise SequenceLawError("proposal path prefix is not consecutive")
+            raise LawNormalizationError("proposal path prefix is not consecutive")
         target_distribution = target.distribution(verification_prefix)
         alpha = acceptance_probability(
             target_distribution,
@@ -248,7 +252,7 @@ def _verification_outcomes(
                 )
     total = sum((mass for _, mass in outcomes), Fraction(0))
     if total != 1:
-        raise SequenceLawError(
+        raise LawNormalizationError(
             "conditional verification outcomes must sum exactly to one; "
             f"observed {total}"
         )
@@ -259,15 +263,15 @@ def enumerate_speculative_round_law(
     target: DistributionModel,
     draft: DistributionModel,
     prefix: tuple[int, ...],
+    budget: int,
     draft_length: int,
-    remaining_budget: int,
     eos_token_id: int,
 ) -> ExactSequenceLaw:
     """Enumerate one exact speculative round, including proposal randomness."""
 
-    validated_prefix, budget, eos = _validate_common(
+    validated_prefix, validated_budget, eos = _validate_common(
         prefix,
-        remaining_budget,
+        budget,
         eos_token_id,
     )
     try:
@@ -276,11 +280,13 @@ def enumerate_speculative_round_law(
             name="draft_length",
         )
     except DistributionValidationError as exc:
-        raise SequenceLawError(str(exc)) from exc
-    if budget == 0 or (validated_prefix and validated_prefix[-1] == eos):
+        raise LawNormalizationError(str(exc)) from exc
+    if validated_budget == 0 or (
+        validated_prefix and validated_prefix[-1] == eos
+    ):
         return ExactSequenceLaw.from_pairs([((), 1)])
 
-    proposal_limit = min(validated_draft_length, budget)
+    proposal_limit = min(validated_draft_length, validated_budget)
     outcomes: list[tuple[tuple[int, ...], Fraction]] = []
     for records, proposal_mass in _enumerate_proposal_paths(
         draft,
@@ -292,7 +298,7 @@ def enumerate_speculative_round_law(
             target,
             validated_prefix,
             records,
-            budget,
+            validated_budget,
             eos,
         ):
             outcomes.append((emitted, proposal_mass * conditional_mass))
@@ -303,8 +309,8 @@ def enumerate_speculative_law(
     target: DistributionModel,
     draft: DistributionModel,
     prefix: tuple[int, ...],
-    draft_length: int,
     budget: int,
+    draft_length: int,
     eos_token_id: int,
 ) -> ExactSequenceLaw:
     """Enumerate the exact multi-round speculative output law."""
@@ -320,7 +326,7 @@ def enumerate_speculative_law(
             name="draft_length",
         )
     except DistributionValidationError as exc:
-        raise SequenceLawError(str(exc)) from exc
+        raise LawNormalizationError(str(exc)) from exc
     memo: dict[tuple[tuple[int, ...], int], ExactSequenceLaw] = {}
 
     def rec(current_prefix: tuple[int, ...], remaining: int) -> ExactSequenceLaw:
@@ -335,19 +341,16 @@ def enumerate_speculative_law(
             target,
             draft,
             current_prefix,
-            validated_draft_length,
             remaining,
+            validated_draft_length,
             eos,
         )
         outcomes: list[tuple[tuple[int, ...], Fraction]] = []
         for emitted, round_mass in round_law.probabilities:
             if not emitted:
-                if remaining != 0:
-                    raise SequenceLawError(
-                        "positive-budget speculative round emitted no token"
-                    )
-                outcomes.append(((), round_mass))
-                continue
+                raise LawNormalizationError(
+                    "positive-budget speculative round emitted no token"
+                )
             if emitted[-1] == eos or len(emitted) >= remaining:
                 outcomes.append((emitted, round_mass))
                 continue

@@ -5,18 +5,25 @@ from itertools import product
 
 import pytest
 
-from forgellm_governance.exact_distribution import ExactDistribution, RandomSourceError, RandomTape
-from forgellm_governance.exact_enumeration import enumerate_speculative_law, enumerate_target_law
+from forgellm_governance.exact_distribution import (
+    ExactDistribution,
+    RandomSourceError,
+    RandomTape,
+)
 from forgellm_governance.speculative_decoding import (
     ProposalValidationError,
     SampledRoundRequest,
     SampledRoundResult,
     decide_one_token,
 )
+from forgellm_governance.speculative_exhaustive import (
+    enumerate_speculative_law,
+    enumerate_target_law,
+)
 from forgellm_governance.speculative_models import FiniteTableModel
 from forgellm_governance.speculative_state import (
     DecoderState,
-    StateInvariantError,
+    TransactionStateError,
     begin_round,
     cancel_round,
     commit_round,
@@ -28,10 +35,14 @@ def d(*pairs: tuple[int, int | Fraction]) -> ExactDistribution:
     return ExactDistribution.from_pairs(pairs)
 
 
-def full_model(distribution: ExactDistribution, alphabet: tuple[int, ...], budget: int) -> FiniteTableModel:
+def full_model(
+    distribution: ExactDistribution,
+    alphabet: tuple[int, ...],
+    budget: int,
+) -> FiniteTableModel:
     return FiniteTableModel.from_pairs(
         (tuple(prefix), distribution)
-        for length in range(budget)
+        for length in range(max(budget, 1))
         for prefix in product(alphabet, repeat=length)
     )
 
@@ -40,8 +51,11 @@ def clean_state() -> DecoderState:
     return DecoderState((), (), (), None, (), (), False)
 
 
-def test_random_tape_never_silently_reduces_out_of_range_draw_modulo_bound() -> None:
-    with pytest.raises(RandomSourceError, match="modulo reduction is forbidden"):
+def test_random_tape_never_reduces_out_of_range_draw_modulo_bound() -> None:
+    with pytest.raises(
+        RandomSourceError,
+        match="modulo reduction is forbidden",
+    ):
         RandomTape((7,)).draw(3)
 
 
@@ -74,16 +88,27 @@ def test_exact_law_grid_covers_overlap_and_imbalance(
 ) -> None:
     budget = 3
     target_distribution = d((0, target_weights[0]), (1, target_weights[1]))
-    proposal_distribution = d((0, proposal_weights[0]), (2, proposal_weights[1]))
+    proposal_distribution = d(
+        (0, proposal_weights[0]),
+        (2, proposal_weights[1]),
+    )
     target = full_model(target_distribution, (0, 1, 2), budget)
     draft = full_model(proposal_distribution, (0, 1, 2), budget)
-    assert enumerate_speculative_law(target, draft, (), draft_length, budget, 9) == enumerate_target_law(
-        target, (), budget, 9
-    )
+    assert enumerate_speculative_law(
+        target,
+        draft,
+        (),
+        budget,
+        draft_length,
+        9,
+    ) == enumerate_target_law(target, (), budget, 9)
 
 
 def test_eos_inside_emitted_sequence_is_rejected_by_result_invariants() -> None:
-    with pytest.raises(ProposalValidationError, match="EOS must be the final emitted token"):
+    with pytest.raises(
+        ProposalValidationError,
+        match="EOS must be the final emitted token",
+    ):
         SampledRoundResult(
             prefix=(),
             proposed_tokens=(9, 0),
@@ -113,9 +138,9 @@ def test_state_transaction_cannot_be_committed_or_cancelled_twice() -> None:
         eos_token_id=9,
     )
     _, closed = commit_round(transaction, result)
-    with pytest.raises(StateInvariantError, match="closed"):
+    with pytest.raises(TransactionStateError, match="closed"):
         commit_round(closed, result)
-    with pytest.raises(StateInvariantError, match="closed"):
+    with pytest.raises(TransactionStateError, match="closed"):
         cancel_round(closed)
 
 
@@ -133,8 +158,17 @@ def test_trace_rejects_request_result_budget_and_prefix_mismatch() -> None:
         eos_token_id=9,
     )
     with pytest.raises(ValueError, match="prefix"):
-        build_trace_document(SampledRoundRequest((7,), 1, 1, 9), result)
+        build_trace_document(
+            SampledRoundRequest((7,), 1, 1, 9),
+            result,
+        )
     with pytest.raises(ValueError, match="remaining_budget"):
-        build_trace_document(SampledRoundRequest((), 1, 2, 9), result)
+        build_trace_document(
+            SampledRoundRequest((), 1, 2, 9),
+            result,
+        )
     with pytest.raises(ValueError, match="eos_token_id"):
-        build_trace_document(SampledRoundRequest((), 1, 1, 8), result)
+        build_trace_document(
+            SampledRoundRequest((), 1, 1, 8),
+            result,
+        )

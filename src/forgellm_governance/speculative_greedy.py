@@ -57,8 +57,8 @@ def greedy_speculative_decode(
     target: DistributionModel,
     draft: DistributionModel,
     prefix: tuple[int, ...],
-    draft_length: int,
     budget: int,
+    draft_length: int,
     eos_token_id: int,
 ) -> tuple[int, ...]:
     """Decode with exact greedy speculative verification and target bonus tokens."""

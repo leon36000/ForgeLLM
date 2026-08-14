@@ -9,7 +9,9 @@ from forgellm_governance.exact_distribution import RandomTape
 from forgellm_governance.speculative_decoding import SampledRoundResult
 from forgellm_governance.speculative_state import (
     DecoderState,
+    RoundTransaction,
     StateInvariantError,
+    TransactionStateError,
     begin_round,
     cancel_round,
     commit_round,
@@ -104,13 +106,15 @@ def test_state_invariants_fail_closed(kwargs: dict[str, object]) -> None:
         DecoderState(**base)  # type: ignore[arg-type]
 
 
-def test_begin_round_records_original_and_rejects_invalid_state() -> None:
+def test_round_transaction_class_api_records_original() -> None:
     state = clean_state((7,))
-    transaction = begin_round(state, (0, 1))
+    transaction = RoundTransaction.begin(state, (0, 1))
     assert transaction.original is state
     assert transaction.proposed_tokens == (0, 1)
     assert transaction.closed is False
 
+
+def test_begin_round_rejects_pending_finished_and_empty_proposals() -> None:
     pending = DecoderState(
         output_tokens=(0, 1),
         target_materialized=(0,),
@@ -120,13 +124,24 @@ def test_begin_round_records_original_and_rejects_invalid_state() -> None:
         grammar_tokens=(0, 1),
         finished=False,
     )
-    with pytest.raises(StateInvariantError, match="pending"):
+    with pytest.raises(TransactionStateError, match="pending"):
         begin_round(pending, (2,))
-    with pytest.raises(StateInvariantError, match="at least one"):
+    finished = DecoderState(
+        output_tokens=(9,),
+        target_materialized=(9,),
+        draft_materialized=(9,),
+        pending_token=None,
+        sampler_tokens=(9,),
+        grammar_tokens=(9,),
+        finished=True,
+    )
+    with pytest.raises(TransactionStateError, match="finished"):
+        begin_round(finished, (2,))
+    with pytest.raises(TransactionStateError, match="at least one"):
         begin_round(clean_state(), ())
 
 
-def test_commit_all_accepted_without_correction_materializes_all_emitted_tokens() -> None:
+def test_commit_all_accepted_without_correction_materializes_every_token() -> None:
     transaction = begin_round(clean_state((7,)), (0, 1))
     round_result = result(
         prefix=(7,),
@@ -137,7 +152,7 @@ def test_commit_all_accepted_without_correction_materializes_all_emitted_tokens(
         termination="budget",
         budget=2,
     )
-    committed, closed = commit_round(transaction, round_result)
+    committed, closed = transaction.commit(round_result, 9)
     assert committed.output_tokens == (7, 0, 1)
     assert (
         committed.target_materialized
@@ -149,7 +164,24 @@ def test_commit_all_accepted_without_correction_materializes_all_emitted_tokens(
     assert closed.closed is True
 
 
-def test_commit_residual_leaves_only_correction_pending() -> None:
+def test_commit_accepted_eos_is_materialized_without_pending_token() -> None:
+    transaction = begin_round(clean_state(), (9,))
+    round_result = result(
+        prefix=(),
+        proposals=(9,),
+        accepted=1,
+        emitted=(9,),
+        correction="none",
+        termination="eos",
+        budget=2,
+    )
+    committed, _ = commit_round(transaction, round_result)
+    assert committed.finished is True
+    assert committed.pending_token is None
+    assert committed.target_materialized == committed.draft_materialized == (9,)
+
+
+def test_commit_residual_discards_suffix_and_leaves_correction_pending() -> None:
     transaction = begin_round(clean_state((7,)), (0, 1, 2))
     round_result = result(
         prefix=(7,),
@@ -166,7 +198,7 @@ def test_commit_residual_leaves_only_correction_pending() -> None:
     assert committed.pending_token == 5
 
 
-def test_commit_bonus_leaves_only_bonus_pending_then_synchronizes() -> None:
+def test_commit_bonus_leaves_bonus_pending_then_synchronizes() -> None:
     transaction = begin_round(clean_state(), (0, 1))
     round_result = result(
         prefix=(),
@@ -190,36 +222,40 @@ def test_commit_bonus_leaves_only_bonus_pending_then_synchronizes() -> None:
     assert synchronize_pending(synchronized) is synchronized
 
 
-def test_eos_correction_marks_finished_even_while_pending() -> None:
-    transaction = begin_round(clean_state(), (0,))
-    round_result = result(
-        prefix=(),
-        proposals=(0,),
-        accepted=0,
-        emitted=(9,),
-        correction="residual",
-        termination="eos",
-        budget=2,
-    )
-    committed, _ = commit_round(transaction, round_result)
-    assert committed.finished is True
-    assert committed.pending_token == 9
-    synchronized = synchronize_pending(committed)
-    assert synchronized.finished is True
-    assert synchronized.target_materialized == (9,)
+def test_residual_and_bonus_eos_are_finished_while_pending() -> None:
+    for correction, proposals, accepted, emitted in (
+        ("residual", (0,), 0, (9,)),
+        ("bonus", (0,), 1, (0, 9)),
+    ):
+        transaction = begin_round(clean_state(), proposals)
+        round_result = result(
+            prefix=(),
+            proposals=proposals,
+            accepted=accepted,
+            emitted=emitted,
+            correction=correction,
+            termination="eos",
+            budget=2,
+        )
+        committed, _ = commit_round(transaction, round_result)
+        assert committed.finished is True
+        assert committed.pending_token == 9
+        synchronized = synchronize_pending(committed)
+        assert synchronized.finished is True
+        assert synchronized.target_materialized == synchronized.output_tokens
 
 
 def test_cancel_restores_original_and_closed_transactions_cannot_repeat() -> None:
     original = clean_state((7,))
-    transaction = begin_round(original, (0, 1))
-    restored, closed = cancel_round(transaction)
+    transaction = RoundTransaction.begin(original, (0, 1))
+    restored, closed = transaction.cancel()
     assert restored is original
     assert closed.closed is True
-    with pytest.raises(StateInvariantError, match="closed"):
+    with pytest.raises(TransactionStateError, match="closed"):
         cancel_round(closed)
 
 
-def test_commit_rejects_prefix_and_proposal_mismatch() -> None:
+def test_commit_rejects_prefix_proposal_and_eos_mismatch() -> None:
     transaction = begin_round(clean_state(), (0,))
     wrong_prefix = result(
         prefix=(7,),
@@ -230,7 +266,7 @@ def test_commit_rejects_prefix_and_proposal_mismatch() -> None:
         termination="budget",
         budget=1,
     )
-    with pytest.raises(StateInvariantError, match="prefix"):
+    with pytest.raises(TransactionStateError, match="prefix"):
         commit_round(transaction, wrong_prefix)
 
     wrong_proposal = result(
@@ -242,5 +278,17 @@ def test_commit_rejects_prefix_and_proposal_mismatch() -> None:
         termination="budget",
         budget=1,
     )
-    with pytest.raises(StateInvariantError, match="proposed tokens"):
+    with pytest.raises(TransactionStateError, match="proposed tokens"):
         commit_round(transaction, wrong_proposal)
+
+    correct = result(
+        prefix=(),
+        proposals=(0,),
+        accepted=1,
+        emitted=(0,),
+        correction="none",
+        termination="budget",
+        budget=1,
+    )
+    with pytest.raises(TransactionStateError, match="eos_token_id"):
+        transaction.commit(correct, 8)

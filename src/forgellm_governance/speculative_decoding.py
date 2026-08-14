@@ -231,10 +231,6 @@ class SampledRoundResult:
             raise ProposalValidationError(
                 "acceptance probabilities must be Fractions between zero and one"
             )
-        if len(self.acceptance_probabilities) < self.accepted_count:
-            raise ProposalValidationError(
-                "missing acceptance probability for accepted proposal"
-            )
         if self.correction_kind == "residual":
             if self.accepted_count >= len(self.proposed_tokens):
                 raise ProposalValidationError(
@@ -253,17 +249,26 @@ class SampledRoundResult:
                 raise ProposalValidationError(
                     "bonus requires every proposal to be accepted"
                 )
+            if len(self.acceptance_probabilities) != self.accepted_count:
+                raise ProposalValidationError(
+                    "bonus branch must record exactly every accepted proposal"
+                )
             if len(self.emitted_tokens) != len(self.proposed_tokens) + 1:
                 raise ProposalValidationError(
                     "bonus branch emits proposals plus one target token"
                 )
         elif self.correction_kind == "none":
-            if (
-                self.emitted_tokens
-                != self.proposed_tokens[: self.accepted_count]
-            ):
+            if self.accepted_count != len(self.proposed_tokens):
                 raise ProposalValidationError(
-                    "none branch can emit only accepted proposals"
+                    "none branch requires every generated proposal to be accepted"
+                )
+            if len(self.acceptance_probabilities) != self.accepted_count:
+                raise ProposalValidationError(
+                    "none branch must record exactly every accepted proposal"
+                )
+            if self.emitted_tokens != self.proposed_tokens:
+                raise ProposalValidationError(
+                    "none branch can emit only all accepted proposals"
                 )
         else:
             raise ProposalValidationError("invalid round correction_kind")
