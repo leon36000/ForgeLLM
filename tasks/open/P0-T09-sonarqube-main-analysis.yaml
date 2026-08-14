@@ -27,7 +27,7 @@ inputs:
 outputs:
 - Sanitized machine-readable baseline of pull-request and main analysis evidence.
 - Read-only diagnosis and explicit failure classification.
-- ADR selecting exactly one method: automatic_only or ci_based_only.
+- "ADR selecting exactly one method: automatic_only or ci_based_only."
 - Minimal reviewed configuration for the selected method.
 - Regression checks for pinned actions, secret hygiene, and mutually exclusive method configuration where mechanically observable.
 - Successful Sonar pull-request and main analysis evidence on reviewed commits.
