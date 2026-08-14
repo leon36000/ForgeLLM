@@ -328,3 +328,62 @@ def test_positive_budget_cannot_have_empty_round_witness() -> None:
             remaining_budget=1,
             eos_token_id=9,
         )
+
+
+def test_one_token_decision_rejects_impossible_probability_witnesses() -> None:
+    with pytest.raises(ProposalValidationError, match="positive acceptance probability"):
+        OneTokenDecision(
+            proposed_token=0,
+            acceptance_probability=Fraction(0),
+            accepted=True,
+            emitted_token=0,
+            correction_kind="accepted",
+            tape=RandomTape(()),
+        )
+    with pytest.raises(ProposalValidationError, match="below one"):
+        OneTokenDecision(
+            proposed_token=0,
+            acceptance_probability=Fraction(1),
+            accepted=False,
+            emitted_token=1,
+            correction_kind="residual",
+            tape=RandomTape(()),
+        )
+    with pytest.raises(ProposalValidationError, match="cannot emit the proposed token"):
+        OneTokenDecision(
+            proposed_token=0,
+            acceptance_probability=Fraction(1, 2),
+            accepted=False,
+            emitted_token=0,
+            correction_kind="residual",
+            tape=RandomTape(()),
+        )
+
+
+def test_round_result_rejects_impossible_probability_witnesses() -> None:
+    with pytest.raises(ProposalValidationError, match="accepted proposals require positive"):
+        SampledRoundResult(
+            prefix=(),
+            proposed_tokens=(0,),
+            accepted_count=1,
+            emitted_tokens=(0,),
+            acceptance_probabilities=(Fraction(0),),
+            correction_kind="none",
+            termination="budget",
+            tape=RandomTape(()),
+            remaining_budget=1,
+            eos_token_id=9,
+        )
+    with pytest.raises(ProposalValidationError, match="rejected proposal requires acceptance probability below one"):
+        SampledRoundResult(
+            prefix=(),
+            proposed_tokens=(0,),
+            accepted_count=0,
+            emitted_tokens=(1,),
+            acceptance_probabilities=(Fraction(1),),
+            correction_kind="residual",
+            termination="rejection",
+            tape=RandomTape(()),
+            remaining_budget=1,
+            eos_token_id=9,
+        )
