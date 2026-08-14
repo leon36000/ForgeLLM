@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import FrozenInstanceError
 from fractions import Fraction
 
 import pytest
@@ -59,7 +60,7 @@ def result(
 def test_clean_decoder_state_is_valid_and_immutable() -> None:
     state = clean_state((4,))
     assert state.materialized_prefix == (4,)
-    with pytest.raises(Exception):
+    with pytest.raises(FrozenInstanceError):
         state.finished = True  # type: ignore[misc]
 
 
@@ -69,8 +70,18 @@ def test_clean_decoder_state_is_valid_and_immutable() -> None:
         {"target_materialized": (0,), "draft_materialized": ()},
         {"output_tokens": (0,), "sampler_tokens": ()},
         {"output_tokens": (0,), "grammar_tokens": ()},
-        {"output_tokens": (0,), "target_materialized": (), "draft_materialized": (), "pending_token": None},
-        {"output_tokens": (0, 1), "target_materialized": (0,), "draft_materialized": (0,), "pending_token": 2},
+        {
+            "output_tokens": (0,),
+            "target_materialized": (),
+            "draft_materialized": (),
+            "pending_token": None,
+        },
+        {
+            "output_tokens": (0, 1),
+            "target_materialized": (0,),
+            "draft_materialized": (0,),
+            "pending_token": 2,
+        },
     ],
 )
 def test_state_invariants_fail_closed(kwargs: dict[str, object]) -> None:
@@ -118,11 +129,21 @@ def test_begin_round_records_original_and_rejects_invalid_state() -> None:
 def test_commit_all_accepted_without_correction_materializes_all_emitted_tokens() -> None:
     transaction = begin_round(clean_state((7,)), (0, 1))
     round_result = result(
-        prefix=(7,), proposals=(0, 1), accepted=2, emitted=(0, 1), correction="none", termination="budget", budget=2
+        prefix=(7,),
+        proposals=(0, 1),
+        accepted=2,
+        emitted=(0, 1),
+        correction="none",
+        termination="budget",
+        budget=2,
     )
     committed, closed = commit_round(transaction, round_result)
     assert committed.output_tokens == (7, 0, 1)
-    assert committed.target_materialized == committed.draft_materialized == committed.output_tokens
+    assert (
+        committed.target_materialized
+        == committed.draft_materialized
+        == committed.output_tokens
+    )
     assert committed.pending_token is None
     assert committed.sampler_tokens == committed.grammar_tokens == committed.output_tokens
     assert closed.closed is True
@@ -131,7 +152,13 @@ def test_commit_all_accepted_without_correction_materializes_all_emitted_tokens(
 def test_commit_residual_leaves_only_correction_pending() -> None:
     transaction = begin_round(clean_state((7,)), (0, 1, 2))
     round_result = result(
-        prefix=(7,), proposals=(0, 1, 2), accepted=1, emitted=(0, 5), correction="residual", termination="rejection", budget=4
+        prefix=(7,),
+        proposals=(0, 1, 2),
+        accepted=1,
+        emitted=(0, 5),
+        correction="residual",
+        termination="rejection",
+        budget=4,
     )
     committed, _ = commit_round(transaction, round_result)
     assert committed.output_tokens == (7, 0, 5)
@@ -142,13 +169,23 @@ def test_commit_residual_leaves_only_correction_pending() -> None:
 def test_commit_bonus_leaves_only_bonus_pending_then_synchronizes() -> None:
     transaction = begin_round(clean_state(), (0, 1))
     round_result = result(
-        prefix=(), proposals=(0, 1), accepted=2, emitted=(0, 1, 2), correction="bonus", termination="all_accepted", budget=3
+        prefix=(),
+        proposals=(0, 1),
+        accepted=2,
+        emitted=(0, 1, 2),
+        correction="bonus",
+        termination="all_accepted",
+        budget=3,
     )
     committed, _ = commit_round(transaction, round_result)
     assert committed.target_materialized == (0, 1)
     assert committed.pending_token == 2
     synchronized = synchronize_pending(committed)
-    assert synchronized.target_materialized == synchronized.draft_materialized == synchronized.output_tokens
+    assert (
+        synchronized.target_materialized
+        == synchronized.draft_materialized
+        == synchronized.output_tokens
+    )
     assert synchronized.pending_token is None
     assert synchronize_pending(synchronized) is synchronized
 
@@ -156,7 +193,13 @@ def test_commit_bonus_leaves_only_bonus_pending_then_synchronizes() -> None:
 def test_eos_correction_marks_finished_even_while_pending() -> None:
     transaction = begin_round(clean_state(), (0,))
     round_result = result(
-        prefix=(), proposals=(0,), accepted=0, emitted=(9,), correction="residual", termination="eos", budget=2
+        prefix=(),
+        proposals=(0,),
+        accepted=0,
+        emitted=(9,),
+        correction="residual",
+        termination="eos",
+        budget=2,
     )
     committed, _ = commit_round(transaction, round_result)
     assert committed.finished is True
@@ -179,13 +222,25 @@ def test_cancel_restores_original_and_closed_transactions_cannot_repeat() -> Non
 def test_commit_rejects_prefix_and_proposal_mismatch() -> None:
     transaction = begin_round(clean_state(), (0,))
     wrong_prefix = result(
-        prefix=(7,), proposals=(0,), accepted=1, emitted=(0,), correction="none", termination="budget", budget=1
+        prefix=(7,),
+        proposals=(0,),
+        accepted=1,
+        emitted=(0,),
+        correction="none",
+        termination="budget",
+        budget=1,
     )
     with pytest.raises(StateInvariantError, match="prefix"):
         commit_round(transaction, wrong_prefix)
 
     wrong_proposal = result(
-        prefix=(), proposals=(1,), accepted=1, emitted=(1,), correction="none", termination="budget", budget=1
+        prefix=(),
+        proposals=(1,),
+        accepted=1,
+        emitted=(1,),
+        correction="none",
+        termination="budget",
+        budget=1,
     )
     with pytest.raises(StateInvariantError, match="proposed tokens"):
         commit_round(transaction, wrong_proposal)
