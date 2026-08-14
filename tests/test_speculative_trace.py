@@ -10,6 +10,7 @@ from forgellm_governance.speculative_trace import (
     TRACE_SCHEMA_VERSION,
     build_trace_document,
     canonical_trace_bytes,
+    canonical_trace_document,
     fraction_document,
 )
 
@@ -45,9 +46,18 @@ def test_fraction_document_is_exact_and_canonical() -> None:
     assert fraction_document(Fraction(2, 3)) == {"denominator": 3, "numerator": 2}
 
 
+def test_canonical_trace_document_is_the_planned_public_name() -> None:
+    request = SampledRoundRequest((7,), 2, 4, 9)
+    assert canonical_trace_document(request, sample_result(), sample_state()) == build_trace_document(
+        request,
+        sample_result(),
+        sample_state(),
+    )
+
+
 def test_trace_document_contains_exact_request_result_tape_and_optional_state() -> None:
     request = SampledRoundRequest((7,), 2, 4, 9)
-    document = build_trace_document(request, sample_result(), sample_state())
+    document = canonical_trace_document(request, sample_result(), sample_state())
     assert document["schema_version"] == TRACE_SCHEMA_VERSION
     assert document["evidence_boundary"] == "finite_exact_reference"
     assert document["request"] == {
@@ -83,9 +93,13 @@ def test_canonical_trace_bytes_are_byte_identical_and_have_no_environment_fields
         "intel",
     ):
         assert forbidden not in decoded
-    assert json.loads(first) == build_trace_document(request, sample_result(), sample_state())
+    assert json.loads(first) == canonical_trace_document(
+        request,
+        sample_result(),
+        sample_state(),
+    )
 
 
 def test_trace_without_state_uses_explicit_null() -> None:
     request = SampledRoundRequest((7,), 2, 4, 9)
-    assert build_trace_document(request, sample_result())["state"] is None
+    assert canonical_trace_document(request, sample_result())["state"] is None
