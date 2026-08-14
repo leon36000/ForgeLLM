@@ -1,9 +1,9 @@
 # ForgeLLM — état, décisions et continuité
 
-**Mise à jour :** 2026-08-13  
-**Version d’état :** S-0005  
-**Phase :** P0 — gouvernance, mémoire durable et laboratoire de preuve  
-**Statut global :** P0-T03 terminé; ruleset `FLLM` actif sur `main`; P0-T04 bloqué uniquement sur la désignation du premier hôte autorisé
+**Mise à jour :** 2026-08-14  
+**Version d’état :** S-0006  
+**Phase :** P0 — gouvernance, simulation et laboratoire de preuve  
+**Statut global :** P0-T07 terminé avec preuve synthétique; P0-T04 attend un hôte; CA-03 est autorisé en mode subagent-driven mais doit commencer par une spécification, un plan et un paquet borné
 
 ## Objectif invariant
 
@@ -14,58 +14,77 @@ Concevoir et construire un moteur d’inférence LLM hétérogène dont correcti
 - dépôt : `leon36000/ForgeLLM`;
 - visibilité : publique sous ADR-0003;
 - branche par défaut : `main`;
-- commit avant S-0005 : `c1ec3db1613d9bc6a9a4cd0cd7a1c7e4eabaaa7f`;
-- GitHub rapporte maintenant `main.protected=true`;
-- ruleset actif : `FLLM`, id `20820530`;
-- cible : exactement `refs/heads/main`;
-- bypass : aucun.
+- protection : ruleset `FLLM` actif;
+- commit d’implémentation P0-T07 : `b0f3f241537b50de0dd3c0cb7bc2e6bf274a7034`;
+- aucun runner auto-hébergé, modèle, benchmark matériel ou code accélérateur ajouté.
 
-## Protection FLLM vérifiée
+## Décisions durables
 
-- suppression protégée;
-- mises à jour non fast-forward protégées;
-- historique linéaire obligatoire;
-- pull request obligatoire;
-- zéro approbation GitHub artificielle en mode solo;
-- conversations de revue résolues;
-- squash uniquement;
-- check strict `Validate and test` de GitHub Actions id `15368`.
+- Git est la mémoire canonique; le chat et les RAG sont dérivés.
+- Le runtime futur appartient principalement à Rust, avec une ABI C stable et des backends natifs.
+- Les moteurs existants sont des baselines/adaptateurs remplacés progressivement.
+- Aucune performance n’est acceptée sans preuve ForgeLLM reproductible.
+- Les travaux significatifs séparent implémentation, revue fraîche et autorisation propriétaire.
+- Les profils de charge précèdent les déclarations de meilleur moteur.
+- Le dépôt source est public; les actifs restreints vivent dans un plan privé.
+- `FLLM` protège `main` en mode mainteneur solo.
+- Le plan microarchitectural utilise un graphe de capacités et un placement/autotuning empirique.
+- ForgeCacheDraft est le premier cas CPU-cache/GPU; Transition Atlas reste expérimental.
 
-Issue #10 est fermée comme complétée.
+## P0-T07 terminé
 
-## Décisions
+P0-T07 livre :
 
-- **D-0001 :** Git est la mémoire canonique; le chat est auxiliaire.
-- **D-0002 :** runtime Rust, C ABI et kernels natifs mesurés.
-- **D-0003 :** remplacer progressivement les composants existants.
-- **D-0004 :** aucune performance sans preuve reproductible.
-- **D-0005 :** revue par contexte distinct + CI exacte + décision du propriétaire.
-- **D-0006 :** l’exécution matérielle privilégiée exige des gates protégés et une revue séparée.
-- **D-0007 :** profils de charge avant optimisation.
-- **D-0008 :** dépôt source public; actifs restreints dans un plan privé séparé.
-- **D-0009 :** RAG et outils externes sont dérivés; Git reste canonique.
-- **D-0010 :** `FLLM` est la politique de protection active de `main` en mode solo jusqu’à décision révisée.
+- schémas stricts de topologie, composants et résultats;
+- modèles immuables et neutres vis-à-vis des produits;
+- coût entier en octets, taux et nanosecondes;
+- placements légaux, rejets stables et fallback générique obligatoire;
+- sortie atomique confinée sous `artifacts/`;
+- scénario cache-draft synthétique;
+- tests adversariaux.
 
-## Tâche active
+Preuves finales :
 
-**P0-T04 — premier inventaire matériel et logiciel assaini.**
+```text
+PR head                99c1c1488f622a6d4290e21a17ff313a1c3568c6
+Merge main             b0f3f241537b50de0dd3c0cb7bc2e6bf274a7034
+Tests                   102 réussis
+Phase 0 PR              31784275654 / 94716606110
+CodeQL PR               31784275655 / 94716597658
+Phase 0 post-merge      31784610893 / 94717633943
+CodeQL post-merge       31784610881 / 94717633957
+Limite                  synthetic_only
+```
 
-Paquet : `tasks/open/P0-T04-first-hardware-inventory.yaml`  
-Issue : #12  
-Statut : `blocked`
+Les nanosecondes simulées ne sont pas des mesures matérielles.
 
-Entrée propriétaire requise : un label de machine sûr et le mode d’exécution indiqué dans l’issue #12.
+## Travail autorisé : CA-03
 
-P0-T04 est observationnel uniquement. Aucun benchmark d’inférence ni code moteur ne fait partie de cette tâche.
+Le propriétaire a autorisé `CA-03 / subagent-driven`.
 
-## Limite de preuve
+CA-03 doit définir et tester :
 
-S-0005 prouve le durcissement du dépôt et les gates déjà enregistrés. Il ne prouve encore aucun inventaire matériel, support accélérateur, résultat numérique ou performance ForgeLLM.
+- distributions cible et proposition;
+- acceptation/rejet exact;
+- résidu positif normalisé;
+- token bonus lorsque tout le draft est accepté;
+- oracle greedy séparé;
+- commit/rollback KV et états auxiliaires;
+- annulation, EOS et budget;
+- égalité exhaustive de loi sur petits modèles synthétiques.
 
-## Prochain ordre
+CA-03 interdit les téléchargements de modèles, l’inférence matérielle, le runtime Rust, l’ABI C, les kernels et les affirmations de performance.
 
-1. propriétaire : désigner un hôte et le mode d’exécution;
-2. P0-T04 : inventaire assaini et revue;
-3. P0-T05 : profils de charge et objectifs;
-4. P0-T06 : plan des baselines;
-5. aucun code moteur avant ces gates.
+## Tâche matérielle parallèle
+
+P0-T04 reste bloqué sur un label d’hôte sûr et un mode d’exécution. Il demeure observationnel uniquement.
+
+## Prochaine séquence
+
+1. sources primaires et claims CA-03;
+2. spécification écrite;
+3. plan TDD;
+4. paquet P0-T08/CA-03;
+5. implémentation de référence exacte;
+6. revue et gates hébergés;
+7. aucune intégration runtime avant les gates ultérieurs.

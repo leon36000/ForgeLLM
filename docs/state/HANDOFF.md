@@ -1,55 +1,81 @@
 # ForgeLLM Handoff
 
-**From state:** S-0005  
-**To task:** P0-T04 — first sanitized hardware/software inventory  
-**Generated:** 2026-08-13
+**From state:** S-0006  
+**To work:** CA-03 — exact speculative-decoding reference semantics  
+**Generated:** 2026-08-14
 
-## Verified control-plane state
+## Canonical status
 
 - repository: `leon36000/ForgeLLM`;
-- visibility: public under ADR-0003;
-- default branch: `main`;
-- GitHub reports `main.protected=true`;
-- active ruleset: `FLLM`, id `20820530`;
-- enforcement: active;
-- target: exactly `refs/heads/main`;
-- bypass actors: none;
-- current user bypass: never.
+- protected default branch: `main`;
+- P0-T07 merge: `b0f3f241537b50de0dd3c0cb7bc2e6bf274a7034`;
+- P0-T07: complete;
+- P0-T04: blocked only on owner host designation;
+- CA-03: owner-authorized for subagent-driven execution;
+- hardware/model/runtime work under CA-03: forbidden.
 
-The ruleset requires pull requests, squash-only merges, conversation resolution, linear history and strict `Validate and test`, while preventing deletion and non-fast-forward updates. Solo mode uses zero fabricated GitHub approvals.
+## P0-T07 evidence
 
-Issue #10 is closed as completed.
+Final pull-request head `99c1c1488f622a6d4290e21a17ff313a1c3568c6`:
 
-## P0-T03 disposition
+- Phase 0 `31784275654` / `94716606110`: success;
+- 102 tests passed;
+- canonical synthetic scenario executed;
+- CodeQL `31784275655` / `94716597658`: success;
+- Dependency Review `31784275656`: skipped;
+- fresh-context verdict: `ACCEPT`.
 
-P0-T03 is complete. The owner-admin blocker is satisfied by direct GitHub readback.
+Post-merge on `b0f3f241537b50de0dd3c0cb7bc2e6bf274a7034`:
 
-Optional controls such as Dependency Review and detailed CodeQL triage remain follow-up improvements rather than hidden completion requirements.
+- Phase 0 `31784610893` / `94717633943`: success;
+- CodeQL `31784610881` / `94717633957`: success.
 
-## Active task
+Synthetic hashes:
 
-`tasks/open/P0-T04-first-hardware-inventory.yaml`
+```text
+6738d9596a2a9b9224a68e071a94463cdcbe7cff10a7cd30c4de29cd3381aa2f  topology
+3aa6dcb2504aebee7c3db236abdd59867efe25296420bdc7e9ba1883061f4cb5  component profile
+e5eb661bb48eca62b778714670000f963922ca459cb8590b3717150993a921ae  generated result
+```
 
-Tracking issue: #12.
+The machine-readable closeout is `artifacts/simulations/P0-T07-closeout-evidence.json`.
 
-Status: blocked only on two owner inputs:
+## CA-03 required scope
 
-1. one project-safe host label;
-2. execution mode: `direct-local` or `owner-copy` as described in issue #12.
+CA-03 must produce a placement-independent exact reference for speculative decoding.
 
-P0-T04 is observation-only and must follow the repository public-data policy. No inference benchmark or engine implementation belongs in the task.
+### Required semantics
 
-## Next operator sequence
+1. An exact finite distribution representation with explicit normalization.
+2. Proposal sampling from `q`.
+3. Per-token acceptance probability `min(1, p(x)/q(x))`.
+4. On rejection, sampling from normalized positive residual `(p-q)_+`.
+5. A target bonus token when all proposals are accepted and budget/EOS permit.
+6. A separate greedy oracle with deterministic tie-breaking.
+7. Transactional target/draft KV and auxiliary state:
+   - retain only accepted proposal state;
+   - discard rejected proposal suffix state;
+   - treat replacement/bonus token state according to the next target evaluation boundary;
+   - roll back atomically on cancellation.
+8. Exhaustive finite probability-law tests against ordinary target decoding.
+9. Explicit handling of zero-probability proposal entries, EOS and output budget.
+10. No same-seed sequence-identity claim; exactness means equality of output law, not identical random-number consumption.
 
-1. Owner designates one host label and execution mode.
-2. Run the repository gate before collection.
-3. Collect one sanitized machine-readable inventory.
-4. Review the inventory before publication.
-5. Run focused hardware-inventory tests and the complete repository gate.
-6. Create a fresh-context verification report.
-7. Update state and close P0-T04 only after the inventory is reproducible and reviewed.
-8. Proceed to P0-T05 workload-profile definition.
+## Required process
 
-## Continuity checksum
+1. Review primary sources and register scoped claims.
+2. Commit a written CA-03 specification.
+3. Write a detailed TDD implementation plan.
+4. Create a schema-valid P0 task packet with explicit allowed paths.
+5. Implement by isolated tasks.
+6. Review specification compliance and code quality separately.
+7. Run exact-head hosted Phase 0 and CodeQL gates.
+8. Update state only after merge and post-merge verification.
 
-The next state must preserve decisions D-0001 through D-0010 and unresolved risks R-001, R-002, R-005, R-007, R-008, R-011, R-013, R-014 and R-015.
+## Evidence boundary
+
+CA-03 may use finite table-defined synthetic target/draft models. It may not download a model, run a GPU, benchmark performance or implement the production runtime.
+
+## Parallel hardware task
+
+P0-T04 may start later when the owner designates one host and mode. CA-03 does not satisfy, replace or weaken the hardware and workload gates.

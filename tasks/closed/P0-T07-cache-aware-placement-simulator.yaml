@@ -1,0 +1,120 @@
+schema_version: '1.0'
+task_id: P0-T07
+title: Build the synthetic cache-aware topology and placement simulator
+phase: P0
+status: complete
+charter_goals:
+- Establish reproducible baselines before optimization.
+- Make heterogeneous resource and memory placement explicit.
+- Preserve correctness and generic fallbacks before specialization.
+goal: Implement a deterministic synthetic-only simulator that validates product-neutral resource topologies and component
+  profiles, enumerates legal placements, estimates integer-nanosecond costs, and emits an explainable plan without probing
+  hardware or implementing the ForgeLLM runtime.
+non_goals:
+- Probe or modify any owner hardware.
+- Run model inference or performance benchmarks.
+- Implement the Rust runtime, C ABI, GPU backend, or production scheduler.
+- Introduce a new third-party dependency.
+- Use commercial product names as behavior-defining policy.
+- Promote external performance claims to ForgeLLM evidence.
+- Bypass the P0-T04 inventory or P0-T05 workload-profile gates.
+inputs:
+- Owner authorization P0-T07 / subagent-driven recorded on 2026-08-14.
+- Owner-approved cache-aware heterogeneous inference specification.
+- Cache-aware heterogeneous inference program plan.
+- Cache-aware topology and placement simulator implementation plan.
+- Canonical S-0005 project state and existing Python governance toolchain.
+- Synthetic topology and component fixtures only.
+- Final reviewed head 99c1c1488f622a6d4290e21a17ff313a1c3568c6.
+- Merge commit b0f3f241537b50de0dd3c0cb7bc2e6bf274a7034.
+outputs:
+- Strict Draft 2020-12 JSON Schemas for topology, component profiles, and placement results.
+- Immutable product-neutral topology and component models with semantic validation.
+- Deterministic integer-nanosecond cost accounting.
+- Legal candidate generation with stable rejection reason codes.
+- Explainable deterministic placement selection retaining a legal generic fallback.
+- Path-confined synthetic placement CLI with atomic JSON output.
+- Canonical synthetic cache-draft example and user documentation.
+- Adversarial tests, exact-head CI evidence, post-merge evidence, and fresh-context review report.
+allowed_paths:
+- schemas/topology.schema.json
+- schemas/component-profile.schema.json
+- schemas/placement-result.schema.json
+- src/forgellm_governance/schema_io.py
+- src/forgellm_governance/topology.py
+- src/forgellm_governance/components.py
+- src/forgellm_governance/cost_model.py
+- src/forgellm_governance/legality.py
+- src/forgellm_governance/planner.py
+- src/forgellm_governance/simulation.py
+- src/forgellm_governance/cli.py
+- src/forgellm_governance/__init__.py
+- scripts/simulate_placement.py
+- scripts/validate_topology.py
+- scripts/validate_component_profile.py
+- tests/
+- examples/simulations/
+- docs/simulations/
+- artifacts/simulations/
+- docs/reviews/P0-T07-CACHE-AWARE-SIMULATOR-REVIEW.md
+- tasks/open/P0-T07-cache-aware-placement-simulator.yaml
+- tasks/closed/
+- docs/state/CURRENT_STATE.md
+- docs/state/HANDOFF.md
+- docs/roadmap/PHASE0_TASKS.md
+- chatgpt/mobile-core/03_FORGELLM_STATE_AND_DECISIONS.md
+- Makefile
+forbidden_actions:
+- Read host topology, performance counters, affinity, huge-page, or resctrl state.
+- Write outside the repository artifacts directory from the simulator CLI.
+- Download or execute a model.
+- Implement inference runtime, scheduler, ABI, accelerator, or kernel code.
+- Add a dependency or public interchange format without a reviewed decision.
+- Treat unknown capability as supported or absent.
+- Select a specialized placement without a legal generic fallback.
+- Use floating-point values for governed sizes, rates, or time accounting.
+- Claim that synthetic predicted nanoseconds are measured performance.
+- Change P0-T04 or P0-T05 acceptance gates to unblock this task.
+acceptance_criteria:
+- All three public schemas are valid Draft 2020-12 documents and reject undeclared properties.
+- Schema-first loaders reject malformed JSON, duplicate IDs, unresolved references, invalid capacities, traversal, and symlink
+  escape.
+- Topology and component models are immutable and serialize deterministically.
+- All cost terms use integer bytes, rates, and nanoseconds with ceiling division and stable unit tests.
+- Legal candidate generation emits deterministic candidates and stable rejection codes for every unsupported placement.
+- Every component has at least one legal generic fallback and every selected specialized plan retains it.
+- Planner selection and tie-breaking are deterministic across repeated runs and semantic input reordering.
+- The CLI writes atomically only beneath artifacts and emits no partial result after validation failure.
+- The canonical synthetic example is labeled synthetic_only and contains no behavior-defining commercial product name.
+- Adversarial tests cover missing links, capabilities, fallbacks, invalid schema versions, path escapes, and misleading rules.
+- make ci succeeds on the exact final pull-request head and executes the canonical simulation.
+- A fresh context verifies exactness boundaries, determinism, fallback preservation, path confinement, and evidence scope.
+verification_commands:
+- python scripts/validate_task_packet.py tasks/closed/P0-T07-cache-aware-placement-simulator.yaml --root .
+- python -m pytest -q tests/test_cache_aware_schemas.py tests/test_schema_io.py tests/test_topology.py tests/test_components.py
+- python -m pytest -q tests/test_cost_model.py tests/test_legality.py tests/test_planner.py
+- python -m pytest -q tests/test_simulation_cli.py tests/test_cache_draft_example.py tests/test_cache_aware_adversarial.py
+- python -m ruff check src scripts tests
+- python -m ruff format --check src scripts tests
+- make ci
+- make simulate-cache-draft
+- sha256sum -c artifacts/simulations/P0-T07-evidence.sha256
+- git diff --check
+- git status --short
+evidence_requirements:
+- Owner authorization, base, reviewed head, merge commit, and implementation-plan revision are recorded.
+- Synthetic topology, component and result SHA-256 values are preserved.
+- Every legal candidate cost breakdown and every rejected candidate reason is emitted by the canonical result.
+- Unsupported cost terms and the synthetic_only boundary are stated in result, documentation and review.
+- Focused tests, complete make ci output, PR and post-merge workflow identifiers, and fresh-context verdict are recorded.
+- P0-T04 and P0-T05 remain unchanged.
+dependencies:
+- P0-T03
+owner_role: Project owner and architecture authority
+reviewer_role: Independent agent or fresh review context
+risk_ids:
+- R-001
+- R-002
+- R-006
+- R-007
+- R-013
