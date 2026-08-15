@@ -3,7 +3,7 @@
 **Mise à jour :** 2026-08-14  
 **Version d’état :** S-0007  
 **Phase :** P0 — gouvernance, simulation et laboratoire de preuve  
-**Statut global :** P0-T07 et P0-T08 terminés; P0-T09 est autorisé et actif en diagnostic Sonar strictement read-only; P0-T04 attend toujours la désignation d’un hôte
+**Statut global :** P0-T07 et P0-T08 terminés; P0-T09 est actif en diagnostic Sonar read-only; la méthode Sonar actuelle est maintenant confirmée comme analyse automatique activée et recommandée; P0-T04 attend toujours la désignation d’un hôte
 
 ## Objectif invariant
 
@@ -13,8 +13,8 @@ Concevoir et construire un moteur d’inférence LLM hétérogène dont correcti
 
 - dépôt : `leon36000/ForgeLLM`;
 - branche par défaut : `main` protégée par `FLLM`;
-- base P0-T09 : `1b1a3621fcdf4129268663c497cdcd53aed48c29`;
-- branche d’exécution : `feat/p0-t09-sonar-diagnosis`;
+- base initiale P0-T09 : `1b1a3621fcdf4129268663c497cdcd53aed48c29`;
+- dernier probe `main` : `bd03e479ff4649a254c41726b33f2b6e841a0e0c`;
 - paquet : `tasks/open/P0-T09-sonarqube-main-analysis.yaml`;
 - issue : #26;
 - autorisation : `P0-T09 / subagent-driven`, 2026-08-14.
@@ -34,34 +34,48 @@ CA-03 fournit les distributions exactes en `Fraction`, le `RandomTape`, le rejet
 
 ## P0-T09 / QG-01 actif
 
-Le baseline public est enregistré dans :
+Le baseline et le readback sont enregistrés dans :
 
 ```text
 artifacts/governance/P0-T09-sonar-baseline.json
+artifacts/governance/P0-T09-sonar-analysis-method-readback.json
 docs/quality/P0-T09-SONAR-BASELINE.md
 ```
 
-Trois cycles reproduisent le même motif :
+Le probe post-import donne :
 
 ```text
-PR #25  Sonar success    → main 94890528740 cancelled
-PR #27  Sonar success    → main 94892860919 cancelled
-PR #28  Sonar success    → main 94894966719 cancelled
+PR #30   Sonar 94945852247  success / 0 nouvelle issue
+main     Sonar 94946081665  cancelled / 0 annotation
 ```
 
-Phase 0 et CodeQL réussissent sur les PR et les commits `main` correspondants. Les checks `main` Sonar n’ont aucune annotation GitHub.
+Phase 0 et CodeQL réussissent sur le probe. L’import du projet n’a donc pas suffi à réparer le chemin `main`.
 
-Le dépôt canonique ne contient ni workflow Sonar CI, ni `sonar-project.properties`, ni `.sonarcloud.properties`. Cela est compatible avec l’analyse automatique, mais ne prouve pas la valeur administrateur **Analysis Method**.
+## Méthode Sonar maintenant confirmée
+
+Une capture authentifiée fournie par le propriétaire montre la page **Analysis method** de ForgeLLM :
+
+```text
+Automatic analysis     activée
+Recommendation         Recommended
+Méthode CI sélectionnée non
+```
+
+La capture brute n’est pas commitée. La transcription assainie conserve son SHA-256 comme preuve d’identité.
 
 ## Bloc actuel
 
 ```text
-classification          unknown_due_to_missing_authenticated_evidence
-méthode sélectionnée    aucune
+méthode configurée       automatic_enabled
+compatibilité            recommended
+classification           automatic_analysis_enabled_root_cause_unknown
+méthode finale choisie   aucune
 changement configuration aucun
 ```
 
-Il manque le readback Sonar authentifié en lecture seule : binding, méthode, activité de l’échec, quality gate, new code, portée/exclusions, plan et scanner externe éventuel.
+La preuve la plus importante qui manque est désormais le message détaillé **Project Activity / failed main analysis** correspondant au commit `bd03e479…` / check `94946081665`.
+
+Il manque aussi avant ADR-0004 : binding, quality gate, new code, portée/exclusions, plan et confirmation d’un scanner externe éventuel.
 
 ## Garde-fous P0-T09
 
@@ -86,11 +100,11 @@ ou :
 ci_based_only
 ```
 
-Aucune méthode ne sera choisie par supposition.
+Aucune méthode finale ne sera choisie par supposition.
 
 ## Limites de preuve
 
-P0-T09 établit actuellement un motif reproductible dans les checks GitHub, pas la cause interne Sonar. CA-03 ne prouve toujours pas un modèle réel, le KV tensoriel, le matériel, la performance ou la production.
+P0-T09 établit maintenant la méthode automatique configurée et le motif reproductible PR-success/`main`-failure, mais pas encore la cause interne Sonar. CA-03 ne prouve toujours pas un modèle réel, le KV tensoriel, le matériel, la performance ou la production.
 
 ## Tâche matérielle parallèle
 
