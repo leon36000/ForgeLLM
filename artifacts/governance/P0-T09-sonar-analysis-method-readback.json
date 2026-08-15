@@ -1,0 +1,44 @@
+{
+  "analysis_method": {
+    "automatic_analysis_compatibility": "recommended",
+    "automatic_analysis_enabled": true,
+    "ci_method_selected": false,
+    "last_analysis_method": null,
+    "source_page": "SonarQube Cloud project > Analysis method"
+  },
+  "capture": {
+    "evidence_sha256": "bfab677e68396b0452bf6348be773e974a3f4325768b080961a0f5e936f7e5e1",
+    "evidence_type": "owner_uploaded_screenshot",
+    "local_display_time": "22:06",
+    "recorded_date": "2026-08-14",
+    "raw_image_committed": false,
+    "sanitized_text_only": true
+  },
+  "classification_update": {
+    "analysis_method_setting_confirmed": true,
+    "configuration_changes_made": false,
+    "failure_classification": "automatic_analysis_enabled_root_cause_unknown",
+    "method_selection": "not_selected",
+    "next_required_evidence": "failed_main_analysis_activity_or_task_message"
+  },
+  "observed_ui": {
+    "automatic_analysis_label": "Automatic analysis",
+    "automatic_analysis_recommendation": "Recommended",
+    "automatic_analysis_toggle": "enabled",
+    "available_other_methods": [
+      "GitHub Actions",
+      "CircleCI",
+      "other CI tools",
+      "manual"
+    ],
+    "project": "ForgeLLM"
+  },
+  "privacy": {
+    "cookies_recorded": false,
+    "email_addresses_recorded": false,
+    "tokens_recorded": false,
+    "user_lists_recorded": false
+  },
+  "schema_version": "1.0",
+  "task_id": "P0-T09"
+}
