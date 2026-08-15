@@ -3,19 +3,21 @@
 - **Task:** P0-T09 / QG-01
 - **Owner authorization:** `P0-T09 / subagent-driven`, recorded 2026-08-14
 - **Canonical base:** `1b1a3621fcdf4129268663c497cdcd53aed48c29`
-- **Branch:** `feat/p0-t09-sonar-diagnosis`
 - **Mode:** read-only diagnosis
 - **Configuration changes:** none
 - **Method selection:** not selected
-- **Current classification:** `unknown_due_to_missing_authenticated_evidence`
+- **Current classification:** `automatic_analysis_enabled_root_cause_unknown`
 
-The machine-readable baseline is `artifacts/governance/P0-T09-sonar-baseline.json`.
+Machine-readable evidence:
+
+- `artifacts/governance/P0-T09-sonar-baseline.json`;
+- `artifacts/governance/P0-T09-sonar-analysis-method-readback.json`.
 
 ## Evidence question
 
 Why does the SonarQube Cloud GitHub App repeatedly produce a successful pull-request quality gate for ForgeLLM while its automatic check on the resulting protected `main` commit is completed as `cancelled` with the title `SonarQube Cloud analysis failed` and no GitHub annotations?
 
-The public evidence establishes the pattern. It does not expose the Sonar project administration setting or the failed analysis task message needed to establish the cause.
+The public GitHub evidence establishes the pattern. The owner-authenticated Analysis Method screenshot now proves that automatic analysis is enabled and recommended for this project, but the failed `main` analysis activity/task message is still missing, so root cause remains unclassified.
 
 ## Canonical project identifiers
 
@@ -25,9 +27,13 @@ The public evidence establishes the pattern. It does not expose the Sonar projec
 | Sonar project key | `leon36000_ForgeLLM` | GitHub check `details_url` |
 | Sonar instance | `https://sonarcloud.io` | GitHub check `details_url` |
 | GitHub App | `sonarqubecloud`, app ID `12526` | GitHub check-run payload |
-| Sonar binding | not authenticated/read back | missing |
-| Analysis Method setting | not authenticated/read back | missing |
-| Last analysis method | not authenticated/read back | missing |
+| Sonar binding | not yet read back | missing |
+| Analysis Method setting | `Automatic analysis` enabled | owner-authenticated screenshot |
+| Compatibility/recommendation | `Recommended` | owner-authenticated screenshot |
+| CI method selected | no | owner-authenticated screenshot |
+| Last analysis method | not displayed/read back | missing |
+
+The sanitized screenshot transcription is stored in `artifacts/governance/P0-T09-sonar-analysis-method-readback.json`. The raw image is not committed; its SHA-256 is recorded as `bfab677e68396b0452bf6348be773e974a3f4325768b080961a0f5e936f7e5e1`.
 
 ## Observed analysis matrix
 
@@ -40,8 +46,10 @@ The public evidence establishes the pattern. It does not expose the Sonar projec
 | `main` after closeout | `e669f5e1…` | `94892860919` | cancelled / analysis failed | 0 | success | success |
 | PR #28 planning | `f60373b3…` | `94894565075` | Quality Gate passed | 0 | success | success |
 | `main` after planning | `1b1a3621…` | `94894966719` | cancelled / analysis failed | 0 | success | success |
+| PR #30 post-import probe | `3bc75c64…` | `94945852247` | Quality Gate passed | 0 | success | success |
+| `main` after post-import probe | `bd03e479…` | `94946081665` | cancelled / analysis failed | 0 | success | success |
 
-The three successive pull-request/`main` pairs reproduce the same separation. A general repository test or CodeQL failure is therefore not established by the public evidence.
+The post-import probe shows that importing the project was not sufficient to repair the `main` analysis path: the PR quality gate passed after import, while the resulting `main` check still failed in the same annotation-free way.
 
 ## PR #24 annotation classification
 
@@ -64,17 +72,25 @@ Quality Gate passed
 0 security hotspots
 ```
 
-The 34 test warnings shared one rule family: exception assertions should contain only one invocation capable of throwing. They are recorded as baseline debt rather than silently accepted or suppressed by P0-T09.
+The 34 test warnings shared one rule family: exception assertions should contain only one invocation capable of throwing. They remain recorded baseline debt; they are not silently accepted or suppressed by P0-T09.
 
-## Repository configuration readback
+## Repository and Analysis Method readback
 
-The canonical Git tree at `3996362aa40dd951a3a4cd97b87ad9cb1988b710` contains:
+The canonical Git tree contains:
 
 - no `.github/workflows/sonar.yml`;
 - no `sonar-project.properties`;
 - no `.sonarcloud.properties`.
 
-The SonarQube Cloud GitHub App nevertheless produces pull-request and `main` checks. This is **consistent with** automatic analysis, but it is not an authenticated readback of **Administration → Analysis Method**. External CI submission to the same project also remains unknown.
+The owner-authenticated SonarQube Cloud **Analysis method** page now confirms:
+
+```text
+Automatic analysis: enabled
+Recommendation: Recommended
+CI analysis method selected: no
+```
+
+Therefore the earlier inference can be promoted to an observed project setting: ForgeLLM is currently configured for automatic analysis. This does **not** yet prove why `main` fails or that `automatic_only` should remain the final architecture.
 
 ## Official-document constraints
 
@@ -90,47 +106,41 @@ The official automatic-analysis documentation states that automatic and CI-based
 
 ## Evidence that is still required
 
-The read-only gate cannot select an analysis method until the owner-authenticated Sonar project readback supplies:
+The read-only gate still requires:
 
-1. project key and bound GitHub repository;
-2. project binding status;
-3. **Administration → Analysis Method** value;
-4. last analysis method;
-5. automatic-analysis compatibility result;
-6. activity/compute-task message for at least one failed `main` analysis;
-7. quality-gate definition and current project status;
-8. new-code definition;
-9. analysis scope, exclusions, and issue-ignore settings;
-10. project plan/tier relevant to pull-request and branch analysis;
-11. confirmation that no external CI scanner submits to this project.
+1. project key and bound GitHub repository readback;
+2. binding status;
+3. **last analysis method** if available;
+4. activity/compute-task message for at least one failed `main` analysis;
+5. quality-gate definition and current project status;
+6. new-code definition;
+7. analysis scope, exclusions, and issue-ignore settings;
+8. project plan/tier relevant to pull-request and branch analysis;
+9. confirmation that no external CI scanner submits to this project.
 
 Administrative payloads must be sanitized or represented by cryptographic hashes. Credentials, user lists, email addresses, tokens, and private organization data must not enter Git.
 
 ## Current classification
 
 ```text
-failure_classification = unknown_due_to_missing_authenticated_evidence
-method_selection       = not_selected
-configuration_changes  = none
+analysis_method_setting = automatic_enabled
+compatibility           = recommended
+failure_classification  = automatic_analysis_enabled_root_cause_unknown
+method_selection        = not_selected
+configuration_changes   = none
 ```
 
-Possible categories remain:
+Possible root-cause categories remain:
 
-- configuration error;
+- automatic-analysis configuration error;
 - binding or permission error;
 - source-detection or scope error;
 - automatic-analysis platform limitation;
 - transient Sonar service failure;
-- unknown because evidence is unavailable.
+- unknown because the failed-task evidence is unavailable.
 
-Choosing `automatic_only` or `ci_based_only` now would be conjectural and would violate the approved plan.
-
-## Post-import verification probe
-
-On 2026-08-14 the owner reported that the ForgeLLM projects had not previously been imported into SonarQube Cloud and had now been imported. This branch exists only to trigger a fresh pull-request analysis after that external change. It does not change Sonar or GitHub configuration and does not select an analysis method.
-
-The probe is successful only if its pull-request Sonar check succeeds. A separate `main` verification is required after merge because prior failures occurred specifically on protected `main`.
+The most important missing item is now the detailed **Project Activity / failed main analysis** message. Choosing `automatic_only` or `ci_based_only` before reading that message would still be conjectural.
 
 ## Safe next operation
 
-The next operation is still read-only with respect to Sonar configuration: observe the fresh pull-request and, if that gate is successful, the resulting `main` analysis. Only observed check results may update the failure classification.
+The next operation remains read-only: open **Project Activity**, select the latest failed `main` analysis associated with commit `bd03e479ff4649a254c41726b33f2b6e841a0e0c` / check `94946081665`, and capture the analysis/task ID, status, and detailed sanitized error message. No Sonar toggle or setting should be changed yet.
