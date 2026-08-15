@@ -125,6 +125,12 @@ Possible categories remain:
 
 Choosing `automatic_only` or `ci_based_only` now would be conjectural and would violate the approved plan.
 
+## Post-import verification probe
+
+On 2026-08-14 the owner reported that the ForgeLLM projects had not previously been imported into SonarQube Cloud and had now been imported. This branch exists only to trigger a fresh pull-request analysis after that external change. It does not change Sonar or GitHub configuration and does not select an analysis method.
+
+The probe is successful only if its pull-request Sonar check succeeds. A separate `main` verification is required after merge because prior failures occurred specifically on protected `main`.
+
 ## Safe next operation
 
-The next operation is still read-only: capture the listed Sonar project fields through the owner-authenticated UI or API. Only after that evidence is committed in sanitized form may ADR-0004 select exactly one analysis method and authorize a configuration change.
+The next operation is still read-only with respect to Sonar configuration: observe the fresh pull-request and, if that gate is successful, the resulting `main` analysis. Only observed check results may update the failure classification.
