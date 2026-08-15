@@ -4,8 +4,8 @@
 - **Updated:** 2026-08-14
 - **Phase:** P0
 - **Milestone:** P0-M6 — exact speculative-decoding reference verified
-- **Overall status:** P0-T08 / CA-03 is complete; P0-T09 / QG-01 is owner-authorized and active in read-only diagnosis; P0-T04 remains blocked on designation of one owner-authorized host
-- **Authorized next work:** freeze and classify P0-T09 evidence without changing Sonar/GitHub configuration; P0-T04 may proceed independently after host designation
+- **Overall status:** P0-T08 / CA-03 is complete; P0-T09 / QG-01 is owner-authorized and active in read-only diagnosis; Sonar Automatic analysis is now owner-confirmed enabled and Recommended, while the `main` failure cause remains unknown; P0-T04 remains blocked on designation of one owner-authorized host
+- **Authorized next work:** capture the failed `main` Sonar activity/task message and remaining read-only project settings without changing Sonar/GitHub configuration; P0-T04 may proceed independently after host designation
 - **State anchor:** the Git commit containing this file
 
 ## Objective
@@ -16,10 +16,10 @@ Preserve the exact speculative-decoding oracle as the correctness reference for 
 
 - Repository: `leon36000/ForgeLLM`.
 - Default branch: protected `main`.
-- Canonical P0-T09 base: `1b1a3621fcdf4129268663c497cdcd53aed48c29`.
+- Initial P0-T09 base: `1b1a3621fcdf4129268663c497cdcd53aed48c29`.
+- Latest diagnostic `main` probe: `bd03e479ff4649a254c41726b33f2b6e841a0e0c`.
 - Active task packet: `tasks/open/P0-T09-sonarqube-main-analysis.yaml`.
 - Tracking issue: #26.
-- Execution branch: `feat/p0-t09-sonar-diagnosis`.
 - Owner authorization: `P0-T09 / subagent-driven`, recorded 2026-08-14.
 
 ## P0-T08 / CA-03 completion
@@ -57,47 +57,54 @@ CA-03 delivered a placement-independent finite exact oracle for stochastic and g
 
 ## P0-T09 / QG-01 active diagnosis
 
-### Public evidence frozen
+### Public and owner-authenticated evidence
 
-The baseline is recorded in:
+The evidence is recorded in:
 
 - `artifacts/governance/P0-T09-sonar-baseline.json`;
+- `artifacts/governance/P0-T09-sonar-analysis-method-readback.json`;
 - `docs/quality/P0-T09-SONAR-BASELINE.md`.
 
-The public GitHub evidence reproduces this pattern three times:
+The GitHub evidence now includes a post-import probe:
 
-1. a pull-request Sonar quality gate succeeds with zero new issues;
-2. Phase 0 and CodeQL succeed;
-3. the resulting `main` Sonar check is completed as `cancelled` with `SonarQube Cloud analysis failed` and zero GitHub annotations.
+1. PR #30 Sonar check `94945852247` succeeded with 0 new issues and 0 security hotspots;
+2. Phase 0 and CodeQL succeeded on the PR head;
+3. the merged `main` commit `bd03e479ff4649a254c41726b33f2b6e841a0e0c` received Sonar check `94946081665`, completed `cancelled` with `SonarQube Cloud analysis failed` and zero GitHub annotations.
 
-Relevant `main` checks are `94890528740`, `94892860919`, and `94894966719`.
+Therefore importing the project was not sufficient to repair the `main` analysis path.
 
-### Repository readback
+### Analysis Method readback
 
-At the canonical base tree:
+An owner-authenticated screenshot of **SonarQube Cloud → ForgeLLM → Analysis method** confirms:
 
-- no `.github/workflows/sonar.yml` exists;
-- no `sonar-project.properties` exists;
-- no `.sonarcloud.properties` exists.
+```text
+Automatic analysis: enabled
+Recommendation: Recommended
+CI method selected: no
+```
 
-The GitHub SonarQube Cloud App produces the checks. This is consistent with automatic analysis but is not an authenticated readback of the Sonar **Analysis Method** setting.
+The raw screenshot is not committed. A sanitized transcription and its SHA-256 evidence binding are stored in `artifacts/governance/P0-T09-sonar-analysis-method-readback.json`.
+
+This promotes the earlier repository-based inference to an observed project setting: ForgeLLM is currently configured for automatic analysis.
 
 ### Current classification
 
 ```text
-failure_classification = unknown_due_to_missing_authenticated_evidence
-method_selection       = not_selected
-configuration_changes  = none
+analysis_method_setting = automatic_enabled
+compatibility           = recommended
+failure_classification  = automatic_analysis_enabled_root_cause_unknown
+method_selection        = not_selected
+configuration_changes   = none
 ```
 
-Authenticated read-only evidence is still required for project binding, analysis method, failed task message, quality gate, new-code definition, scope settings, plan/tier, and confirmation that no external CI scanner submits to the same project.
+The most important missing evidence is now the detailed failed `main` **Project Activity / analysis task** message. Binding, quality gate, new-code definition, scope/issue-ignore settings, plan/tier, and external-scanner confirmation are also still required before ADR-0004 may select a final method.
 
 ### Hard gate
 
 No Sonar or GitHub analysis configuration may change until:
 
-1. the missing read-only evidence is captured in sanitized form;
-2. the failure is classified without guessing;
+1. the remaining read-only evidence is captured in sanitized form;
+2. the failed `main` task message allows the cause to be classified without guessing;
 3. ADR-0004 selects exactly one method: `automatic_only` or `ci_based_only`;
 4. the selected method and rollback are reviewed.
 
@@ -118,13 +125,13 @@ Within the finite exact oracle and committed test families:
 
 P0-T08 evidence is `finite_exact_reference`. It does not establish real-model, floating-point, KV-tensor, hardware, performance, distributed, or production behavior.
 
-P0-T09 evidence is currently `quality_governance_read_only`. It establishes a repeated GitHub check pattern, not the internal Sonar failure cause or the selected remediation method.
+P0-T09 evidence is currently `quality_governance_read_only`. It now establishes the configured automatic-analysis method plus the repeated PR-success/`main`-failure pattern, but not the internal failure cause or the final remediation method.
 
 ## Active and blocked work
 
 ### P0-T09
 
-Status: `in_progress`, blocked after the public read-only baseline on owner-authenticated Sonar project administration/activity readback.
+Status: `in_progress`, blocked on the failed-main Sonar activity/task message and remaining read-only project administration evidence.
 
 ### P0-T04
 

@@ -17,16 +17,19 @@ non_goals:
 - Claim repository-wide zero Sonar findings from a clean pull-request new-code gate.
 inputs:
 - Owner authorization P0-T09 / subagent-driven recorded on 2026-08-14.
-- Canonical S-0007 main commit 1b1a3621fcdf4129268663c497cdcd53aed48c29.
+- Canonical S-0007 initial P0-T09 base commit 1b1a3621fcdf4129268663c497cdcd53aed48c29.
 - QG-01 tracking issue #26 and authorization comment 5298369164.
 - Canonical QG-01 design and implementation plan merged by pull request #28.
 - P0-T08 implementation and remediation evidence from pull requests #24 and #25.
-- SonarQube Cloud pull-request checks 94889986512, 94892322303, and 94894565075 passed with zero new issues.
-- SonarQube Cloud main checks 94890528740, 94892860919, and 94894966719 were cancelled or failed without GitHub annotations.
+- SonarQube Cloud pull-request checks 94889986512, 94892322303, 94894565075, and post-import check 94945852247 passed with zero new issues.
+- SonarQube Cloud main checks 94890528740, 94892860919, 94894966719, and post-import check 94946081665 were cancelled or failed without GitHub annotations.
+- Post-import probe merge commit bd03e479ff4649a254c41726b33f2b6e841a0e0c reproduced the main-only failure after project import.
+- Owner-authenticated Sonar Analysis Method screenshot on 2026-08-14 confirms Automatic analysis enabled and marked Recommended; sanitized evidence is artifacts/governance/P0-T09-sonar-analysis-method-readback.json.
+- Raw screenshot is not committed; SHA-256 bfab677e68396b0452bf6348be773e974a3f4325768b080961a0f5e936f7e5e1 binds the transcription to the supplied image.
 - Official SonarQube Cloud automatic-analysis, CI-based-analysis, troubleshooting, Web API, and project-binding documentation.
 - Public GitHub check-run evidence and official documentation are available.
-- Authenticated read-only Sonar project administration and activity evidence is not yet available.
-- No analysis method has been selected.
+- Authenticated read-only Sonar project activity, binding, quality-gate, new-code, scope, plan, and external-scanner evidence is still incomplete.
+- No final analysis method has been selected.
 outputs:
 - Sanitized machine-readable baseline of pull-request and main analysis evidence.
 - Read-only diagnosis and explicit failure classification.
