@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "task_id": "P0-T09",
   "captured_date": "2026-08-17",
-  "evidence_boundary": "quality_governance_read_only",
+  "evidence_boundary": "quality_governance_bounded_remediation",
   "canonical_repository": "leon36000/ForgeLLM",
   "canonical_branch": "main",
   "canonical_main": {
@@ -171,7 +171,7 @@
     "No Sonar scanner configuration is committed in the canonical repository.",
     "A GitHub check-run conclusion of cancelled does not establish the Sonar internal background-task status.",
     "Owner-authenticated Sonar UI evidence now classifies the immediate failure as a platform/subscription limitation: organization lines-of-code limit exceeded.",
-    "Owner-authenticated Background Tasks evidence now establishes the internal branch-analysis task status as FAILED; only the exact task/analysis-to-commit binding remains to be read back.",
+    "Owner-authenticated Background Tasks evidence establishes the internal branch-analysis task status as FAILED; the historical task/revision link remains strong correlation rather than shared-ID proof and is no longer the load-bearing next gate.",
     "The immediate LOC blocker is independent of analysis method. The owner explicitly authorized the minimal visibility correction for ForgeLLM, aligning the Sonar project with the already-public GitHub repository; no analysis-method or GitHub setting was changed."
   ],
   "remediation_analysis": {
@@ -255,26 +255,33 @@
   },
   "next_experiment": {
     "id": "E-P0-T09-02",
-    "mode": "read_only",
-    "target_primary": {
-      "commit": "bd03e479ff4649a254c41726b33f2b6e841a0e0c",
-      "github_sonar_check_id": 94946081665
-    },
-    "target_corroborating": {
-      "commit": "484fec34007fd89f554c9c03bffa9a5275676602",
-      "github_sonar_check_id": 94948378776
-    },
-    "capture": [
-      "verify_analysis_id_to_commit_or_check_binding",
-      "verify_background_task_to_commit_or_check_binding",
-      "organization_loc_usage_and_subscription_limit_verified",
-      "plan_or_tier_verified",
-      "binding_verified",
-      "quality_gate_verified",
-      "new_code_definition_verified",
-      "scope_and_issue_ignore_settings_verified",
-      "external_scanner_no_selected_or_canonical_ci_evidence_verified"
+    "mode": "controlled_evidence_pr_to_protected_main",
+    "canonical_base_main": "484fec34007fd89f554c9c03bffa9a5275676602",
+    "evidence_branch": "forgeai/manual-p0-t09-evidence-update-20260817102053",
+    "head_identity": "exact evidence-branch HEAD at PR creation; recorded from GitHub after push",
+    "preconditions": [
+      "task packet validates",
+      "local make ci passes on exact branch HEAD",
+      "gitleaks reports zero findings for canonical_base_main..HEAD",
+      "fresh independent governance/security review records ACCEPT with no BLOCKER or MAJOR",
+      "Sonar project visibility is public and organization private LOC remains below entitlement"
     ],
-    "stop_rule": "Complete the remaining read-only admin evidence, then use the reviewed evidence-update pull request and resulting protected main merge as the falsifiable post-remediation Automatic Analysis verification. Do not change analysis method, scope, Quality Gate, subscription, binding or any other project visibility."
+    "pull_request_success_criteria": [
+      "SonarQube Cloud check completes success on the exact PR head",
+      "Phase 0 completes success on the exact PR head",
+      "CodeQL completes success on the exact PR head",
+      "GitGuardian completes success on the exact PR head",
+      "Dependency Review succeeds when present for the PR",
+      "fresh review remains ACCEPT"
+    ],
+    "main_success_criteria": [
+      "merge occurs through the protected main workflow, never by direct push",
+      "resulting main commit SHA is recorded",
+      "SonarQube Cloud check on that exact main SHA completes success rather than cancelled, skipped, absent or inferred",
+      "Phase 0 and CodeQL complete success on that exact main SHA",
+      "final evidence records any remaining baseline debt without claiming repository-wide zero findings"
+    ],
+    "falsifier": "Any required PR-head gate failure or a non-success/absent Sonar check on the resulting protected main commit falsifies recovery and blocks ADR-0004 closeout.",
+    "stop_rule": "Do not change analysis method, scope, Quality Gate, subscription, binding or any project visibility during this verification cycle."
   }
 }
