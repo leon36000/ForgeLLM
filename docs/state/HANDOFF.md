@@ -120,7 +120,7 @@ ForgeLLM maintained non-test Python       ~5k physical lines
 
 Switching scanners is not a remedy for the diagnosed subscription limit, and adding exclusions merely to reduce billing would violate QG-01.
 
-The owner subsequently authenticated manually in the isolated OpenClaw browser. A targeted before/after readback verified `ForgeLLM / leon36000_ForgeLLM` was Private while bound to the already-public GitHub repository and using Automatic Analysis. Under an explicit local single-use owner approval recorded outside Git, OpenClaw changed **only** Project visibility from `Private` to `Public - Anyone`; project key, GitHub binding and Automatic Analysis remained unchanged.
+The owner subsequently authenticated manually in the isolated OpenClaw browser. A targeted before/after readback verified `ForgeLLM / leon36000_ForgeLLM` was Private while bound to the already-public GitHub repository and using Automatic Analysis. The then-current P0-T09 packet still contained a broad no-Sonar/GitHub-setting freeze before ADR-0004; the owner-directed visibility change is recorded as a bounded exception to that packet, not as retroactive authorization by the pre-change packet. Under a local single-use approval recorded outside Git, OpenClaw changed **only** Project visibility from `Private` to `Public - Anyone`; project key, GitHub binding and Automatic Analysis remained unchanged.
 
 Independent anonymous Sonar Web API reads then returned HTTP 200 and confirmed:
 

@@ -51,6 +51,7 @@
       "change": {
         "approval_record": "local_single_use_approval_recorded_outside_git",
         "authorized_by_owner": true,
+        "governance_note": "The then-current P0-T09 packet still contained a broad no-Sonar/GitHub-setting freeze before ADR-0004. The visibility change is recorded as a bounded owner-directed exception to that packet, not as retroactive authorization by the pre-change packet.",
         "scope": "leon36000_ForgeLLM visibility only",
         "from": "private",
         "to": "public",
