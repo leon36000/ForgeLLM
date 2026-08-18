@@ -1,7 +1,7 @@
 # ForgeLLM Handoff
 
 **From state:** S-0007  
-**To work:** P0-T09 evidence PR -> protected `main` Automatic Analysis verification, then ADR-0004  
+**To work:** P0-T09 evidence PR -> protected `main` Automatic Analysis verification, then ADR-0004
 **Generated:** 2026-08-17
 
 ## Canonical status
