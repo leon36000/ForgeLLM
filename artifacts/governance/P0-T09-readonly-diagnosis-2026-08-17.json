@@ -1,0 +1,279 @@
+{
+  "schema_version": "1.0",
+  "task_id": "P0-T09",
+  "captured_date": "2026-08-17",
+  "evidence_boundary": "quality_governance_read_only",
+  "canonical_repository": "leon36000/ForgeLLM",
+  "canonical_branch": "main",
+  "canonical_main": {
+    "sha": "484fec34007fd89f554c9c03bffa9a5275676602",
+    "local_head_matches_origin_main": true,
+    "local_head_matches_github_main": true,
+    "base_worktree_clean": true
+  },
+  "infrastructure_diagnosis": {
+    "independent_workers_used": [
+      "codex",
+      "claude-code",
+      "openhands"
+    ],
+    "all_repository_reviews_read_only": true,
+    "review_worktrees_clean_after_diagnosis": true,
+    "sonar_configuration_changes": true,
+    "sonar_configuration_change_scope": "project_visibility_private_to_public_only",
+    "github_configuration_changes": false
+  },
+  "github_evidence": {
+    "pull_request_31": {
+      "head_sha": "a2d68d910e270fe15f590808de5041814a416b1f",
+      "sonar_check_id": 94948153214,
+      "sonar_conclusion": "success"
+    },
+    "main_after_pull_request_31": {
+      "sha": "484fec34007fd89f554c9c03bffa9a5275676602",
+      "sonar_check_id": 94948378776,
+      "sonar_github_check_conclusion": "cancelled",
+      "sonar_annotations": 0,
+      "phase0_conclusion": "success",
+      "codeql_conclusion": "success"
+    }
+  },
+  "repository_configuration_readback": {
+    "committed_sonar_workflow_present": false,
+    "sonar_project_properties_present": false,
+    "sonarcloud_properties_present": false,
+    "external_scanner_submission": "no_canonical_or_selected_ci_scanner_observed",
+    "sonar_visibility_readback": {
+      "before_change": {
+        "authenticated_visibility": "private",
+        "anonymous_exact_project_key_lookup": "http_404"
+      },
+      "change": {
+        "approval_record": "local_single_use_approval_recorded_outside_git",
+        "authorized_by_owner": true,
+        "scope": "leon36000_ForgeLLM visibility only",
+        "from": "private",
+        "to": "public",
+        "other_sonar_settings_changed": false,
+        "github_settings_changed": false
+      },
+      "after_change": {
+        "authenticated_visibility": "public",
+        "anonymous_api_access": "http_200",
+        "independent_anonymous_visibility": "public"
+      }
+    }
+  },
+  "sonar_readback": {
+    "sonar_project_identifier": "leon36000_ForgeLLM",
+    "visibility": "public",
+    "github_binding": "https://github.com/leon36000/ForgeLLM",
+    "automatic_analysis": "enabled",
+    "compatibility": "Recommended",
+    "ci_method_selected": false,
+    "quality_gate": "Sonar way",
+    "quality_gate_status_latest_completed_main": "OK",
+    "ncloc_latest_completed_main": 1658,
+    "latest_completed_main_analysis": {
+      "date_utc": "2026-08-14T05:17:41Z",
+      "revision": "d5cd25bd9d6fc3f9cded27781c2051939dcdde85",
+      "current_github_main_sha": "484fec34007fd89f554c9c03bffa9a5275676602",
+      "is_current_main": false
+    },
+    "internal_background_task_status": "FAILED",
+    "internal_background_task_error": "organization_lines_of_code_subscription_limit_exceeded",
+    "failure_classification": "platform_limitation",
+    "failure_subtype": "subscription_loc_limit_exceeded",
+    "owner_authenticated_error_readback": {
+      "source": "owner_provided_screenshot",
+      "screenshot_sha256": "1b39f3d3ab5b11ae4f378c13cfd33026666409b6d3b83df63540288549b880a3",
+      "analysis_id": "472eadb9-b554-47ca-8336-2033fb3b7408",
+      "sanitized_message": "Analysis failed because the total number of lines of code in the organization exceeds the current subscription limit.",
+      "commit_binding": "not_yet_verified"
+    },
+    "owner_authenticated_background_task_readback": {
+      "source": "owner_provided_screenshot",
+      "screenshot_sha256": "a81a644bf0536fddf2fe4f8bcf986bd82453604a1bc7ef1386b450390ccf0bc7",
+      "task_id": "AaADNoZ4U0I7o8og6Mb6",
+      "task_kind": "branch_project_analysis",
+      "internal_status": "FAILED",
+      "submitted": "2026-08-14T22:18:20",
+      "started": "2026-08-14T22:18:20",
+      "finished": "2026-08-14T22:18:23",
+      "immediately_preceding_pr_task": {
+        "task_id": "AaADNKJHGgg5GiBgCda_",
+        "internal_status": "SUCCESS",
+        "submitted": "2026-08-14T22:16:16",
+        "started": "2026-08-14T22:16:16",
+        "finished": "2026-08-14T22:16:18"
+      },
+      "commit_binding": "strongly_correlated_not_shared_identifier_verified",
+      "public_github_correlation": {
+        "assumed_ui_offset_for_comparison": "UTC-04:00",
+        "pull_request_check": {
+          "github_check_id": 94948153214,
+          "head_sha": "a2d68d910e270fe15f590808de5041814a416b1f",
+          "github_started_at_utc": "2026-08-15T02:16:03Z",
+          "github_completed_at_utc": "2026-08-15T02:16:18Z",
+          "sonar_ui_finished_local": "2026-08-14T22:16:18",
+          "finish_timestamp_exact_match_under_offset": true
+        },
+        "main_check": {
+          "github_check_id": 94948378776,
+          "head_sha": "484fec34007fd89f554c9c03bffa9a5275676602",
+          "github_started_at_utc": "2026-08-15T02:18:01Z",
+          "github_completed_at_utc": "2026-08-15T02:18:23Z",
+          "sonar_ui_finished_local": "2026-08-14T22:18:23",
+          "finish_timestamp_exact_match_under_offset": true
+        },
+        "binding_strength": "strong_correlation",
+        "binding_limit": "GitHub check payload exposes no Sonar background-task ID; definitive binding still requires authenticated Sonar task detail containing revision/SHA or another shared identifier."
+      },
+      "interpretation": "The internal Sonar branch task is FAILED immediately after a SUCCESS pull-request task. Public GitHub check timestamps, head SHAs and details scopes align strongly with these tasks under a UTC-04:00 UI offset, including exact finish-time matches, but no shared task identifier is exposed publicly."
+    },
+    "controller_browser_activity_readback": "authenticated_openclaw_managed_browser_available",
+    "authenticated_error_readback_captured": true,
+    "post_visibility_anonymous_readback": {
+      "components_show_http": 200,
+      "measures_http": 200,
+      "quality_gate_http": 200,
+      "project_analyses_http": 200,
+      "navigation_http": 200,
+      "branches_http": 200,
+      "new_code_settings_http": 200,
+      "scope_settings_http": 200,
+      "authentication_used": false
+    },
+    "final_admin_readback": {
+      "repository_binding": "leon36000/ForgeLLM",
+      "binding_evidence": "owner_authenticated_ui_plus_anonymous_navigation_api",
+      "new_code_definition": "previous_version",
+      "analysis_scope_custom_values": "none/default",
+      "source_inclusions": "none/default",
+      "source_exclusions": "none/default",
+      "test_inclusions": "none/default",
+      "test_exclusions": "none/default",
+      "coverage_exclusions": "none/default",
+      "duplication_exclusions": "none/default",
+      "issue_ignore_multicriteria": "none/default",
+      "analysis_method": "automatic_analysis_enabled",
+      "last_analysis_method": "Analyzed by SonarQube Cloud / Autoscan",
+      "ci_method_selected": false,
+      "quality_gate": "Sonar way",
+      "quality_gate_default": true,
+      "quality_gate_status_latest_completed_main": "OK",
+      "external_scanner_confirmation": "canonical_repository_has_no_scanner_configuration; Analysis Method has no CI selection; anonymous navigation reports Autoscan"
+    }
+  },
+  "independent_review_consensus": [
+    "The repeated pull-request-success/main-GitHub-check-cancelled pattern is established.",
+    "No Sonar scanner configuration is committed in the canonical repository.",
+    "A GitHub check-run conclusion of cancelled does not establish the Sonar internal background-task status.",
+    "Owner-authenticated Sonar UI evidence now classifies the immediate failure as a platform/subscription limitation: organization lines-of-code limit exceeded.",
+    "Owner-authenticated Background Tasks evidence now establishes the internal branch-analysis task status as FAILED; only the exact task/analysis-to-commit binding remains to be read back.",
+    "The immediate LOC blocker is independent of analysis method. The owner explicitly authorized the minimal visibility correction for ForgeLLM, aligning the Sonar project with the already-public GitHub repository; no analysis-method or GitHub setting was changed."
+  ],
+  "remediation_analysis": {
+    "independent_reviewers": [
+      "codex",
+      "claude-code"
+    ],
+    "ci_based_analysis_bypasses_loc_limit": false,
+    "reason": "The SonarQube Cloud organization LOC entitlement is enforced by the service regardless of whether scanner execution is automatic or CI-based.",
+    "forgellm_authored_non_test_python_physical_lines_estimate": 4965,
+    "legitimate_repository_exclusions_identified": false,
+    "scope_recommendation": "Do not add exclusions merely to reduce subscription usage. No generated, vendored, build-output, fixture, or third-party production source was identified as a justified exclusion.",
+    "preferred_remediation_order": [
+      "ForgeLLM Sonar visibility aligned private_to_public with its already-public canonical GitHub repository under explicit owner approval",
+      "authenticate billing_and_usage and per-project visibility/LOC readback after the change",
+      "if obsolete Sonar projects consume private LOC, require explicit destructive approval before deletion",
+      "if the organization is eligible and all affected projects may be public, review OSS plan transition",
+      "otherwise require explicit financial approval to increase LOC entitlement"
+    ],
+    "primary_documentation": [
+      "https://docs.sonarsource.com/sonarqube-cloud/administering-sonarcloud/managing-subscription/subscription-plans",
+      "https://docs.sonarsource.com/sonarqube-cloud/administering-sonarcloud/managing-subscription/viewing-billing-and-usage",
+      "https://docs.sonarsource.com/sonarqube-cloud/administering-sonarcloud/about-sonarqube-cloud-solution/resources-structure/projects",
+      "https://docs.sonarsource.com/sonarqube-cloud/administering-sonarcloud/managing-subscription/changing-plan"
+    ],
+    "visibility_change_authorized": true,
+    "post_visibility_billing_readback": {
+      "plan": "Free",
+      "private_loc_entitlement": 50000,
+      "private_loc_consumption": 48248,
+      "remaining_loc_displayed": "approximately_1.8k",
+      "loc_limit_state": "below_limit_nearing_limit",
+      "readback_mode": "owner_authenticated_read_only_ui",
+      "prices_or_payment_data_recorded": false
+    },
+    "financial_or_destructive_change_authorized": false
+  },
+  "openclaw_browser_access": {
+    "existing_user_chrome_authenticated": "owner_asserted",
+    "supported_attachment_mode": "profile=user / existing-session / Chrome DevTools MCP autoConnect",
+    "direct_attachment_available_at_first_attempt": false,
+    "initial_blockers": [
+      "browser-side remote debugging was not enabled for Chrome MCP existing-session attachment",
+      "managed OpenClaw Chromium launch was blocked by local AppArmor/sandbox constraints",
+      "OpenClaw bounded gateway later experienced an abnormal closure and was restored through the controller approval mechanism"
+    ],
+    "supported_safe_procedure": "Keep the signed-in Chrome session open, enable remote debugging in chrome://inspect/#remote-debugging, use profile=user, and require the owner's on-screen attach consent. Do not copy cookies/profile data, expose a raw CDP port beyond loopback, or disable the browser sandbox.",
+    "latest_profile_user_attempt": {
+      "openclaw_gateway_restored_before_attempt": true,
+      "driver": "existing-session",
+      "profile": "user",
+      "doctor": "pass",
+      "page_ready": false,
+      "tabs_result": "failed_missing_DevToolsActivePort",
+      "snapshot_result": "failed_missing_DevToolsActivePort",
+      "sonar_data_read": false,
+      "mutating_actions_attempted": false
+    },
+    "sanitized_browser_identity_readback": {
+      "explicit_openclaw_browser_profiles_defined": false,
+      "google_chrome_profile_directory_exists": true,
+      "google_chrome_DevToolsActivePort_exists": false,
+      "chromium_profile_directory_exists": true,
+      "chromium_DevToolsActivePort_exists": false,
+      "builtin_user_profile_default_target": "google_chrome",
+      "chromium_requires_explicit_existing_session_profile_or_attach_endpoint": true,
+      "foreground_browser_identity": "not_observable_from_controller_session",
+      "passive_desktop_snapshot_available": false
+    },
+    "browser_security_weakening_applied": false,
+    "sonar_changes_during_browser_access_attempts": false
+  },
+  "experiment_result": {
+    "id": "E-P0-T09-01",
+    "result": "classified_and_minimal_remediation_applied",
+    "classification": "platform_limitation",
+    "subtype": "subscription_loc_limit_exceeded",
+    "evidence": "owner-authenticated Sonar error UI plus Background Tasks",
+    "remediation": "project_visibility_private_to_public",
+    "post_remediation_private_loc_state": "48248_of_50000_below_limit"
+  },
+  "next_experiment": {
+    "id": "E-P0-T09-02",
+    "mode": "read_only",
+    "target_primary": {
+      "commit": "bd03e479ff4649a254c41726b33f2b6e841a0e0c",
+      "github_sonar_check_id": 94946081665
+    },
+    "target_corroborating": {
+      "commit": "484fec34007fd89f554c9c03bffa9a5275676602",
+      "github_sonar_check_id": 94948378776
+    },
+    "capture": [
+      "verify_analysis_id_to_commit_or_check_binding",
+      "verify_background_task_to_commit_or_check_binding",
+      "organization_loc_usage_and_subscription_limit_verified",
+      "plan_or_tier_verified",
+      "binding_verified",
+      "quality_gate_verified",
+      "new_code_definition_verified",
+      "scope_and_issue_ignore_settings_verified",
+      "external_scanner_no_selected_or_canonical_ci_evidence_verified"
+    ],
+    "stop_rule": "Complete the remaining read-only admin evidence, then use the reviewed evidence-update pull request and resulting protected main merge as the falsifiable post-remediation Automatic Analysis verification. Do not change analysis method, scope, Quality Gate, subscription, binding or any other project visibility."
+  }
+}

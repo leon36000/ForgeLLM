@@ -1,11 +1,11 @@
 # ForgeLLM Current State
 
 - **State ID:** S-0007
-- **Updated:** 2026-08-14
+- **Updated:** 2026-08-17
 - **Phase:** P0
 - **Milestone:** P0-M6 — exact speculative-decoding reference verified
-- **Overall status:** P0-T08 / CA-03 is complete; P0-T09 / QG-01 is owner-authorized and active in read-only diagnosis; Sonar Automatic analysis is now owner-confirmed enabled and Recommended, while the `main` failure cause remains unknown; P0-T04 remains blocked on designation of one owner-authorized host
-- **Authorized next work:** capture the failed `main` Sonar activity/task message and remaining read-only project settings without changing Sonar/GitHub configuration; P0-T04 may proceed independently after host designation
+- **Overall status:** P0-T08 / CA-03 is complete; P0-T09 / QG-01 remains active; the immediate failure is classified `platform_limitation / subscription_loc_limit_exceeded` with internal task status `FAILED`; the owner-authorized minimal remediation has changed only Sonar project visibility for `leon36000_ForgeLLM` from private to public, matching the already-public canonical GitHub repository. Anonymous Sonar API readback independently confirms visibility `public`, GitHub binding unchanged, Automatic Analysis enabled, `ncloc=1658`, and Quality Gate `OK` on the latest completed main analysis. Billing & usage after the change shows Free plan, 50,000 private-LOC entitlement, 48,248 private LOC consumed and approximately 1.8k remaining, so the organization is now below the private-LOC limit. Current GitHub `main@484fec34007fd89f554c9c03bffa9a5275676602` remains newer than Sonar's latest completed main analysis (`d5cd25bd9d6fc3f9cded27781c2051939dcdde85`), so post-remediation main verification is still required; P0-T04 remains blocked on designation of one owner-authorized host
+- **Authorized next work:** the administrative readback is complete enough for the decision gate: binding `leon36000/ForgeLLM`, New Code `previous_version`, no custom scope/issue-ignore settings, Automatic Analysis/Autoscan, default `Sonar way`, and no selected/canonical CI scanner are recorded. Use the reviewed P0-T09 evidence-update pull request itself as the controlled Automatic Analysis trigger. Do not switch analysis method, add exclusions, delete projects, change another project's visibility, change the subscription, or incur cost. After the evidence PR passes all exact-head gates, merge it and require the resulting protected `main` Sonar check to complete successfully before ADR-0004/final closeout; P0-T04 may proceed independently after host designation.
 - **State anchor:** the Git commit containing this file
 
 ## Objective
@@ -17,7 +17,7 @@ Preserve the exact speculative-decoding oracle as the correctness reference for 
 - Repository: `leon36000/ForgeLLM`.
 - Default branch: protected `main`.
 - Initial P0-T09 base: `1b1a3621fcdf4129268663c497cdcd53aed48c29`.
-- Latest diagnostic `main` probe: `bd03e479ff4649a254c41726b33f2b6e841a0e0c`.
+- Latest observed `main` recurrence: `484fec34007fd89f554c9c03bffa9a5275676602`.
 - Active task packet: `tasks/open/P0-T09-sonarqube-main-analysis.yaml`.
 - Tracking issue: #26.
 - Owner authorization: `P0-T09 / subagent-driven`, recorded 2026-08-14.
@@ -63,7 +63,8 @@ The evidence is recorded in:
 
 - `artifacts/governance/P0-T09-sonar-baseline.json`;
 - `artifacts/governance/P0-T09-sonar-analysis-method-readback.json`;
-- `docs/quality/P0-T09-SONAR-BASELINE.md`.
+- `docs/quality/P0-T09-SONAR-BASELINE.md`;
+- `artifacts/governance/P0-T09-readonly-diagnosis-2026-08-17.json`.
 
 The GitHub evidence now includes a post-import probe:
 
@@ -72,6 +73,8 @@ The GitHub evidence now includes a post-import probe:
 3. the merged `main` commit `bd03e479ff4649a254c41726b33f2b6e841a0e0c` received Sonar check `94946081665`, completed `cancelled` with `SonarQube Cloud analysis failed` and zero GitHub annotations.
 
 Therefore importing the project was not sufficient to repair the `main` analysis path.
+
+A fifth recurrence is now observed on the current canonical head: PR #31 Sonar check `94948153214` succeeded, while `main@484fec34007fd89f554c9c03bffa9a5275676602` received Sonar GitHub check `94948378776` with conclusion `cancelled` and zero annotations; Phase 0 and CodeQL succeeded on the same `main` commit. The GitHub check conclusion is evidence about the check-run object, not proof that the internal Sonar background task itself had status `CANCELED`.
 
 ### Analysis Method readback
 
@@ -92,21 +95,37 @@ This promotes the earlier repository-based inference to an observed project sett
 ```text
 analysis_method_setting = automatic_enabled
 compatibility           = recommended
-failure_classification  = automatic_analysis_enabled_root_cause_unknown
+failure_classification  = platform_limitation
+failure_subtype         = subscription_loc_limit_exceeded
+internal_task_status    = FAILED
+background_task_id      = AaADNoZ4U0I7o8og6Mb6
+analysis_id             = 472eadb9-b554-47ca-8336-2033fb3b7408
 method_selection        = not_selected
-configuration_changes   = none
+configuration_changes   = sonar_visibility_private_to_public_only
 ```
 
-The most important missing evidence is now the detailed failed `main` **Project Activity / analysis task** message. Binding, quality gate, new-code definition, scope/issue-ignore settings, plan/tier, and external-scanner confirmation are also still required before ADR-0004 may select a final method.
+Owner-authenticated Sonar UI evidence gives a direct sanitized error: the analysis failed because the organization's total lines of code exceed the current subscription limit. A second owner-provided Background Tasks screenshot establishes the internal branch-analysis task status `FAILED` for task `AaADNoZ4U0I7o8og6Mb6`, submitted/started at 22:18:20 and finished at 22:18:23, immediately after a pull-request task `AaADNKJHGgg5GiBgCda_` succeeded from 22:16:16 to 22:16:18. The screenshots expose analysis ID `472eadb9-b554-47ca-8336-2033fb3b7408`; raw images are not committed and their SHA-256 evidence bindings are recorded in the sanitized diagnosis artifact. Public GitHub correlation now strongly associates the Background Tasks pair with PR #31 and `main@484fec34007fd89f554c9c03bffa9a5275676602`: under a UTC−04:00 UI offset, the Sonar PR and branch task finish times match GitHub checks `94948153214` and `94948378776` exactly to the second, and the public check scopes are respectively `pullRequest=31` and `branch=main`. This is strong correlation but not a definitive shared-identifier binding because the GitHub check payload exposes no Sonar task ID. Authenticated Sonar task detail with revision/SHA remains required. Binding, quality gate, new-code definition, scope/issue-ignore settings, plan/tier/LOC usage, and external-scanner confirmation are also still required before ADR-0004 may select a final method.
+
+Independent Codex and Claude Code remediation reviews add two negative results that constrain the fix: moving scanner execution from Automatic Analysis to CI-based analysis does not remove SonarQube Cloud's organization LOC entitlement, and the canonical ForgeLLM tree contains no generated, vendored, build-output, fixture, or third-party production source that is justified for exclusion. The maintained non-test Python footprint is approximately 5k physical lines, so subscription remediation must be based on authenticated organization-level Billing & usage rather than speculative repository exclusions.
+
+### Owner-authorized visibility remediation
+
+On 2026-08-17 local time, after the failure class was established, the owner explicitly authorized aligning the Sonar project visibility with the already-public canonical GitHub repository. A local single-use controller approval was recorded outside Git, and OpenClaw changed only `leon36000_ForgeLLM` from `Private` to `Public - Anyone`. Project key, GitHub binding and Automatic Analysis remained unchanged. Independent anonymous Sonar Web API reads then returned HTTP 200 and confirmed `visibility=public`, binding `https://github.com/leon36000/ForgeLLM`, `autoscanEnabled=true`, `ncloc=1658`, and Quality Gate `OK` for the latest completed main analysis. No GitHub setting, subscription, quality gate, scope, exclusion or analysis method was changed.
+
+Billing & usage after the visibility change reports Free plan, 50,000 private-LOC entitlement, 48,248 private LOC consumed and approximately 1.8k remaining. The diagnosed organization LOC blocker is therefore no longer active at readback time, although the organization is close to the limit.
+
+The latest completed Sonar main analysis remains stale relative to canonical Git: Sonar reports revision `d5cd25bd9d6fc3f9cded27781c2051939dcdde85` at `2026-08-14T05:17:41Z`, while GitHub `main` remains `484fec34007fd89f554c9c03bffa9a5275676602`. Visibility change alone is therefore not treated as proof of a healthy current-main analysis.
 
 ### Hard gate
 
-No Sonar or GitHub analysis configuration may change until:
+No Sonar or GitHub **analysis configuration** may change until:
 
-1. the remaining read-only evidence is captured in sanitized form;
-2. the failed `main` task message allows the cause to be classified without guessing;
-3. ADR-0004 selects exactly one method: `automatic_only` or `ci_based_only`;
+1. the owner-authorized visibility remediation and completed administrative readback are recorded with sanitized before/after evidence;
+2. the controlled evidence-update PR and resulting protected `main` commit verify whether public visibility removes the LOC blocker;
+3. ADR-0004 selects exactly one method: `automatic_only` or `ci_based_only`, noting that method selection is orthogonal to the LOC-limit remediation;
 4. the selected method and rollback are reviewed.
+
+The already-completed `private -> public` visibility change is a bounded, owner-authorized subscription/visibility remediation, not an analysis-method change. No further visibility, subscription, scope, Quality Gate or analysis-method mutation is authorized by this state.
 
 Automatic and CI-based analysis must never run concurrently for the same Sonar project.
 
@@ -125,13 +144,13 @@ Within the finite exact oracle and committed test families:
 
 P0-T08 evidence is `finite_exact_reference`. It does not establish real-model, floating-point, KV-tensor, hardware, performance, distributed, or production behavior.
 
-P0-T09 evidence is currently `quality_governance_read_only`. It now establishes the configured automatic-analysis method plus the repeated PR-success/`main`-failure pattern, but not the internal failure cause or the final remediation method.
+P0-T09 evidence is currently `quality_governance_read_only`. It establishes the configured automatic-analysis method, the repeated PR-success/`main` GitHub-check-cancelled pattern, and the immediate Sonar failure class `platform_limitation` with subtype `subscription_loc_limit_exceeded`. It establishes the internal branch-analysis task status as `FAILED`; it does not yet establish the exact task/analysis-to-commit binding or the final remediation method.
 
 ## Active and blocked work
 
 ### P0-T09
 
-Status: `in_progress`, blocked on the failed-main Sonar activity/task message and remaining read-only project administration evidence.
+Status: `in_progress`. `E-P0-T09-01` classified the immediate failure as `platform_limitation / subscription_loc_limit_exceeded`; authenticated Background Tasks establishes internal status `FAILED`; owner-authorized visibility remediation is applied and independently verified public; Billing/admin evidence is materially complete. `E-P0-T09-02` is now the reviewed evidence PR -> protected `main` Automatic Analysis verification cycle.
 
 ### P0-T04
 
@@ -147,7 +166,7 @@ Transition Atlas and runtime conformance may use CA-03 as an oracle, but neither
 
 ## Forbidden next steps
 
-- no Sonar/GitHub configuration change before authenticated diagnosis and ADR-0004;
+- no further Sonar/GitHub analysis, scope, Quality Gate, visibility, subscription, or binding change before the remaining evidence and ADR-0004, except a separately explicit owner authorization;
 - no automatic and CI-based analysis concurrently;
 - no token, private administrative payload, or hidden issue suppression in Git;
 - no hardware benchmark before P0-T04 and P0-T05;

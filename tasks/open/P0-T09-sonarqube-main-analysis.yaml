@@ -22,14 +22,21 @@ inputs:
 - Canonical QG-01 design and implementation plan merged by pull request #28.
 - P0-T08 implementation and remediation evidence from pull requests #24 and #25.
 - SonarQube Cloud pull-request checks 94889986512, 94892322303, 94894565075, and post-import check 94945852247 passed with zero new issues.
-- SonarQube Cloud main checks 94890528740, 94892860919, 94894966719, and post-import check 94946081665 were cancelled or failed without GitHub annotations.
+- SonarQube Cloud main GitHub checks 94890528740, 94892860919, 94894966719, post-import check 94946081665, and current-head check 94948378776 had conclusion cancelled or failed without GitHub annotations; these GitHub conclusions do not establish the internal Sonar background-task status.
 - Post-import probe merge commit bd03e479ff4649a254c41726b33f2b6e841a0e0c reproduced the main-only failure after project import.
+- PR #31 Sonar check 94948153214 succeeded; the resulting current main commit 484fec34007fd89f554c9c03bffa9a5275676602 received GitHub Sonar check 94948378776 with conclusion cancelled and zero annotations while Phase 0 and CodeQL succeeded.
+- Independent read-only Codex, Claude Code, and OpenHands reviews on 2026-08-17 converged that no Sonar scanner configuration is committed and that GitHub check conclusion cancelled did not establish the internal Sonar task status; sanitized evidence is artifacts/governance/P0-T09-readonly-diagnosis-2026-08-17.json.
+- Owner-authenticated Sonar error UI supplied on 2026-08-17 states that the analysis failed because the organization's total lines of code exceed the current subscription limit; analysis ID 472eadb9-b554-47ca-8336-2033fb3b7408 is visible. This classifies the immediate failure as platform_limitation with subtype subscription_loc_limit_exceeded.
+- Owner-authenticated Background Tasks evidence supplied on 2026-08-17 establishes branch-analysis task AaADNoZ4U0I7o8og6Mb6 with internal status FAILED from 2026-08-14 22:18:20 to 22:18:23, immediately after pull-request task AaADNKJHGgg5GiBgCda_ succeeded; exact task/analysis-to-commit binding remains to be read back.
+- Independent remediation reviews on 2026-08-17 establish that moving from Automatic Analysis to CI-based analysis does not bypass the organization LOC entitlement and that no generated, vendored, build-output, fixture, or third-party ForgeLLM production source is justified for exclusion; maintained non-test Python is approximately 5k physical lines.
+- ForgeAI/OpenClaw browser access was restored without sandbox weakening; the owner authenticated manually in the isolated managed browser and no credential was captured. A local single-use owner approval, recorded outside Git, authorized changing only ForgeLLM Sonar visibility from private to public.
 - Owner-authenticated Sonar Analysis Method screenshot on 2026-08-14 confirms Automatic analysis enabled and marked Recommended; sanitized evidence is artifacts/governance/P0-T09-sonar-analysis-method-readback.json.
 - Raw screenshot is not committed; SHA-256 bfab677e68396b0452bf6348be773e974a3f4325768b080961a0f5e936f7e5e1 binds the transcription to the supplied image.
 - Official SonarQube Cloud automatic-analysis, CI-based-analysis, troubleshooting, Web API, and project-binding documentation.
-- Public GitHub check-run evidence and official documentation are available.
-- Authenticated read-only Sonar project activity, binding, quality-gate, new-code, scope, plan, and external-scanner evidence is still incomplete.
-- No final analysis method has been selected.
+- Owner-authenticated before/after readback confirms `leon36000_ForgeLLM` changed only from Private to Public; project key, GitHub binding and Automatic Analysis remained unchanged. Independent anonymous Sonar Web API reads now return HTTP 200 and confirm visibility public, GitHub binding `leon36000/ForgeLLM`, Automatic Analysis enabled, latest completed main `ncloc=1658`, and Quality Gate `OK`.
+- Post-remediation Billing & usage readback: Free plan, 50,000 private-LOC entitlement, 48,248 private LOC consumed, approximately 1.8k remaining. The organization is below the private-LOC limit after the visibility correction.
+- Public GitHub main remains `484fec34007fd89f554c9c03bffa9a5275676602`; Sonar's latest completed main analysis remains stale at revision `d5cd25bd9d6fc3f9cded27781c2051939dcdde85`, so a controlled post-remediation PR/main cycle is still required.
+- Final administrative readback records binding `leon36000/ForgeLLM`, New Code `previous_version`, default/no custom scope or issue-ignore settings, Automatic Analysis enabled with SonarQube Cloud/Autoscan as the observed method, no CI method selected, and default `Sonar way` Quality Gate. No canonical or selected CI scanner is observed. The historical failed-task-to-revision field remains strong correlation rather than a shared-ID proof. No final analysis method has been selected.
 outputs:
 - Sanitized machine-readable baseline of pull-request and main analysis evidence.
 - Read-only diagnosis and explicit failure classification.
@@ -45,7 +52,7 @@ allowed_paths:
 - .github/workflows/phase0.yml
 - artifacts/governance/
 - docs/quality/
-- docs/adr/ADR-0004-sonarqube-analysis-method.md
+- docs/architecture/ADR-0004-sonarqube-analysis-method.md
 - docs/superpowers/plans/2026-08-14-sonarqube-main-analysis.md
 - docs/reviews/P0-T09-SONAR-MAIN-ANALYSIS-REVIEW.md
 - src/forgellm_governance/validation.py
@@ -56,10 +63,12 @@ allowed_paths:
 - docs/state/HANDOFF.md
 - docs/state/RISKS.md
 - docs/roadmap/PHASE0_TASKS.md
-- chatgpt/mobile-core/03_FORGELLM_STATE_AND_DECISIONS.md
 - Makefile
 forbidden_actions:
-- Change any Sonar or GitHub setting before read-only diagnosis evidence and a reviewed method-selection ADR.
+- Change any Sonar or GitHub analysis setting before the remaining read-only evidence and a reviewed method-selection ADR.
+- Switch to CI-based analysis as a workaround for the LOC subscription limit; the service-level entitlement applies regardless of scanner execution location.
+- Add source exclusions merely to reduce subscription LOC or obtain a green check; no justified generated/vendor/build production source has been identified.
+- Delete a Sonar project, change another project visibility, change ForgeLLM visibility again, migrate subscription plan, or increase LOC entitlement without explicit owner approval appropriate to the destructive, confidentiality, or financial consequence.
 - Run automatic analysis and a CI scanner against the same Sonar project concurrently.
 - Print, log, commit, or transmit SONAR_TOKEN outside the approved GitHub secret boundary.
 - Use an unpinned third-party GitHub Action.
@@ -67,9 +76,11 @@ forbidden_actions:
 - Treat an absent, skipped, cancelled, or annotation-free Sonar check as success.
 - Hide baseline debt or accept an issue without a reviewed disposition.
 - Weaken Phase 0, CodeQL, GitGuardian, dependency policy, branch protection, or P0-T08 exactness gates.
+- Manually edit generated mobile-context projections; regenerate them only through the repository-sanctioned generation path after canonical source updates.
 acceptance_criteria:
-- Authenticated readback records the Sonar project binding, analysis method, last analysis method, failed main task status, quality gate, new-code definition, and relevant scope settings.
-- The failure is classified as configuration, binding or permission, source detection, platform limitation, transient service failure, or unknown due to unavailable evidence.
+- Authenticated/anonymously reproducible readback records the Sonar project binding, visibility before/after, analysis method, observed last method, failed main task status, quality gate, new-code definition, relevant scope/issue-ignore settings, current plan/LOC entitlement, organization LOC consumption, and ForgeLLM LOC/visibility sufficient to verify the selected subscription/usage remedy.
+- The failure is classified as configuration, binding or permission, source detection, platform limitation, transient service failure, or unknown due to unavailable evidence; the current observed class is platform_limitation / subscription_loc_limit_exceeded with internal branch task status FAILED.
+- The LOC blocker is resolved by the owner-authorized minimal action `ForgeLLM Sonar visibility: private -> public`, matching the already-public canonical GitHub repository; post-change Billing & usage is below the 50k private-LOC entitlement and no maintained code is hidden.
 - A reviewed ADR selects exactly one supported analysis method and documents rollback, secret surface, and the rejected alternative.
 - The repository cannot mechanically contain conflicting automatic-analysis and CI-scanner configuration under the selected method.
 - Any CI scanner action is pinned to an immutable commit and uses least-privilege workflow permissions.
@@ -87,8 +98,8 @@ verification_commands:
 - git status --short
 evidence_requirements:
 - Record owner authorization, canonical base, implementation head, merge commit, and selected analysis method.
-- Preserve exact GitHub check and workflow identifiers for the failing baseline, final pull request, and final main commit.
-- Preserve sanitized Sonar binding, method, task, quality-gate, new-code, and scope readback or hashes of non-public administrative evidence.
+- Preserve exact GitHub check and workflow identifiers for the failing baseline, final pull request, and final main commit, and distinguish GitHub check-run conclusions from internal Sonar background-task status.
+- Preserve sanitized Sonar binding, visibility before/after, method, task, quality-gate, new-code, scope/issue-ignore, Billing & usage, exact LOC entitlement/consumption, and ForgeLLM LOC/visibility readback or hashes of non-public administrative evidence.
 - Record every configuration change before and after, including Sonar UI changes not represented in Git.
 - Record scanner action SHA, workflow permissions, secret name, and token scope when CI-based analysis is selected without exposing the token value.
 - Record every Sonar finding and its fix or reviewed disposition; suppression is not an implicit disposition.
