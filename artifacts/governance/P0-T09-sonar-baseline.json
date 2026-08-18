@@ -1,19 +1,11 @@
 {
   "administrative_evidence": {
-    "authenticated_readback_available": false,
+    "authenticated_readback_available": true,
     "captured_payload_hashes": [],
     "missing_fields": [
-      "analysis_method_setting",
-      "automatic_analysis_compatibility",
-      "bound_repository_readback",
-      "failed_main_analysis_task_message",
-      "last_analysis_method",
-      "new_code_definition",
-      "project_plan_or_tier",
-      "project_quality_gate_definition",
-      "project_scope_settings"
+      "definitive_task_analysis_to_revision_binding"
     ],
-    "reason": "No authenticated SonarQube Cloud project-administration or activity session is available to the executing agent. Administrative API services require authorization."
+    "reason": "Owner-authenticated and anonymous evidence now covers Analysis Method, failure class/status, repository binding, visibility before/after, Quality Gate, New Code, scope/issue-ignore defaults, Free plan and organization LOC entitlement/consumption. The historical task/revision binding remains strong correlation rather than a shared-ID proof; post-remediation PR/main verification is the load-bearing next evidence."
   },
   "authorization": {
     "mode": "subagent-driven",
@@ -22,12 +14,19 @@
     "tracking_comment_id": 5298369164
   },
   "baseline_classification": {
-    "configuration_changes_made": false,
-    "failure_classification": "unknown_due_to_missing_authenticated_evidence",
+    "configuration_changes_made": true,
+    "configuration_change_scope": "sonar_project_visibility_private_to_public_only",
+    "failure_classification": "platform_limitation",
+    "failure_subtype": "subscription_loc_limit_exceeded",
+    "analysis_id": "472eadb9-b554-47ca-8336-2033fb3b7408",
+    "background_task_id": "AaADNoZ4U0I7o8og6Mb6",
+    "internal_task_status": "FAILED",
     "method_selection": "not_selected",
-    "observed_pattern": "pull_request_analysis_succeeds_while_main_analysis_is_cancelled",
-    "read_only_gate": "blocked_after_public_evidence",
-    "repository_code_regression_established": false
+    "observed_pattern": "pull_request_analysis_succeeds_while_main_github_check_conclusion_is_cancelled",
+    "read_only_gate": "minimal_remediation_applied_pending_post_change_verification",
+    "repository_code_regression_established": false,
+    "ci_based_analysis_bypasses_loc_limit": false,
+    "legitimate_repository_exclusions_identified": false
   },
   "canonical_source": {
     "commit": "1b1a3621fcdf4129268663c497cdcd53aed48c29",
@@ -205,7 +204,28 @@
     "github_app": "sonarqubecloud",
     "github_app_id": 12526,
     "project_key": "leon36000_ForgeLLM",
-    "sonar_instance": "https://sonarcloud.io"
+    "sonar_instance": "https://sonarcloud.io",
+    "visibility": "public",
+    "visibility_before_remediation": "private",
+    "github_binding": "https://github.com/leon36000/ForgeLLM",
+    "automatic_analysis_enabled": true,
+    "quality_gate": "Sonar way",
+    "quality_gate_status_latest_completed_main": "OK",
+    "latest_completed_main_analysis": {
+      "revision": "d5cd25bd9d6fc3f9cded27781c2051939dcdde85",
+      "analysis_date_utc": "2026-08-14T05:17:41Z",
+      "ncloc": 1658,
+      "current_github_main_sha": "484fec34007fd89f554c9c03bffa9a5275676602",
+      "current": false
+    },
+    "billing_after_visibility_change": {
+      "plan": "Free",
+      "private_loc_entitlement": 50000,
+      "private_loc_consumption": 48248,
+      "remaining_displayed": "approximately_1.8k",
+      "below_limit": true
+    },
+    "visibility_change_approval": "local_single_use_approval_recorded_outside_git"
   },
   "repository_configuration_readback": {
     "canonical_tree_search": {
@@ -214,9 +234,13 @@
       "sonarcloud_properties_present": false,
       "search_basis": "Git tree path inventory at canonical_source.tree"
     },
-    "external_ci_submitting_to_same_project": "unknown",
-    "inference": "The GitHub SonarQube Cloud app is producing analyses without a committed scanner configuration, which is consistent with automatic analysis but does not authenticate the Analysis Method setting."
+    "external_ci_submitting_to_same_project": "no_selected_or_canonical_ci_scanner_observed",
+    "inference": "The canonical repository contains no committed Sonar scanner configuration, owner-authenticated Analysis Method shows Automatic Analysis enabled and no CI method selected, and anonymous Sonar navigation reports Autoscan. No selected or canonical CI scanner is observed; an unknowable out-of-band rogue submitter is not treated as established evidence."
   },
+  "supplemental_evidence": [
+    "artifacts/governance/P0-T09-sonar-analysis-method-readback.json",
+    "artifacts/governance/P0-T09-readonly-diagnosis-2026-08-17.json"
+  ],
   "schema_version": "1.0",
   "sonar_findings_from_pull_request_24": {
     "production_findings": [
