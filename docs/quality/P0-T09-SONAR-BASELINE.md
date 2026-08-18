@@ -33,7 +33,7 @@ The public GitHub evidence establishes the pattern. The owner-authenticated Anal
 | Analysis Method setting | `Automatic analysis` enabled | owner-authenticated screenshot + anonymous navigation API |
 | Compatibility/recommendation | `Recommended` | owner-authenticated screenshot |
 | CI method selected | no | owner-authenticated screenshot |
-| Last analysis method | not displayed/read back | missing |
+| Last analysis method | `Analyzed by SonarQube Cloud / Autoscan` | owner-authenticated final readback + anonymous navigation API |
 
 The sanitized screenshot transcription is stored in `artifacts/governance/P0-T09-sonar-analysis-method-readback.json`. The raw image is not committed; its SHA-256 is recorded as `bfab677e68396b0452bf6348be773e974a3f4325768b080961a0f5e936f7e5e1`.
 
@@ -164,4 +164,4 @@ The smallest evidence-supported remediation has now been applied: ForgeLLM Sonar
 
 ## Safe next operation
 
-`E-P0-T09-01` classified the failure; `E-P0-T09-02` applied and independently verified the minimal visibility remediation and brought private LOC below the entitlement. Sonar's latest completed main analysis is still revision `d5cd25bd…`, while canonical GitHub `main` is `484fec34…`; the visibility change did not itself establish a fresh current-main analysis. Finish the narrow admin readback, then use the reviewed evidence-update PR itself as the Automatic Analysis trigger. If its exact head passes Sonar/Phase 0/CodeQL/GitGuardian, merge it and require the resulting protected `main` Sonar check to complete successfully. No artificial probe commit is needed.
+`E-P0-T09-01` classified the failure and records the bounded owner-approved visibility remediation that returned private LOC below entitlement. `E-P0-T09-02` is the pending controlled evidence-PR → protected-`main` verification cycle. Sonar's latest completed main analysis is still revision `d5cd25bd…`, while canonical GitHub `main` is `484fec34…`; the visibility change did not itself establish a fresh current-main analysis. Push the reviewed evidence branch, require Sonar/Phase 0/CodeQL/GitGuardian (and Dependency Review when present) on the exact PR head, merge only through protected `main`, then require the Sonar check on the exact resulting `main` SHA to complete `success`. No artificial probe commit is needed.
