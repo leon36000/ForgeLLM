@@ -10,23 +10,28 @@
 | P0-T06 | blocked on P0-T05 | write P1 baseline implementation plan | reviewed profile specification |
 | P0-T07 | complete | synthetic cache-aware topology and placement simulator | PR #20; 102 tests; PR/post-merge gates |
 | P0-T08 / CA-03 | complete | finite exact speculative-decoding reference semantics | PR #24 + remediation PR #25; 332 complete and 230 focused tests; dual review; PR/post-merge gates |
-| P0-T09 / QG-01 | in progress — read-only block | stabilize SonarQube Cloud analysis on protected `main` | owner authorization recorded; public baseline complete; authenticated Sonar readback required |
+| P0-T09 / QG-01 | in progress — remediation verification | stabilize SonarQube Cloud analysis on protected `main` | LOC-limit cause classified; ForgeLLM visibility remediation applied; evidence PR → protected `main` verification required |
 
 ## P0-T09 current gate
 
 - owner command: `autorise P0-T09 / subagent-driven`;
 - canonical base: `1b1a3621fcdf4129268663c497cdcd53aed48c29`;
-- branch: `feat/p0-t09-sonar-diagnosis`;
+- evidence branch: `forgeai/manual-p0-t09-evidence-update-20260817102053`;
+- current canonical `main`: `484fec34007fd89f554c9c03bffa9a5275676602`;
 - task packet: `tasks/open/P0-T09-sonarqube-main-analysis.yaml`;
 - baseline JSON: `artifacts/governance/P0-T09-sonar-baseline.json`;
 - baseline report: `docs/quality/P0-T09-SONAR-BASELINE.md`;
-- configuration changes: none;
-- failure classification: `unknown_due_to_missing_authenticated_evidence`;
+- configuration changes: `ForgeLLM Sonar visibility private -> public` only, under explicit owner authorization;
+- failure classification: `platform_limitation / subscription_loc_limit_exceeded`;
+- internal failed branch-task status: `FAILED`;
+- post-remediation Billing & usage: Free plan, 50,000 private-LOC entitlement, 48,248 consumed, approximately 1.8k remaining;
 - method selection: `not_selected`.
 
-Public evidence shows three successive PR quality-gate successes followed by cancelled `main` Sonar checks with zero GitHub annotations. Phase 0 and CodeQL passed on all corresponding commits. The canonical tree contains no Sonar scanner workflow or properties file.
+Public and owner-authenticated evidence now shows five PR-success/`main`-failure recurrences, with Phase 0 and CodeQL succeeding on the corresponding commits. Sonar Background Tasks establishes the internal branch-analysis status as `FAILED`, and the owner-authenticated error identifies the organization private-LOC subscription limit as the immediate cause. The canonical tree contains no Sonar scanner workflow or properties file.
 
-The next gate is owner-authenticated read-only Sonar project evidence: binding, Analysis Method, failed activity/task message, quality gate, new-code definition, scope settings, plan/tier, and external scanner confirmation. ADR-0004 may select `automatic_only` or `ci_based_only` only after this readback. The methods may not run concurrently.
+The administrative readback records binding `leon36000/ForgeLLM`, Automatic Analysis/Autoscan, no CI method selected, New Code `previous_version`, default/no custom scope or issue-ignore settings, and default `Sonar way`. After ForgeLLM was aligned from private to public in Sonar, anonymous Sonar API access independently confirmed the public project while Billing & usage returned below the private-LOC limit.
+
+The next gate is the reviewed evidence-update PR itself: its exact head must pass Sonar, Phase 0, CodeQL and GitGuardian; after merge, the resulting protected `main` Sonar check must complete successfully. No artificial probe is required. ADR-0004 may select exactly one analysis method only after this post-remediation cycle; Automatic and CI-based methods may not run concurrently.
 
 ## P0-T08 final evidence
 
