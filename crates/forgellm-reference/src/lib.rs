@@ -62,8 +62,13 @@ pub enum ReferenceError {
 impl Display for ReferenceError {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Self::EmptyShape => write!(formatter, "tensor shape must contain at least one dimension"),
-            Self::ZeroDimension { axis } => write!(formatter, "tensor dimension {axis} must be non-zero"),
+            Self::EmptyShape => write!(
+                formatter,
+                "tensor shape must contain at least one dimension"
+            ),
+            Self::ZeroDimension { axis } => {
+                write!(formatter, "tensor dimension {axis} must be non-zero")
+            }
             Self::ElementCountOverflow => write!(formatter, "tensor element count overflows usize"),
             Self::DataLengthMismatch { expected, actual } => write!(
                 formatter,
@@ -85,21 +90,38 @@ impl Display for ReferenceError {
                 formatter,
                 "{operation} dimension mismatch: left={left}, right={right}"
             ),
-            Self::EmptyInput { operation } => write!(formatter, "{operation} input must not be empty"),
+            Self::EmptyInput { operation } => {
+                write!(formatter, "{operation} input must not be empty")
+            }
             Self::LengthMismatch {
                 operation,
                 left,
                 right,
-            } => write!(formatter, "{operation} length mismatch: left={left}, right={right}"),
+            } => write!(
+                formatter,
+                "{operation} length mismatch: left={left}, right={right}"
+            ),
             Self::NonFiniteInput { operation, index } => {
-                write!(formatter, "{operation} input at index {index} is not finite")
+                write!(
+                    formatter,
+                    "{operation} input at index {index} is not finite"
+                )
             }
             Self::NonFiniteWeight { operation, index } => {
-                write!(formatter, "{operation} weight at index {index} is not finite")
+                write!(
+                    formatter,
+                    "{operation} weight at index {index} is not finite"
+                )
             }
-            Self::InvalidEpsilon => write!(formatter, "rms_norm epsilon must be finite and strictly positive"),
+            Self::InvalidEpsilon => write!(
+                formatter,
+                "rms_norm epsilon must be finite and strictly positive"
+            ),
             Self::NonFiniteResult { operation, index } => {
-                write!(formatter, "{operation} result at index {index} is not finite")
+                write!(
+                    formatter,
+                    "{operation} result at index {index} is not finite"
+                )
             }
         }
     }
@@ -212,14 +234,14 @@ pub fn matmul(lhs: &Tensor, rhs: &Tensor) -> Result<Tensor, ReferenceError> {
 
     for row in lhs.data.chunks_exact(shared) {
         for column in 0..columns {
-            let accumulator = row
-                .iter()
-                .copied()
-                .enumerate()
-                .fold(0.0f64, |sum, (inner, lhs_value)| {
-                    let rhs_value = rhs.data[inner * columns + column];
-                    sum + f64::from(lhs_value) * f64::from(rhs_value)
-                });
+            let accumulator =
+                row.iter()
+                    .copied()
+                    .enumerate()
+                    .fold(0.0f64, |sum, (inner, lhs_value)| {
+                        let rhs_value = rhs.data[inner * columns + column];
+                        sum + f64::from(lhs_value) * f64::from(rhs_value)
+                    });
             let value = accumulator as f32;
             if !value.is_finite() {
                 return Err(ReferenceError::NonFiniteResult {
@@ -245,10 +267,7 @@ pub fn softmax(values: &[f32]) -> Result<Vec<f32>, ReferenceError> {
     }
     require_finite(values, OPERATION)?;
 
-    let maximum = values
-        .iter()
-        .copied()
-        .fold(f32::NEG_INFINITY, f32::max);
+    let maximum = values.iter().copied().fold(f32::NEG_INFINITY, f32::max);
     let exponentials: Vec<f64> = values
         .iter()
         .map(|value| f64::from(*value - maximum).exp())
