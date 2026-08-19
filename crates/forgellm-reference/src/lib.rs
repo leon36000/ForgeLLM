@@ -1,13 +1,23 @@
 #![forbid(unsafe_code)]
 
-//! Deterministic CPU reference semantics for the first ForgeLLM engine-code slice.
+//! CPU reference semantics for the first ForgeLLM engine-code slice.
 //!
 //! The crate intentionally implements a narrow correctness surface: checked contiguous
-//! row-major `f32` tensors plus a small set of decoder-relevant operations. It is not a
-//! general tensor framework and it makes no performance claim.
+//! row-major `f32` tensors plus a small set of decoder-relevant operations. Fixed-order
+//! arithmetic such as matmul and argmax is deterministic. Softmax uses the Rust `f64::exp`
+//! transcendental and therefore has an explicit tolerance-based numerical contract rather
+//! than a bitwise cross-platform reproducibility claim. This is not a general tensor
+//! framework and it makes no performance claim.
 
 use std::error::Error;
 use std::fmt::{self, Display, Formatter};
+
+/// Absolute comparison tolerance used by the pinned softmax reference vectors.
+///
+/// Rust specifies `f64::exp` with unspecified precision. ForgeLLM therefore validates
+/// softmax against this tolerance on its pinned reference evidence environment instead of
+/// claiming bitwise equality across Rust versions, targets, or platforms.
+pub const SOFTMAX_ABS_TOLERANCE: f32 = 1.0e-6;
 
 /// Typed failures produced by the reference semantics.
 #[derive(Debug, Clone, PartialEq)]
@@ -56,6 +66,11 @@ pub enum ReferenceError {
     NonFiniteResult {
         operation: &'static str,
         index: usize,
+    },
+    /// A recoverable vector reservation failed before an operation produced its result.
+    AllocationFailed {
+        operation: &'static str,
+        requested_elements: usize,
     },
 }
 
@@ -123,6 +138,13 @@ impl Display for ReferenceError {
                     "{operation} result at index {index} is not finite"
                 )
             }
+            Self::AllocationFailed {
+                operation,
+                requested_elements,
+            } => write!(
+                formatter,
+                "{operation} could not reserve {requested_elements} output elements"
+            ),
         }
     }
 }
@@ -132,7 +154,7 @@ impl Error for ReferenceError {}
 /// A checked contiguous row-major `f32` tensor.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Tensor {
-    shape: Box<[usize]>,
+    shape: Vec<usize>,
     data: Vec<f32>,
 }
 
@@ -160,10 +182,7 @@ impl Tensor {
             });
         }
 
-        Ok(Self {
-            shape: shape.into_boxed_slice(),
-            data,
-        })
+        Ok(Self { shape, data })
     }
 
     /// Returns the immutable tensor shape.
@@ -177,6 +196,20 @@ impl Tensor {
     pub fn data(&self) -> &[f32] {
         &self.data
     }
+}
+
+fn try_vec_with_capacity<T>(
+    requested_elements: usize,
+    operation: &'static str,
+) -> Result<Vec<T>, ReferenceError> {
+    let mut values = Vec::new();
+    values
+        .try_reserve_exact(requested_elements)
+        .map_err(|_| ReferenceError::AllocationFailed {
+            operation,
+            requested_elements,
+        })?;
+    Ok(values)
 }
 
 fn first_non_finite(values: &[f32]) -> Option<usize> {
@@ -230,7 +263,7 @@ pub fn matmul(lhs: &Tensor, rhs: &Tensor) -> Result<Tensor, ReferenceError> {
     let output_len = rows
         .checked_mul(columns)
         .ok_or(ReferenceError::ElementCountOverflow)?;
-    let mut output = Vec::with_capacity(output_len);
+    let mut output = try_vec_with_capacity(output_len, OPERATION)?;
 
     for row in lhs.data.chunks_exact(shared) {
         for column in 0..columns {
@@ -253,10 +286,17 @@ pub fn matmul(lhs: &Tensor, rhs: &Tensor) -> Result<Tensor, ReferenceError> {
         }
     }
 
-    Tensor::new(vec![rows, columns], output)
+    let mut output_shape = try_vec_with_capacity(2, OPERATION)?;
+    output_shape.push(rows);
+    output_shape.push(columns);
+    Tensor::new(output_shape, output)
 }
 
-/// Computes a numerically stable softmax over one non-empty finite vector.
+/// Computes a max-shifted softmax over one non-empty finite vector.
+///
+/// The operation has a fixed iteration order but calls `f64::exp`, whose precision is
+/// unspecified by Rust. Callers comparing reference values should use
+/// [`SOFTMAX_ABS_TOLERANCE`] rather than assume bitwise cross-platform equality.
 pub fn softmax(values: &[f32]) -> Result<Vec<f32>, ReferenceError> {
     const OPERATION: &str = "softmax";
 
@@ -268,13 +308,13 @@ pub fn softmax(values: &[f32]) -> Result<Vec<f32>, ReferenceError> {
     require_finite(values, OPERATION)?;
 
     let maximum = f64::from(values.iter().copied().fold(f32::NEG_INFINITY, f32::max));
-    let exponentials: Vec<f64> = values
-        .iter()
-        .map(|value| (f64::from(*value) - maximum).exp())
-        .collect();
+    let mut exponentials = try_vec_with_capacity(values.len(), OPERATION)?;
+    for value in values {
+        exponentials.push((f64::from(*value) - maximum).exp());
+    }
     let denominator: f64 = exponentials.iter().sum();
 
-    let mut probabilities = Vec::with_capacity(values.len());
+    let mut probabilities = try_vec_with_capacity(values.len(), OPERATION)?;
     for (index, exponential) in exponentials.into_iter().enumerate() {
         let probability = (exponential / denominator) as f32;
         if !probability.is_finite() {
@@ -323,7 +363,7 @@ pub fn rms_norm(values: &[f32], weights: &[f32], epsilon: f32) -> Result<Vec<f32
     let mean_square = sum_of_squares / values.len() as f64;
     let inverse_rms = 1.0f64 / (mean_square + f64::from(epsilon)).sqrt();
 
-    let mut output = Vec::with_capacity(values.len());
+    let mut output = try_vec_with_capacity(values.len(), OPERATION)?;
     for (index, (value, weight)) in values.iter().zip(weights).enumerate() {
         let normalized = (f64::from(*value) * inverse_rms * f64::from(*weight)) as f32;
         if !normalized.is_finite() {
