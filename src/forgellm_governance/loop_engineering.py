@@ -279,7 +279,10 @@ def _verify_tool_mutation_issue(tokens: Sequence[str]) -> str | None:
     subcommand = _first_subcommand(tokens, executable)
     forbidden_subcommands = {
         "git": (_FORBIDDEN_GIT_SUBCOMMANDS, "VERIFY command mutates Git state and must stop_and_escalate"),
-        "gh": (_FORBIDDEN_GH_SUBCOMMANDS, "VERIFY command uses GitHub administration/API surface and must stop_and_escalate"),
+        "gh": (
+            _FORBIDDEN_GH_SUBCOMMANDS,
+            "VERIFY command uses GitHub administration/API surface and must stop_and_escalate",
+        ),
         "terraform": (
             _FORBIDDEN_TERRAFORM_SUBCOMMANDS,
             "VERIFY command mutates infrastructure through Terraform and must stop_and_escalate",
