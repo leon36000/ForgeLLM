@@ -79,10 +79,27 @@ def test_private_feature_workflow_guard_is_required(tmp_path: Path) -> None:
     assert any("FORGELLM_ENABLE_DEPENDENCY_REVIEW" in issue.message for issue in issues)
 
 
+SONAR_TRUSTED_SETTINGS_PATH = "${{ runner.temp }}/forgellm-sonar.properties"
+SONAR_TRUSTED_SCOPE_LINES = (
+    "sonar.sources=.",
+    "sonar.tests=tests",
+    "sonar.exclusions=tests/**",
+)
+SONAR_TRUSTED_SETTINGS_BLOCK = """      - name: Create trusted Sonar settings
+        shell: bash
+        run: |
+          umask 077
+          printf '%s\\n' \\
+            'sonar.sources=.' \\
+            'sonar.tests=tests' \\
+            'sonar.exclusions=tests/**' \\
+            > "${RUNNER_TEMP}/forgellm-sonar.properties"
+"""
 SONAR_TRUSTED_MARKERS = (
     "sonar.host.url=https://sonarcloud.io",
     "sonar.organization=leon36000",
     "sonar.projectKey=leon36000_ForgeLLM",
+    f"project.settings={SONAR_TRUSTED_SETTINGS_PATH}",
     "sonar.sca.enabled=false",
     "sonar.rust.clippy.enable=false",
     "sonar.qualitygate.wait=true",
@@ -124,6 +141,15 @@ jobs:
     if: vars.FORGELLM_SONAR_CI_ENABLED == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
+      - name: Create trusted Sonar settings
+        shell: bash
+        run: |
+          umask 077
+          printf '%s\\n' \\
+            'sonar.sources=.' \\
+            'sonar.tests=tests' \\
+            'sonar.exclusions=tests/**' \\
+            > "${RUNNER_TEMP}/forgellm-sonar.properties"
       - name: Require SONAR_TOKEN
         shell: bash
         env:
@@ -148,6 +174,7 @@ jobs:
             -Dsonar.host.url=https://sonarcloud.io
             -Dsonar.organization=leon36000
             -Dsonar.projectKey=leon36000_ForgeLLM
+            -Dproject.settings=${{ runner.temp }}/forgellm-sonar.properties
             -Dsonar.sca.enabled=false
             -Dsonar.rust.clippy.enable=false
             -Dsonar.qualitygate.wait=true
@@ -156,6 +183,15 @@ jobs:
     if: vars.FORGELLM_SONAR_CI_ENABLED == 'true' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.actor == github.repository_owner
     runs-on: ubuntu-latest
     steps:
+      - name: Create trusted Sonar settings
+        shell: bash
+        run: |
+          umask 077
+          printf '%s\\n' \\
+            'sonar.sources=.' \\
+            'sonar.tests=tests' \\
+            'sonar.exclusions=tests/**' \\
+            > "${RUNNER_TEMP}/forgellm-sonar.properties"
       - name: Require SONAR_TOKEN
         shell: bash
         env:
@@ -181,6 +217,7 @@ jobs:
             -Dsonar.host.url=https://sonarcloud.io
             -Dsonar.organization=leon36000
             -Dsonar.projectKey=leon36000_ForgeLLM
+            -Dproject.settings=${{ runner.temp }}/forgellm-sonar.properties
             -Dsonar.sca.enabled=false
             -Dsonar.rust.clippy.enable=false
             -Dsonar.qualitygate.wait=true
@@ -328,6 +365,50 @@ def test_sonar_pr_parameters_are_required(tmp_path: Path, marker: str) -> None:
     text = workflow.read_text(encoding="utf-8")
     workflow.write_text(text.replace(f"            -D{marker}\n", ""), encoding="utf-8")
     assert any(marker in message for message in _sonar_messages(root))
+
+
+def test_sonar_trusted_settings_initializer_is_required(tmp_path: Path) -> None:
+    root = _sonar_automation_root(tmp_path)
+    workflow = root / ".github/workflows/sonar.yml"
+    text = workflow.read_text(encoding="utf-8")
+    workflow.write_text(text.replace(SONAR_TRUSTED_SETTINGS_BLOCK, ""), encoding="utf-8")
+    assert any("trusted Sonar settings" in message for message in _sonar_messages(root))
+
+
+@pytest.mark.parametrize(
+    ("old", "new"),
+    [
+        ("sonar.sources=.", "sonar.sources=src"),
+        ("sonar.tests=tests", "sonar.tests=src"),
+        ("sonar.exclusions=tests/**", "sonar.exclusions=src/**"),
+    ],
+)
+def test_sonar_trusted_settings_scope_is_fixed(tmp_path: Path, old: str, new: str) -> None:
+    root = _sonar_automation_root(tmp_path)
+    workflow = root / ".github/workflows/sonar.yml"
+    text = workflow.read_text(encoding="utf-8")
+    workflow.write_text(text.replace(old, new), encoding="utf-8")
+    assert any(old in message for message in _sonar_messages(root))
+
+
+def test_sonar_trusted_settings_must_precede_checkout(tmp_path: Path) -> None:
+    root = _sonar_automation_root(tmp_path)
+    workflow = root / ".github/workflows/sonar.yml"
+    text = workflow.read_text(encoding="utf-8")
+    text = text.replace(SONAR_TRUSTED_SETTINGS_BLOCK, "", 1)
+    text = text.replace("      - name: Sonar scan\n", SONAR_TRUSTED_SETTINGS_BLOCK + "      - name: Sonar scan\n", 1)
+    workflow.write_text(text, encoding="utf-8")
+    assert any("before checkout" in message.lower() for message in _sonar_messages(root))
+
+
+def test_sonar_trusted_settings_step_must_not_receive_token(tmp_path: Path) -> None:
+    root = _sonar_automation_root(tmp_path)
+    workflow = root / ".github/workflows/sonar.yml"
+    text = workflow.read_text(encoding="utf-8")
+    old = "        shell: bash\n        run: |\n          umask 077\n"
+    new = "        shell: bash\n        env:\n          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}\n        run: |\n          umask 077\n"
+    workflow.write_text(text.replace(old, new), encoding="utf-8")
+    assert any("trusted Sonar settings" in message and "SONAR_TOKEN" in message for message in _sonar_messages(root))
 
 
 def test_sonar_scanner_requires_exact_secret_reference(tmp_path: Path) -> None:
