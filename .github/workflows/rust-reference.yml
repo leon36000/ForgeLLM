@@ -39,18 +39,13 @@ jobs:
           rustc --version --verbose
           cargo --version --verbose
       - name: Test reference semantics
-        run: cargo test --workspace --all-targets
-      - name: Show generated lockfile for canonicalization
-        shell: bash
-        run: |
-          set -euo pipefail
-          printf '%s\n' '--- BEGIN GENERATED Cargo.lock ---'
-          cat Cargo.lock
-          printf '%s\n' '--- END GENERATED Cargo.lock ---'
+        run: cargo test --workspace --all-targets --locked
       - name: Check formatting
         run: cargo fmt --all --check
       - name: Lint reference core
-        run: cargo clippy --workspace --all-targets -- -D warnings
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Verify lockfile remains unchanged
+        run: git diff --exit-code -- Cargo.lock
       - name: Reject implementation debt and unsafe code
         shell: bash
         run: |
