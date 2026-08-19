@@ -362,3 +362,6 @@ pub fn argmax(values: &[f32]) -> Result<usize, ReferenceError> {
 
     Ok(best_index)
 }
+
+#[cfg(test)]
+mod allocation_tests;
