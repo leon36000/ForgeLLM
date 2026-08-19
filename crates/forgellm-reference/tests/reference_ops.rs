@@ -119,7 +119,12 @@ fn softmax_is_shift_invariant_within_reference_budget() {
 #[test]
 fn softmax_rejects_empty_input() {
     let error = softmax(&[]).unwrap_err();
-    assert_eq!(error, ReferenceError::EmptyInput { operation: "softmax" });
+    assert_eq!(
+        error,
+        ReferenceError::EmptyInput {
+            operation: "softmax"
+        }
+    );
 }
 
 #[test]
@@ -192,7 +197,12 @@ fn argmax_uses_first_index_for_ties() {
 #[test]
 fn argmax_rejects_empty_input() {
     let error = argmax(&[]).unwrap_err();
-    assert_eq!(error, ReferenceError::EmptyInput { operation: "argmax" });
+    assert_eq!(
+        error,
+        ReferenceError::EmptyInput {
+            operation: "argmax"
+        }
+    );
 }
 
 #[test]
