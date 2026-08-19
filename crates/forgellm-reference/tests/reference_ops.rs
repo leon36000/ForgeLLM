@@ -159,7 +159,7 @@ fn rms_norm_rejects_weight_length_mismatch() {
 fn rms_norm_rejects_invalid_epsilon() {
     for epsilon in [0.0, -1.0, f32::INFINITY, f32::NAN] {
         let error = rms_norm(&[1.0], &[1.0], epsilon).unwrap_err();
-        assert_eq!(error, ReferenceError::InvalidEpsilon { value: epsilon });
+        assert_eq!(error, ReferenceError::InvalidEpsilon);
     }
 }
 
