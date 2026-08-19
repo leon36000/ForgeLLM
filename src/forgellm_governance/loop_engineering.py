@@ -254,57 +254,90 @@ def _wget_mutates(tokens: Sequence[str]) -> bool:
     return False
 
 
+def _verify_preparse_issue(command: Any) -> str | None:
+    if not isinstance(command, str) or not command.strip():
+        return "VERIFY command must be a non-empty string"
+    if "\n" in command or "\r" in command:
+        return "VERIFY command must be one physical command line"
+    if "$(" in command or "`" in command:
+        return "VERIFY command uses shell command substitution and must stop_and_escalate"
+    if any(marker in command for marker in _SECRET_VERIFY_MARKERS):
+        return "VERIFY command references a secret-bearing environment and must stop_and_escalate"
+    return None
+
+
+def _verify_token_issue(tokens: Sequence[str]) -> str | None:
+    token_names = {Path(token).name for token in tokens}
+    forbidden = sorted(token_names & _FORBIDDEN_VERIFY_TOKENS)
+    if forbidden:
+        return f"VERIFY command uses privileged/external token {forbidden[0]!r} and must stop_and_escalate"
+    return None
+
+
+def _verify_tool_mutation_issue(tokens: Sequence[str]) -> str | None:
+    executable = Path(tokens[0]).name
+    subcommand = _first_subcommand(tokens, executable)
+    forbidden_subcommands = {
+        "git": (_FORBIDDEN_GIT_SUBCOMMANDS, "VERIFY command mutates Git state and must stop_and_escalate"),
+        "gh": (_FORBIDDEN_GH_SUBCOMMANDS, "VERIFY command uses GitHub administration/API surface and must stop_and_escalate"),
+        "terraform": (
+            _FORBIDDEN_TERRAFORM_SUBCOMMANDS,
+            "VERIFY command mutates infrastructure through Terraform and must stop_and_escalate",
+        ),
+        "kubectl": (
+            _FORBIDDEN_KUBECTL_SUBCOMMANDS,
+            "VERIFY command mutates or enters cluster state and must stop_and_escalate",
+        ),
+    }
+    rule = forbidden_subcommands.get(executable)
+    if rule is not None and subcommand in rule[0]:
+        return rule[1]
+    if executable == "curl" and _curl_mutates(tokens):
+        return "VERIFY command performs an HTTP mutation and must stop_and_escalate"
+    if executable == "wget" and _wget_mutates(tokens):
+        return "VERIFY command performs an HTTP mutation and must stop_and_escalate"
+    return None
+
+
+def _verify_inline_issue(tokens: Sequence[str]) -> str | None:
+    executable = Path(tokens[0]).name
+    if executable in {"bash", "dash", "ksh", "sh", "zsh"} and "-c" in tokens[1:]:
+        return "VERIFY command executes inline shell code and must stop_and_escalate"
+    if executable in {"python", "python3", "pypy", "pypy3"} and "-c" in tokens[1:]:
+        return "VERIFY command executes inline Python code and must stop_and_escalate"
+    if executable == "node" and any(token in {"-e", "--eval"} for token in tokens[1:]):
+        return "VERIFY command executes inline Node code and must stop_and_escalate"
+    return None
+
+
+def _verify_install_issue(tokens: Sequence[str]) -> str | None:
+    executable = Path(tokens[0]).name
+    if executable in {"pip", "pip3"} and _first_subcommand(tokens, executable) == "install":
+        return "VERIFY command installs Python packages and must stop_and_escalate"
+    if executable in {"python", "python3"} and len(tokens) >= 4 and tokens[1:4] == ["-m", "pip", "install"]:
+        return "VERIFY command installs Python packages and must stop_and_escalate"
+    if executable == "cargo" and _first_subcommand(tokens, "cargo") == "install":
+        return "VERIFY command installs Cargo tools and must stop_and_escalate"
+    return None
+
+
 def validate_loop_verify_command(command: Any) -> list[str]:
     """Reject verifier commands that cross the loop privilege or mutation firewall."""
 
-    if not isinstance(command, str) or not command.strip():
-        return ["VERIFY command must be a non-empty string"]
-    if "\n" in command or "\r" in command:
-        return ["VERIFY command must be one physical command line"]
-    if "$(" in command or "`" in command:
-        return ["VERIFY command uses shell command substitution and must stop_and_escalate"]
-    if any(marker in command for marker in _SECRET_VERIFY_MARKERS):
-        return ["VERIFY command references a secret-bearing environment and must stop_and_escalate"]
-
+    preparse_issue = _verify_preparse_issue(command)
+    if preparse_issue is not None:
+        return [preparse_issue]
+    assert isinstance(command, str)
     try:
         tokens = shlex.split(command, posix=True)
     except ValueError as exc:
         return [f"VERIFY command cannot be parsed safely: {exc}"]
     if not tokens:
         return ["VERIFY command must be non-empty after parsing"]
-
-    token_names = {Path(token).name for token in tokens}
-    forbidden = sorted(token_names & _FORBIDDEN_VERIFY_TOKENS)
-    if forbidden:
-        return [f"VERIFY command uses privileged/external token {forbidden[0]!r} and must stop_and_escalate"]
-
-    executable = Path(tokens[0]).name
-    if executable == "git" and _first_subcommand(tokens, "git") in _FORBIDDEN_GIT_SUBCOMMANDS:
-        return ["VERIFY command mutates Git state and must stop_and_escalate"]
-    if executable == "gh" and _first_subcommand(tokens, "gh") in _FORBIDDEN_GH_SUBCOMMANDS:
-        return ["VERIFY command uses GitHub administration/API surface and must stop_and_escalate"]
-    if executable == "terraform" and _first_subcommand(tokens, "terraform") in _FORBIDDEN_TERRAFORM_SUBCOMMANDS:
-        return ["VERIFY command mutates infrastructure through Terraform and must stop_and_escalate"]
-    if executable == "kubectl" and _first_subcommand(tokens, "kubectl") in _FORBIDDEN_KUBECTL_SUBCOMMANDS:
-        return ["VERIFY command mutates or enters cluster state and must stop_and_escalate"]
-    if executable == "curl" and _curl_mutates(tokens):
-        return ["VERIFY command performs an HTTP mutation and must stop_and_escalate"]
-    if executable == "wget" and _wget_mutates(tokens):
-        return ["VERIFY command performs an HTTP mutation and must stop_and_escalate"]
-
-    if executable in {"bash", "dash", "ksh", "sh", "zsh"} and "-c" in tokens[1:]:
-        return ["VERIFY command executes inline shell code and must stop_and_escalate"]
-    if executable in {"python", "python3", "pypy", "pypy3"} and "-c" in tokens[1:]:
-        return ["VERIFY command executes inline Python code and must stop_and_escalate"]
-    if executable == "node" and any(token in {"-e", "--eval"} for token in tokens[1:]):
-        return ["VERIFY command executes inline Node code and must stop_and_escalate"]
-
-    if executable in {"pip", "pip3"} and _first_subcommand(tokens, executable) == "install":
-        return ["VERIFY command installs Python packages and must stop_and_escalate"]
-    if executable in {"python", "python3"} and len(tokens) >= 4 and tokens[1:4] == ["-m", "pip", "install"]:
-        return ["VERIFY command installs Python packages and must stop_and_escalate"]
-    if executable == "cargo" and _first_subcommand(tokens, "cargo") == "install":
-        return ["VERIFY command installs Cargo tools and must stop_and_escalate"]
+    for check in (_verify_token_issue, _verify_tool_mutation_issue, _verify_inline_issue, _verify_install_issue):
+        issue = check(tokens)
+        if issue is not None:
+            return [issue]
     return []
 
 
