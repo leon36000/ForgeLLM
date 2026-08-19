@@ -511,12 +511,78 @@ def _find_step_index(steps: list[Any], predicate: Any) -> int | None:
     return None
 
 
-def _validate_sonar_trusted_settings(workflow_path: Path, job_name: str, steps: list[Any]) -> list[ValidationIssue]:
-    named = [
+def _sonar_trusted_settings_steps(steps: list[Any]) -> list[tuple[int, Mapping[str, Any]]]:
+    return [
         (index, step)
         for index, step in enumerate(steps)
         if isinstance(step, Mapping) and step.get("name") == _SONAR_TRUSTED_SETTINGS_NAME
     ]
+
+
+def _validate_sonar_trusted_settings_security(
+    workflow_path: Path, job_name: str, settings_step: Mapping[str, Any]
+) -> list[ValidationIssue]:
+    issues: list[ValidationIssue] = []
+    if settings_step.get("shell") != "bash":
+        issues.append(ValidationIssue(str(workflow_path), f"Sonar {job_name} trusted Sonar settings must use bash"))
+
+    step_dump = yaml.safe_dump(settings_step, sort_keys=False)
+    step_env = settings_step.get("env")
+    receives_token = _SONAR_TOKEN_REFERENCE in step_dump or (isinstance(step_env, Mapping) and "SONAR_TOKEN" in step_env)
+    if receives_token:
+        issues.append(
+            ValidationIssue(
+                str(workflow_path),
+                f"Sonar {job_name} trusted Sonar settings must not receive SONAR_TOKEN",
+            )
+        )
+    return issues
+
+
+def _validate_sonar_trusted_settings_script(
+    workflow_path: Path, job_name: str, settings_step: Mapping[str, Any]
+) -> list[ValidationIssue]:
+    run_script = settings_step.get("run")
+    if not isinstance(run_script, str):
+        return [ValidationIssue(str(workflow_path), f"Sonar {job_name} trusted Sonar settings requires a static run script")]
+
+    issues = [
+        ValidationIssue(
+            str(workflow_path),
+            f"Sonar {job_name} trusted Sonar settings must include exact scope: {marker}",
+        )
+        for marker in _SONAR_TRUSTED_SCOPE_LINES
+        if marker not in run_script
+    ]
+    if run_script.strip() != _SONAR_TRUSTED_SETTINGS_SCRIPT.strip():
+        issues.append(
+            ValidationIssue(
+                str(workflow_path),
+                f"Sonar {job_name} trusted Sonar settings initializer must match the reviewed static script",
+            )
+        )
+    return issues
+
+
+def _validate_sonar_trusted_settings_order(
+    workflow_path: Path, job_name: str, steps: list[Any], settings_index: int
+) -> list[ValidationIssue]:
+    checkout_index = _find_step_index(
+        steps,
+        lambda step: str(step.get("uses", "")).startswith("actions/checkout@"),
+    )
+    if checkout_index is None or settings_index < checkout_index:
+        return []
+    return [
+        ValidationIssue(
+            str(workflow_path),
+            f"Sonar {job_name} trusted Sonar settings initializer must run before checkout",
+        )
+    ]
+
+
+def _validate_sonar_trusted_settings(workflow_path: Path, job_name: str, steps: list[Any]) -> list[ValidationIssue]:
+    named = _sonar_trusted_settings_steps(steps)
     if len(named) != 1:
         return [
             ValidationIssue(
@@ -526,51 +592,9 @@ def _validate_sonar_trusted_settings(workflow_path: Path, job_name: str, steps: 
         ]
 
     settings_index, settings_step = named[0]
-    issues: list[ValidationIssue] = []
-    if settings_step.get("shell") != "bash":
-        issues.append(ValidationIssue(str(workflow_path), f"Sonar {job_name} trusted Sonar settings must use bash"))
-
-    step_dump = yaml.safe_dump(settings_step, sort_keys=False)
-    step_env = settings_step.get("env")
-    if _SONAR_TOKEN_REFERENCE in step_dump or (isinstance(step_env, Mapping) and "SONAR_TOKEN" in step_env):
-        issues.append(
-            ValidationIssue(
-                str(workflow_path),
-                f"Sonar {job_name} trusted Sonar settings must not receive SONAR_TOKEN",
-            )
-        )
-
-    run_script = settings_step.get("run")
-    if not isinstance(run_script, str):
-        issues.append(ValidationIssue(str(workflow_path), f"Sonar {job_name} trusted Sonar settings requires a static run script"))
-    else:
-        for marker in _SONAR_TRUSTED_SCOPE_LINES:
-            if marker not in run_script:
-                issues.append(
-                    ValidationIssue(
-                        str(workflow_path),
-                        f"Sonar {job_name} trusted Sonar settings must include exact scope: {marker}",
-                    )
-                )
-        if run_script.strip() != _SONAR_TRUSTED_SETTINGS_SCRIPT.strip():
-            issues.append(
-                ValidationIssue(
-                    str(workflow_path),
-                    f"Sonar {job_name} trusted Sonar settings initializer must match the reviewed static script",
-                )
-            )
-
-    checkout_index = _find_step_index(
-        steps,
-        lambda step: str(step.get("uses", "")).startswith("actions/checkout@"),
-    )
-    if checkout_index is not None and settings_index >= checkout_index:
-        issues.append(
-            ValidationIssue(
-                str(workflow_path),
-                f"Sonar {job_name} trusted Sonar settings initializer must run before checkout",
-            )
-        )
+    issues = _validate_sonar_trusted_settings_security(workflow_path, job_name, settings_step)
+    issues.extend(_validate_sonar_trusted_settings_script(workflow_path, job_name, settings_step))
+    issues.extend(_validate_sonar_trusted_settings_order(workflow_path, job_name, steps, settings_index))
     return issues
 
 
