@@ -77,7 +77,9 @@ def _validate_verification(receipt: Mapping[str, Any]) -> list[str]:
     issues = _exact_keys(verification, _REQUIRED_VERIFICATION_FIELDS, "receipt verification")
     verifier = verification.get("verifier")
     if not isinstance(verifier, str) or not verifier.strip() or verifier.startswith(_TEMPLATE_PREFIX):
-        issues.append("receipt verification.verifier must identify the execution verifier and cannot be a template marker")
+        issues.append(
+            "receipt verification.verifier must identify the execution verifier and cannot be a template marker"
+        )
 
     verified_commit = verification.get("verified_commit")
     if not _legacy._is_nonzero_full_sha(verified_commit):
