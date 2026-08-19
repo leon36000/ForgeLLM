@@ -1,0 +1,32 @@
+schema_version: '1.1'
+project: ForgeLLM
+task_id: P0-T10
+plan: docs/superpowers/plans/2026-08-19-bounded-loop-engineering.md
+base_commit: 6a7bf616b972bab00649962fe4eaed84a5020dbf
+final_commit: b09cf7ca0ab2ebf24beb5fe3a9911cdc4e07471d
+iterations: 6
+identical_failures_at_stop: 0
+stop_reason: budget_exhausted
+changed_paths:
+  - artifacts/governance/loop-engineering/P0-T10-loop.yaml
+  - artifacts/governance/loop-engineering/receipts/P0-T10-run-01.yaml
+  - artifacts/governance/loop-engineering/receipts/TEMPLATE.yaml
+  - artifacts/governance/loop-engineering/verify-firewall-cases.yaml
+  - docs/quality/P0-T10-LOOP-ENGINEERING.md
+  - scripts/validate_loop_engineering.py
+  - src/forgellm_governance/loop_engineering.py
+  - src/forgellm_governance/loop_engineering_legacy.py
+  - tests/test_loop_engineering.py
+scope_check: fail
+verify_commands:
+  - python scripts/validate_loop_engineering.py --root .
+  - python -m pytest -q tests/test_loop_engineering.py
+  - make ci
+verification:
+  verifier: GitHub Actions Phase0
+  verified_commit: b09cf7ca0ab2ebf24beb5fe3a9911cdc4e07471d
+  disposition: failed
+  evidence:
+    - 'Phase0 run 32234935867 / job 96012678237: failure.'
+    - 'Ruff format gate stopped make ci before pytest: src/forgellm_governance/loop_engineering.py requires formatting at the verification.verifier error append.'
+    - 'Scope check failed: src/forgellm_governance/loop_engineering_legacy.py was introduced outside the declared run-2 SCOPE.'
