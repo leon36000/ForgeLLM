@@ -121,10 +121,8 @@ def _validate_loop_fields(declaration: Mapping[str, Any]) -> list[str]:
 def _validate_scope(declaration: Mapping[str, Any], task_packet: Mapping[str, Any]) -> list[str]:
     scope = declaration.get("SCOPE")
     allowed_paths = task_packet.get("allowed_paths")
-    if not _is_sequence(scope):
+    if not _is_sequence(scope) or not scope:
         return ["SCOPE must be a non-empty array constrained by task packet allowed_paths"]
-    if not scope:
-        return ["SCOPE must be non-empty and constrained by task packet allowed_paths"]
     if not _is_sequence(allowed_paths):
         return ["task packet allowed_paths must be an array before validating SCOPE"]
 
@@ -277,11 +275,7 @@ def validate_vendor_provenance(root: Path | str) -> list[str]:
     issues.extend(binding_issues)
 
     expected_local_files = set(EXPECTED_VENDOR_FILES) | {"PROVENANCE.yaml"}
-    actual_local_files = {
-        path.relative_to(vendor).as_posix()
-        for path in vendor.rglob("*")
-        if path.is_file()
-    }
+    actual_local_files = {path.relative_to(vendor).as_posix() for path in vendor.rglob("*") if path.is_file()}
     if actual_local_files != expected_local_files:
         issues.append(
             "vendored Loop Engineering tree must contain only the reviewed inert subset; "
