@@ -58,7 +58,7 @@ rejected:
   - touch artifacts/governance/mutation
   - tee artifacts/governance/mutation
   - make -f attacker.mk ci
-  - make --eval='deploy: git push origin main' deploy
+  - "make --eval='deploy: git push origin main' deploy"
   - bash -c 'make ci'
   - sh -c 'make ci'
   - python -c 'print(1)'
