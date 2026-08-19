@@ -1,0 +1,110 @@
+schema_version: 1.0
+project: ForgeLLM
+task_id: P0-T11
+title: Rust reference core experiment
+phase: P0
+status: in_progress
+priority: P0
+owner: ChatGPT
+writers:
+  - ChatGPT
+reviewers:
+  - codex-security-review
+  - exact-head-correctness-reviewer
+branch: p0-t11-rust-reference-core
+depends_on:
+  - P0-T03
+  - ADR-0002
+allowed_paths:
+  - Cargo.toml
+  - Cargo.lock
+  - rust-toolchain.toml
+  - crates/
+  - schemas/rust-test-report.schema.json
+  - schemas/rust-clippy-report.schema.json
+  - scripts/validate_rust_reports.py
+  - tests/test_rust_report_provenance.py
+  - .gitignore
+  - Makefile
+  - .github/workflows/phase0.yml
+  - docs/quality/P0-T11-RUST-REFERENCE-CORE.md
+  - docs/architecture/RUST_WORKSPACE_PROPOSAL.md
+  - docs/superpowers/plans/2026-08-19-forgellm-engine-orchestration.md
+  - tasks/open/P0-T11-rust-reference-core-experiment.yaml
+  - CURRENT_STATE.md
+  - HANDOFF.md
+  - PHASE0_TASKS.md
+forbidden_paths:
+  - secrets/
+  - models/
+  - weights/
+  - private/
+  - user-data/
+  - docs/GOALS.md
+  - docs/STATUS.md
+  - docs/PROJECT_BRIEF.md
+  - runtime/
+  - backends/
+  - include/
+  - ffi/
+  - distributed/
+  - kernels/
+acceptance_criteria:
+  - A real Cargo workspace exists and the checked-in lockfile is reproducible on the pinned toolchain.
+  - The reference tensor contract rejects invalid rank/dimensions, non-finite values, shape mismatches and impossible indexing states.
+  - Reference f64 matmul, stable softmax, RMSNorm and deterministic argmax are implemented without unsafe code or third-party dependencies.
+  - Positive, negative and boundary tests include independent oracles and pass under the pinned Rust toolchain.
+  - Existing Python governance gates remain green and generated Rust reports carry exact commit/toolchain provenance when present.
+  - Exact-head Phase 0, Rust fmt, Clippy, unit tests, CodeQL, GitGuardian and Sonar evidence are recorded before merge.
+non_goals:
+  - Production runtime or backend integration
+  - C ABI or FFI surface
+  - CUDA, HIP, ROCm, CuTe, CUTLASS or portable DSL kernels
+  - Paged KV cache, scheduler, batching, distributed execution or networking
+  - Quantization, model loading, tokenizer support or user-facing inference API
+  - Hardware inventory or host mutation
+  - Performance claims, SIMD tuning, threading or benchmark optimization
+  - Stub, placeholder or no-op implementation
+constraints:
+  - No direct push to main.
+  - No stubs, TODO-only APIs, fake success or deferred correctness debt.
+  - Rust workspace layout follows docs/architecture/RUST_WORKSPACE_PROPOSAL.md unless a separate ADR changes it.
+  - Initial arithmetic is explicit CPU f64 reference semantics; optimization is forbidden in this task.
+  - Unsafe Rust is forbidden.
+  - New third-party Rust dependencies are forbidden unless separately reviewed and recorded; the default implementation uses std only.
+  - Public inputs are validated fail-closed before arithmetic.
+  - Numerical tolerances must be justified per assertion; exact assertions are preferred for exact cases.
+  - No claim of production promotion or phase completion follows from this experiment.
+required_tests:
+  - Tensor construction accepts valid shapes and finite data.
+  - Tensor construction rejects rank-zero/zero dimensions, length overflow, shape-data mismatch and NaN/Inf.
+  - Matmul matches an independent small-matrix oracle and rejects incompatible shapes.
+  - Softmax is stable for large logits, normalizes along the last dimension and rejects invalid inputs.
+  - RMSNorm matches an independent scalar oracle and rejects invalid epsilon/weight shapes.
+  - Argmax has deterministic lowest-index tie behavior and rejects empty/invalid rows.
+  - cargo fmt --check, cargo clippy --workspace --all-targets -- -D warnings and cargo test --workspace pass.
+  - Existing make ci remains green.
+verification_commands:
+  - python scripts/validate_task_packet.py tasks/open/P0-T11-rust-reference-core-experiment.yaml --root .
+  - cargo fmt --all -- --check
+  - cargo clippy --workspace --all-targets -- -D warnings
+  - cargo test --workspace
+  - python scripts/validate_rust_reports.py --root .
+  - python -m pytest -q tests/test_rust_report_provenance.py
+  - make ci
+rollback:
+  - Revert the experiment PR; do not promote partial APIs into runtime/backend paths.
+evidence_required:
+  - Exact base/head/merge SHA lineage
+  - Pinned Rust toolchain and Cargo lockfile
+  - Raw cargo fmt/clippy/test command results
+  - Positive, negative and boundary oracle descriptions
+  - Exact-head hosted checks and post-merge main proof
+  - Independent reviewer identity and disposition
+  - Explicit non-claims for runtime, ABI, hardware and performance
+stop_conditions:
+  - Any requested change requires unsafe code, an unreviewed dependency or a forbidden path.
+  - Correctness or numerical semantics are ambiguous and no accepted ADR resolves them.
+  - The same verifier failure repeats three times without new information.
+  - Scope would widen into runtime, backend, ABI, hardware, performance or distributed work.
+  - Writer and reviewer independence cannot be established for the final exact head.
