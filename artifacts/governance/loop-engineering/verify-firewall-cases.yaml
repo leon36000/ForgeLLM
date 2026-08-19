@@ -1,3 +1,4 @@
+# reviewed_base: 868adf414c99ead2249993e6d31670940ffd3ea7
 schema_version: '1.0'
 allowed:
   - git status --short
