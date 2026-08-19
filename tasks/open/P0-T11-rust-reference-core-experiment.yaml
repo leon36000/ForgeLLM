@@ -7,13 +7,14 @@ charter_goals:
   - Build the first executable engine path as a correctness reference.
   - Keep Rust as the default control-plane/runtime language while preserving explicit semantics.
   - Reduce later P2 implementation risk without bypassing P0-T04/P1 promotion gates.
-goal: Build and verify a bounded, reusable Rust CPU reference nucleus implementing checked contiguous f32 tensor semantics, deterministic matmul, numerically stable softmax, RMS normalization and deterministic argmax/tie behavior.
+goal: Build and verify a bounded, reusable Rust CPU reference nucleus implementing checked contiguous f32 tensor semantics, deterministic matmul, tolerance-qualified numerically stable softmax, RMS normalization, deterministic argmax/tie behavior and typed recoverable result-allocation failures.
 non_goals:
   - Promote Phase 2 to production or claim the P1/P2 exit gates are satisfied.
   - Implement CUDA, HIP, a portable accelerator backend, C ABI, scheduler, KV cache, service runtime or distributed execution.
   - Download models, run real-model inference or publish performance claims.
   - Build an unbounded generic tensor framework.
   - Introduce placeholder APIs, TODO implementation debt, panic-based normal error handling, unsafe code or unimplemented production paths.
+  - Claim bitwise or cross-platform reproducibility for transcendental floating-point functions whose Rust precision contract is unspecified.
 inputs:
   - Owner authorization recorded in issue #42 on 2026-08-19.
   - Task identity corrected from P0-T10 to P0-T11 on 2026-08-19 because P0-T10 was already allocated to issue #36 / bounded Loop Engineering before this packet was created.
@@ -21,11 +22,14 @@ inputs:
   - Canonical roadmap gate rule allowing a small later-phase experiment to reduce risk without promoting production implementation.
   - Canonical P0-T08 exact speculative-decoding oracle remains the later semantic reference and is not modified by this task.
   - Official Rust release evidence selecting Rust 1.97.1 as the pinned experiment toolchain.
+  - Official Rust standard-library documentation states that `f64::exp` has unspecified precision, so the softmax evidence contract is tolerance-based rather than a bitwise cross-platform claim.
+  - Official Rust standard-library allocation APIs provide recoverable `try_reserve`/`try_reserve_exact` errors for capacity overflow or allocation failure within their documented contract.
 outputs:
   - Pinned Rust workspace and toolchain.
   - Production-quality `forgellm-reference` crate with no third-party runtime dependency in this slice.
   - Checked contiguous f32 tensor representation and typed errors.
-  - Deterministic reference matmul, softmax, RMSNorm and argmax operations.
+  - Deterministic reference matmul and argmax operations, tolerance-qualified softmax, and RMSNorm.
+  - Typed recoverable output-allocation failure handling for reference operations.
   - Golden, boundary and adversarial Rust tests.
   - Hosted Rust CI gate when required for reproducible execution.
   - Fresh independent correctness and code-quality review before merge.
@@ -51,14 +55,18 @@ forbidden_actions:
   - Convert invalid user/model input into process panics when a typed error is appropriate.
   - Make a performance, superiority or production-readiness claim.
   - Treat this experiment as satisfying P1 or P2 exit gates.
+  - Represent `f64::exp` as bitwise deterministic across Rust versions, targets or platforms.
 acceptance_criteria:
   - `rust-toolchain.toml` pins exactly Rust 1.97.1 with rustfmt and clippy components.
   - The workspace builds without third-party Rust runtime dependencies in the reference crate.
   - Tensor construction rejects empty shape, checked element-count overflow, data-length mismatch and non-finite inputs where an operation requires finite values.
   - Matmul has deterministic row-major semantics, checked dimensions and typed shape errors.
-  - Softmax is max-shifted, deterministic, rejects empty/non-finite input and is tested on large-magnitude logits without overflow.
+  - Softmax is max-shifted with fixed iteration order, rejects empty/non-finite input, exposes `SOFTMAX_ABS_TOLERANCE = 1.0e-6`, and is tested on large-magnitude, shifted, equal, extreme-range and subnormal-tail logits.
+  - Softmax comparison claims are tolerance-based on the pinned Rust 1.97.1 hosted x86_64 Ubuntu 24.04 evidence environment; no bitwise or cross-platform transcendental reproducibility claim is made.
   - RMSNorm validates epsilon, dimensions and finite values and has golden/boundary tests.
   - Argmax has explicit deterministic first-index tie semantics and rejects empty/non-finite input.
+  - Reference-operation output vectors use recoverable `try_reserve_exact` capacity reservation and map recoverable reservation failures to `ReferenceError::AllocationFailed`.
+  - A deterministic capacity-overflow seam verifies typed allocation failure without inducing an actual OOM.
   - No `unsafe`, TODO implementation markers, stubs or unimplemented production paths exist in the crate.
   - `cargo fmt --check`, `cargo clippy --workspace --all-targets --locked -- -D warnings` and `cargo test --workspace --all-targets --locked` pass on the exact final head.
   - Existing `make ci` remains green on the exact final head.
@@ -76,6 +84,9 @@ evidence_requirements:
   - Record canonical base, exact implementation head and merge commit.
   - Record Rust toolchain version and hosted runner environment used for the final gate.
   - Preserve exact Rust test counts and all failed-to-green corrections.
+  - Record the explicit softmax tolerance contract and the limitation that Rust `f64::exp` precision is unspecified outside the pinned evidence environment.
+  - Record the deterministic capacity-overflow allocation test and the typed error it produces.
+  - State that process aborts or allocator failures outside Rust's recoverable `try_reserve`/`try_reserve_exact` contract are not claimed to be converted into typed errors.
   - Record whether any dependency was proposed or rejected.
   - Record fresh independent review results and residual limitations.
   - State explicitly that hardware, real-model, numerical-conformance-to-PyTorch and performance evidence remain future gates.
