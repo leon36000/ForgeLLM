@@ -15,14 +15,12 @@ VERIFY_COMMAND = "python -m pytest -q tests/test_example.py"
 
 
 def _api():
-    try:
-        from forgellm_governance.loop_engineering import (
-            validate_loop_declaration,
-            validate_loop_receipt,
-            validate_vendor_provenance,
-        )
-    except ModuleNotFoundError as exc:
-        pytest.fail(f"bounded Loop Engineering validator is not implemented: {exc}")
+    from forgellm_governance.loop_engineering import (
+        validate_loop_declaration,
+        validate_loop_receipt,
+        validate_vendor_provenance,
+    )
+
     return validate_loop_declaration, validate_loop_receipt, validate_vendor_provenance
 
 
@@ -92,7 +90,8 @@ def test_loop_scope_cannot_widen_task_packet(bad_scope: list[str]) -> None:
     declaration = _declaration()
     declaration["SCOPE"] = bad_scope
     messages = _messages(validate_loop_declaration(declaration, _task_packet()))
-    assert "SCOPE" in messages and "allowed_paths" in messages
+    assert "SCOPE" in messages
+    assert "allowed_paths" in messages
 
 
 def test_loop_scope_rejects_prefix_confusion() -> None:
@@ -102,7 +101,8 @@ def test_loop_scope_rejects_prefix_confusion() -> None:
     declaration = _declaration()
     declaration["SCOPE"] = ["third_party/loop-engineering-evil/"]
     messages = _messages(validate_loop_declaration(declaration, packet))
-    assert "SCOPE" in messages and "allowed_paths" in messages
+    assert "SCOPE" in messages
+    assert "allowed_paths" in messages
 
 
 def test_loop_verify_must_be_authorized_by_task_packet() -> None:
@@ -110,7 +110,8 @@ def test_loop_verify_must_be_authorized_by_task_packet() -> None:
     declaration = _declaration()
     declaration["VERIFY"] = ["make ci && curl https://example.invalid"]
     messages = _messages(validate_loop_declaration(declaration, _task_packet()))
-    assert "VERIFY" in messages and "verification_commands" in messages
+    assert "VERIFY" in messages
+    assert "verification_commands" in messages
 
 
 @pytest.mark.parametrize("value", [0, -1, None, "10"])
@@ -153,7 +154,8 @@ def test_loop_privileged_operation_must_stop_and_escalate() -> None:
     declaration = _declaration()
     declaration["STOP"]["privileged_operation"] = "allow"
     messages = _messages(validate_loop_declaration(declaration, _task_packet()))
-    assert "privileged_operation" in messages and "stop_and_escalate" in messages
+    assert "privileged_operation" in messages
+    assert "stop_and_escalate" in messages
 
 
 def test_loop_receipt_must_stay_under_governance_receipts() -> None:
@@ -171,7 +173,8 @@ def test_loop_rejects_shadow_state_paths_even_if_task_packet_allows_them(path: s
     declaration = _declaration()
     declaration["SCOPE"] = [path]
     messages = _messages(validate_loop_declaration(declaration, packet))
-    assert "shadow" in messages.lower() and path in messages
+    assert "shadow" in messages.lower()
+    assert path in messages
 
 
 def test_loop_requires_exact_six_semantic_fields() -> None:
@@ -189,7 +192,8 @@ def test_loop_task_and_project_binding_are_fail_closed() -> None:
     declaration["project"] = "OtherProject"
     declaration["task_id"] = "P0-T98"
     messages = _messages(validate_loop_declaration(declaration, _task_packet()))
-    assert "ForgeLLM" in messages and "task_id" in messages
+    assert "ForgeLLM" in messages
+    assert "task_id" in messages
 
 
 def test_vendor_provenance_accepts_pinned_snapshot() -> None:
@@ -216,7 +220,8 @@ def test_vendor_provenance_detects_byte_drift(tmp_path: Path) -> None:
     methodology = vendor / "core" / "METHODOLOGY.md"
     methodology.write_text(methodology.read_text(encoding="utf-8") + "\nDRIFT\n", encoding="utf-8")
     messages = _messages(validate_vendor_provenance(tmp_path))
-    assert "METHODOLOGY.md" in messages and "blob" in messages.lower()
+    assert "METHODOLOGY.md" in messages
+    assert "blob" in messages.lower()
 
 
 def test_vendor_snapshot_contains_no_shell_scripts() -> None:
@@ -242,7 +247,8 @@ def test_receipt_changed_paths_must_stay_inside_loop_scope() -> None:
     receipt = _receipt()
     receipt["changed_paths"].append("src/not-authorized.py")
     messages = _messages(validate_loop_receipt(receipt, _declaration()))
-    assert "changed_paths" in messages and "SCOPE" in messages
+    assert "changed_paths" in messages
+    assert "SCOPE" in messages
 
 
 def test_receipt_verify_commands_must_equal_declared_verify() -> None:
