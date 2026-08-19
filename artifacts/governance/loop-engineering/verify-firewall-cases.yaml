@@ -49,7 +49,7 @@ rejected:
   - . scripts/verify.sh
   - xargs git push origin main
   - find . -exec rm -rf {} +
-  - parallel git push origin main ::: target
+  - "parallel git push origin main ::: target"
   - timeout 30 git push origin main
   - nice git push origin main
   - stdbuf -oL gh secret set SONAR_TOKEN
