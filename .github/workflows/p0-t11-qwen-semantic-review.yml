@@ -31,12 +31,13 @@ jobs:
           cmake --build llama.cpp/build --target llama-cli --parallel 2
           llama.cpp/build/bin/llama-cli --version
 
-      - name: Resolve and download exact official Qwen reviewer model
+      - name: Resolve exact official Qwen reviewer model
+        id: model-meta
         env:
           MODEL_REPO: Qwen/Qwen2.5-Coder-7B-Instruct-GGUF
         run: |
           set -euo pipefail
-          python3 - <<'PY' >> "${GITHUB_ENV}"
+          python3 - <<'PY'
           import json
           import os
           import urllib.request
@@ -51,16 +52,35 @@ jobs:
               if item.get("rfilename", "").lower().endswith("q4_k_m.gguf")
           ]
           if not revision or len(files) != 1:
-              raise SystemExit(f"expected exactly one Q4_K_M GGUF at a pinned revision; revision={revision!r} files={files!r}")
+              raise SystemExit(
+                  f"expected exactly one Q4_K_M GGUF at a pinned revision; revision={revision!r} files={files!r}"
+              )
+          if not all(c in "0123456789abcdef" for c in revision.lower()) or len(revision) != 40:
+              raise SystemExit(f"unexpected model revision format: {revision!r}")
+          output_path = os.environ["GITHUB_OUTPUT"]
+          with open(output_path, "a", encoding="utf-8") as output:
+              output.write(f"revision={revision}\n")
+              output.write(f"file={files[0]}\n")
+          print(f"MODEL_REPO={repo}")
           print(f"MODEL_REVISION={revision}")
           print(f"MODEL_FILE={files[0]}")
           PY
-          echo "MODEL_REPO=${MODEL_REPO}"
-          echo "MODEL_REVISION=${MODEL_REVISION}"
-          echo "MODEL_FILE=${MODEL_FILE}"
+
+      - name: Download exact official Qwen reviewer model
+        env:
+          MODEL_REPO: Qwen/Qwen2.5-Coder-7B-Instruct-GGUF
+          MODEL_REVISION: ${{ steps.model-meta.outputs.revision }}
+          MODEL_FILE: ${{ steps.model-meta.outputs.file }}
+        run: |
+          set -euo pipefail
+          test -n "${MODEL_REVISION}"
+          test -n "${MODEL_FILE}"
           curl --fail --location --retry 3 --retry-delay 2 \
             "https://huggingface.co/${MODEL_REPO}/resolve/${MODEL_REVISION}/${MODEL_FILE}?download=true" \
             --output reviewer.gguf
+          echo "MODEL_REPO=${MODEL_REPO}"
+          echo "MODEL_REVISION=${MODEL_REVISION}"
+          echo "MODEL_FILE=${MODEL_FILE}"
           sha256sum reviewer.gguf
           du -h reviewer.gguf
 
