@@ -233,9 +233,12 @@ def _curl_mutates(tokens: Sequence[str]) -> bool:
     for index, token in enumerate(tokens):
         if token in _CURL_MUTATION_FLAGS:
             return True
-        if token in {"-X", "--request"} and index + 1 < len(tokens):
-            if tokens[index + 1].upper() in {"POST", "PUT", "PATCH", "DELETE"}:
-                return True
+        if (
+            token in {"-X", "--request"}
+            and index + 1 < len(tokens)
+            and tokens[index + 1].upper() in {"POST", "PUT", "PATCH", "DELETE"}
+        ):
+            return True
         if token.startswith("--request=") and token.split("=", 1)[1].upper() in {"POST", "PUT", "PATCH", "DELETE"}:
             return True
     return False
