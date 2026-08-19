@@ -55,7 +55,7 @@ Explicitly excluded upstream surfaces:
 - GREEN commit `3205bacbec3fd6e3dc4bc51e107f577322cb498b`.
 - Phase 0 run `32226029581` / job `95985793320`: success; `377 passed` complete suite plus `230 passed` focused speculative tests.
 
-The GREEN validator rejects scope widening, path-prefix confusion, verifier widening, invalid/unbounded iteration/failure/wall-time budgets, incomplete STOP conditions, privileged execution, shadow project state, wrong project/task binding, provenance drift, incomplete receipts, receipt scope drift, stale/invalid SHAs, and budget overrun.
+The GREEN validator rejects scope widening, verifier widening, unbounded budget, privileged operation, shadow-state authority, provenance drift, and incomplete receipts.
 
 ### 2. Repository gate RED → GREEN
 
@@ -64,8 +64,6 @@ The GREEN validator rejects scope widening, path-prefix confusion, verifier wide
 - First GREEN candidate `783b3ced605a2306c697c0162c67742635526ed7` exposed a real YAML typing defect: unquoted all-zero `final_commit` was parsed as integer `0`, and the fail-closed receipt validator correctly rejected it.
 - Minimal correction `8649d22185fdfda736351b02b6b09b0eb90e7662` quoted the placeholder SHA.
 - Phase 0 run `32226526309` / job `95987208211`: success; `378 passed` plus `230 passed` focused speculative tests.
-
-The receipt template remains a **template**, not completion evidence; its reviewer/evidence strings explicitly require replacement with independent evidence at closeout.
 
 ### 3. Claude/Codex bridge RED → GREEN
 
@@ -92,8 +90,6 @@ They were fixed through behavior-preserving decomposition and assertion clarific
 
 - implementation head `5c5a7e54149c8d824d411283f44a99e9bd0f08a0`;
 - Phase 0 run `32227746741` / job `95990883246`: success;
-- Ruff: all checks passed; 20 files already formatted;
-- repository Loop gate: `OK: bounded Loop Engineering contract is valid`;
 - complete suite: `384 passed`;
 - focused speculative suite: `230 passed`;
 - CodeQL check `95991070923`: success, no new alerts in changed code;
@@ -102,12 +98,35 @@ They were fixed through behavior-preserving decomposition and assertion clarific
 - fresh cache-busted Sonar issue readback: `total=0`;
 - Dependency Review check `95990884483`: terminal `skipped`, not success.
 
+### 6. Final-receipt promotion boundary RED → GREEN
+
+Adversarial review found a semantic gap: the inert repository `TEMPLATE.yaml` was validated by the same generic function used for a final receipt. Documentation said the template was non-probative, but code did not make that distinction fail-closed.
+
+- RED commit `54d3c3b4de95f261d7c51e48cb7400814e8849fd` added four tests only: a template cannot pass final-receipt validation; all-zero final SHA is rejected; `stop_reason: template` is rejected by final validation; a dedicated template validator is required.
+- Phase 0 run `32228926686` / job `95994408597`: failure with `384 passed / 4 failed`; Ruff, provenance, Loop gate and P0-T09 validation remained green.
+- First GREEN candidate `6f9dcad1ebe3707a932d00832c0cd56d63441f15` separated final/template semantics but concentrated template validation enough for Sonar `python:S3776` (cognitive complexity 19 > 15); no threshold or suppression was changed.
+- Refactor `accdb6f4eb1ebcf3ebae7202d54286538891877e` decomposed template validation. Sonar returned 0 new issues, but Phase 0 produced `387 passed / 1 failed`.
+- That single failure was classified **bad gate**: the test compared the real P0-T10 template with a synthetic P0-T99 declaration, so the validator correctly reported task/base/VERIFY binding mismatches. Validator policy was not weakened.
+- Bad-gate fix `6a7bf616b972bab00649962fe4eaed84a5020dbf` changed only the test to load the active P0-T10 declaration for template-structure validation.
+- Phase 0 run `32230113979` / job `95997918154`: terminal `success`; repository Loop validation, Ruff, all historical validation and the complete/focused test gates succeeded. The connector did not expose a stable raw pytest-count line on re-read, so no exact new test count is asserted here.
+- CodeQL check `95998373942`: `success`, no new alerts in changed code.
+- GitGuardian check `95997918026`: `success`, 20 PR commits scanned with no secrets.
+- Sonar Automatic check `95998242109`: `success`, Quality Gate passed, 0 new issues, 0 accepted issues, 0 security hotspots.
+- Fresh cache-busted Sonar issue readback on PR #37: `total=0`.
+- Dependency Review check `95997918947`: terminal `skipped`, not success.
+
+Final semantics are now mechanically distinct:
+
+- `validate_loop_receipt()` accepts only final evidence: non-zero full Git SHA, approved final stop reason, non-template reviewer, declared VERIFY evidence, scope pass and task/base binding.
+- `validate_loop_receipt_template()` accepts only the inert sentinel form: `final_commit: REPLACE_WITH_FINAL_COMMIT`, `stop_reason: template`, zero iterations/failures, no changed paths, `TEMPLATE:` evidence/reviewer markers, and exact P0-T10 task/base/VERIFY binding.
+- `scripts/validate_loop_engineering.py` validates repository `TEMPLATE.yaml` only through the template validator. A template therefore cannot be promoted into final evidence by passing the repository gate.
+
 ## Installed ForgeLLM surfaces
 
-- `src/forgellm_governance/loop_engineering.py` — fail-closed declaration, receipt, and vendor-provenance validation.
+- `src/forgellm_governance/loop_engineering.py` — fail-closed declaration, final receipt, template receipt, and vendor-provenance validation.
 - `scripts/validate_loop_engineering.py` — read-only repository validator; no loop execution.
 - `artifacts/governance/loop-engineering/P0-T10-loop.yaml` — bounded P0-T10 declaration.
-- `artifacts/governance/loop-engineering/receipts/TEMPLATE.yaml` — noncanonical receipt template until filled with final independent evidence.
+- `artifacts/governance/loop-engineering/receipts/TEMPLATE.yaml` — inert receipt template with a non-SHA sentinel and explicit TEMPLATE markers.
 - `.agents/skills/forgellm-loop-engineering/SKILL.md` and `.claude/skills/forgellm-loop-engineering/SKILL.md` — identical project-local adapters.
 - `AGENTS.md` / `CLAUDE.md` — bounded bridge precedence markers appended without replacing existing instructions.
 - `Makefile` — `validate-loop` is part of ordinary `validate`/`make ci`; P0-T09 validation remains intact.
@@ -132,6 +151,6 @@ P0-T10 does **not**:
 
 ## Remaining acceptance gate
 
-ADR-0005 remains `proposed`. Before merge, PR #37 requires an independent architecture/security review of the exact final diff with no unresolved BLOCKER or MAJOR finding. The reviewer must challenge source-of-truth duplication, command injection/eval surfaces, scope-prefix escape, verifier self-certification, unbounded retry/watch behavior, privilege escalation from loop text, vendor provenance drift, agent-instruction conflicts, and writer/worktree assumptions.
+ADR-0005 remains `proposed`. Before merge, PR #37 requires an independent architecture/security review of the exact final diff with no unresolved BLOCKER or MAJOR finding. The reviewer must challenge source-of-truth duplication, command injection/eval surfaces, scope-prefix escape, verifier self-certification, unbounded retry/watch behavior, privilege escalation from loop text, vendor provenance drift, agent-instruction conflicts, worktree/writer assumptions, and receipt promotion semantics.
 
 Only after independent ACCEPT may ADR-0005 become `accepted`; that status change must then receive a fresh exact-head Phase 0, CodeQL, GitGuardian, Sonar and Dependency Review readback before merge.
