@@ -8,13 +8,13 @@
 
 Sonar/QG-01 is no longer the program focus. It may receive only bounded maintenance needed to preserve repository quality. Product work follows the charter and roadmap: P1 laboratory evidence, P2 CPU reference core, P3 C ABI/NVIDIA, P4 AMD/portable path, P5 KV/scheduler, P6 distributed/heterogeneous execution, P7 optimization/hardening.
 
-The current repository contains no Rust engine workspace. P0-T10 is therefore the first bounded engine-code risk-reduction increment.
+The current repository contains no Rust engine workspace. P0-T11 is therefore the first bounded engine-code risk-reduction increment. P0-T10 remains reserved for the earlier owner-approved bounded Loop Engineering work tracked by issue #36 / PR #37; the two tasks must not share an identifier.
 
 ## Long-term lanes
 
 ### Lane A — Core reference engine — ACTIVE
 
-- **Current task:** P0-T10 / issue #42.
+- **Current task:** P0-T11 / issue #42.
 - **Goal:** real Rust CPU reference semantics: checked tensor representation, matmul, softmax, RMSNorm and deterministic argmax.
 - **Why now:** independent of accelerator hardware and directly aligned with the charter's “reference before optimization” rule.
 - **Promotion rule:** useful code may later be promoted into P2 only after P1/P2 gates; this task does not claim promotion.
@@ -71,14 +71,16 @@ Every active lane iteration declares:
 
 A writer never declares its own risky work complete without an independent checker.
 
+P0-T10's repository-level Loop Engineering integration remains blocked while its independent security reviews have unresolved MAJOR findings. The orchestration contract above may be followed manually; the blocked P0-T10 implementation must not be merged merely to satisfy this plan.
+
 ## Near-term sequence
 
-1. Merge P0-T10 authorization only after packet validation and independent scope review.
+1. Canonically correct the Rust reference task identity to P0-T11 while retaining P0-T10 for bounded Loop Engineering.
 2. TDD RED: add Rust reference-core tests first.
 3. GREEN: implement the smallest complete reference semantics with no stubs/unsafe/dependencies.
 4. Run hosted Rust fmt/clippy/test plus existing `make ci`; independently review exact head; merge through PR.
 5. In parallel, restore MCP_TO_PC access and execute P0-T04 observation-only inventory; then promote P0-T05/P0-T06.
-6. After P0-T10 evidence, draft a separate ABI/lifecycle ADR/task packet; do not mix it into the reference-core PR.
+6. After P0-T11 evidence, draft a separate ABI/lifecycle ADR/task packet; do not mix it into the reference-core PR.
 
 ## Stop / escalation rules
 

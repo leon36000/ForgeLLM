@@ -1,5 +1,5 @@
 schema_version: "1.0"
-task_id: P0-T10
+task_id: P0-T11
 title: Bootstrap the Rust CPU reference core experiment
 phase: P0
 status: in_progress
@@ -16,6 +16,7 @@ non_goals:
   - Introduce placeholder APIs, TODO implementation debt, panic-based normal error handling, unsafe code or unimplemented production paths.
 inputs:
   - Owner authorization recorded in issue #42 on 2026-08-19.
+  - Task identity corrected from P0-T10 to P0-T11 on 2026-08-19 because P0-T10 was already allocated to issue #36 / bounded Loop Engineering before this packet was created.
   - Canonical charter and accepted ADR-0001 Rust/native-backend architecture.
   - Canonical roadmap gate rule allowing a small later-phase experiment to reduce risk without promoting production implementation.
   - Canonical P0-T08 exact speculative-decoding oracle remains the later semantic reference and is not modified by this task.
@@ -34,8 +35,8 @@ allowed_paths:
   - rust-toolchain.toml
   - crates/forgellm-reference/
   - .github/workflows/rust-reference.yml
-  - tasks/open/P0-T10-rust-reference-core-experiment.yaml
-  - tasks/closed/P0-T10-rust-reference-core-experiment.yaml
+  - tasks/open/P0-T11-rust-reference-core-experiment.yaml
+  - tasks/closed/P0-T11-rust-reference-core-experiment.yaml
   - docs/superpowers/plans/2026-08-19-forgellm-engine-orchestration.md
   - docs/reviews/
   - docs/roadmap/PHASE0_TASKS.md
@@ -59,14 +60,14 @@ acceptance_criteria:
   - RMSNorm validates epsilon, dimensions and finite values and has golden/boundary tests.
   - Argmax has explicit deterministic first-index tie semantics and rejects empty/non-finite input.
   - No `unsafe`, TODO implementation markers, stubs or unimplemented production paths exist in the crate.
-  - `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings` and `cargo test --workspace --all-targets` pass on the exact final head.
+  - `cargo fmt --check`, `cargo clippy --workspace --all-targets --locked -- -D warnings` and `cargo test --workspace --all-targets --locked` pass on the exact final head.
   - Existing `make ci` remains green on the exact final head.
   - Fresh independent correctness and code-quality reviews record ACCEPT before merge.
   - The final report explicitly states that the work is a risk-reduction reference experiment, not P2 production promotion.
 verification_commands:
   - cargo fmt --check
-  - cargo clippy --workspace --all-targets -- -D warnings
-  - cargo test --workspace --all-targets
+  - cargo clippy --workspace --all-targets --locked -- -D warnings
+  - cargo test --workspace --all-targets --locked
   - git grep -n -E 'todo!|unimplemented!|TODO|FIXME|unsafe' -- Cargo.toml rust-toolchain.toml crates/forgellm-reference || true
   - make ci
   - git diff --check
