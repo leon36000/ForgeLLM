@@ -1,0 +1,104 @@
+name: P0-T11 Moltline reviewer discovery
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/p0-t11-moltline-review-discovery.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  discover:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Discover anonymous code-review MCP tools
+        env:
+          MOLTLINE_ENDPOINT: https://mcp.moltlinestudio.com/codereview
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.request
+
+          endpoint = os.environ["MOLTLINE_ENDPOINT"]
+
+          def parse_body(content_type: str, body: str):
+              if "application/json" in content_type:
+                  return json.loads(body)
+              events = []
+              current = []
+              for line in body.splitlines():
+                  if line.startswith("data:"):
+                      current.append(line[5:].lstrip())
+                  elif not line and current:
+                      events.append(json.loads("\n".join(current)))
+                      current = []
+              if current:
+                  events.append(json.loads("\n".join(current)))
+              if not events:
+                  raise RuntimeError("MCP response contained neither JSON nor SSE data events")
+              return events[-1]
+
+          def post(payload, session_id=None):
+              headers = {
+                  "Accept": "application/json, text/event-stream",
+                  "Content-Type": "application/json",
+              }
+              if session_id:
+                  headers["Mcp-Session-Id"] = session_id
+                  headers["MCP-Protocol-Version"] = "2025-06-18"
+              request = urllib.request.Request(
+                  endpoint,
+                  data=json.dumps(payload).encode("utf-8"),
+                  headers=headers,
+                  method="POST",
+              )
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  body = response.read().decode("utf-8")
+                  return (
+                      parse_body(response.headers.get("Content-Type", ""), body),
+                      response.headers.get("Mcp-Session-Id"),
+                  )
+
+          initialized, session_id = post(
+              {
+                  "jsonrpc": "2.0",
+                  "id": 1,
+                  "method": "initialize",
+                  "params": {
+                      "protocolVersion": "2025-06-18",
+                      "capabilities": {},
+                      "clientInfo": {"name": "forgellm-review-probe", "version": "1.0"},
+                  },
+              }
+          )
+          if "error" in initialized:
+              raise RuntimeError(f"initialize failed: {initialized['error']}")
+          if not session_id:
+              raise RuntimeError("server did not return Mcp-Session-Id")
+
+          post(
+              {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
+              session_id,
+          )
+          tools, _ = post(
+              {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
+              session_id,
+          )
+          if "error" in tools:
+              raise RuntimeError(f"tools/list failed: {tools['error']}")
+
+          safe = []
+          for tool in tools.get("result", {}).get("tools", []):
+              safe.append(
+                  {
+                      "name": tool.get("name"),
+                      "description": tool.get("description"),
+                      "inputSchema": tool.get("inputSchema"),
+                  }
+              )
+          print(json.dumps({"server": initialized.get("result", {}).get("serverInfo"), "tools": safe}, indent=2, sort_keys=True))
+          PY
