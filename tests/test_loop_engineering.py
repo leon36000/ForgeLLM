@@ -348,3 +348,24 @@ def test_project_local_loop_skills_are_reference_only_for_upstream_content() -> 
         assert "third_party/loop-engineering/core/METHODOLOGY.md" in text
         assert "third_party/loop-engineering/core/COMMANDS.md" in text
         assert "reference only" in text.lower()
+
+
+def test_makefile_wires_p0_t10_into_normal_validation_without_dropping_p0_t09() -> None:
+    text = (ROOT / "Makefile").read_text(encoding="utf-8")
+    assert "validate-loop" in text
+    assert "validate: validate-loop" in text
+    assert "$(PYTHON) scripts/validate_task_packet.py tasks/open/P0-T10-bounded-loop-engineering.yaml --root ." in text
+    assert "$(PYTHON) scripts/validate_loop_engineering.py --root ." in text
+    assert "$(PYTHON) scripts/validate_task_packet.py tasks/open/P0-T09-sonarqube-main-analysis.yaml --root ." in text
+
+
+def test_makefile_formats_new_loop_python_surface() -> None:
+    text = (ROOT / "Makefile").read_text(encoding="utf-8")
+    assert "LOOP_FORMAT_FILES" in text
+    for path in (
+        "src/forgellm_governance/loop_engineering.py",
+        "scripts/validate_loop_engineering.py",
+        "tests/test_loop_engineering.py",
+    ):
+        assert path in text
+    assert "$(PYTHON) -m ruff format --check $(SPECULATIVE_FORMAT_FILES) $(LOOP_FORMAT_FILES)" in text
