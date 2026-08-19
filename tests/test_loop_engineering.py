@@ -384,6 +384,13 @@ def _load_repository_receipt_template() -> dict:
     return loaded
 
 
+def _load_repository_loop_declaration() -> dict:
+    path = ROOT / "artifacts/governance/loop-engineering/P0-T10-loop.yaml"
+    loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
+    assert isinstance(loaded, dict)
+    return loaded
+
+
 def test_receipt_template_cannot_pass_as_final_evidence() -> None:
     _, validate_loop_receipt, _ = _api()
     messages = _messages(validate_loop_receipt(_load_repository_receipt_template(), _declaration()))
@@ -411,4 +418,5 @@ def test_receipt_template_has_separate_structural_validator() -> None:
     from forgellm_governance.loop_engineering import validate_loop_receipt_template
 
     template = _load_repository_receipt_template()
-    assert validate_loop_receipt_template(template, _declaration()) == []
+    declaration = _load_repository_loop_declaration()
+    assert validate_loop_receipt_template(template, declaration) == []
