@@ -141,11 +141,7 @@ def _wget_mutation_issue(tokens: Sequence[str]) -> str | None:
         lowered = token.lower()
         if lowered.startswith(("--post-data", "--post-file")):
             return "VERIFY command performs an HTTP mutation and must stop_and_escalate"
-        if (
-            token == "--method"
-            and index + 1 < len(tokens)
-            and tokens[index + 1].upper() in _HTTP_MUTATION_METHODS
-        ):
+        if token == "--method" and index + 1 < len(tokens) and tokens[index + 1].upper() in _HTTP_MUTATION_METHODS:
             return "VERIFY command performs an HTTP mutation and must stop_and_escalate"
         if lowered.startswith("--method=") and lowered.split("=", 1)[1].upper() in _HTTP_MUTATION_METHODS:
             return "VERIFY command performs an HTTP mutation and must stop_and_escalate"
