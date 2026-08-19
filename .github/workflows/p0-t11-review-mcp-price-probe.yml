@@ -1,0 +1,192 @@
+name: P0-T11 semantic reviewer price probe
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/p0-t11-review-mcp-price-probe.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Discover reviewer and capture x402 quote without payment
+        env:
+          REVIEW_ENDPOINT: https://review-mcp-production.up.railway.app/mcp
+        run: |
+          python3 - <<'PY'
+          import base64
+          import json
+          import os
+          import urllib.error
+          import urllib.request
+
+          endpoint = os.environ["REVIEW_ENDPOINT"]
+
+          def parse_body(content_type: str, body: str):
+              if not body.strip():
+                  return {}
+              if "application/json" in content_type:
+                  return json.loads(body)
+              events = []
+              current = []
+              for line in body.splitlines():
+                  if line.startswith("data:"):
+                      current.append(line[5:].lstrip())
+                  elif not line and current:
+                      events.append(json.loads("\n".join(current)))
+                      current = []
+              if current:
+                  events.append(json.loads("\n".join(current)))
+              if not events:
+                  raise RuntimeError("response contained neither JSON nor SSE data events")
+              return events[-1]
+
+          def sanitized_payment_headers(headers):
+              result = {}
+              for key in (
+                  "Payment-Required",
+                  "X-Payment-Required",
+                  "X-Payment-Response",
+                  "X-Payment-Version",
+              ):
+                  value = headers.get(key)
+                  if value:
+                      result[key] = value
+                      try:
+                          decoded = base64.b64decode(value + "===").decode("utf-8")
+                          if decoded.startswith("{"):
+                              result[key + "-decoded"] = json.loads(decoded)
+                      except Exception:
+                          pass
+              return result
+
+          def post(payload, session_id=None):
+              headers = {
+                  "Accept": "application/json, text/event-stream",
+                  "Content-Type": "application/json",
+              }
+              if session_id:
+                  headers["Mcp-Session-Id"] = session_id
+                  headers["MCP-Protocol-Version"] = "2025-06-18"
+              request = urllib.request.Request(
+                  endpoint,
+                  data=json.dumps(payload).encode("utf-8"),
+                  headers=headers,
+                  method="POST",
+              )
+              try:
+                  with urllib.request.urlopen(request, timeout=30) as response:
+                      body = response.read().decode("utf-8")
+                      return {
+                          "status": response.status,
+                          "payload": parse_body(response.headers.get("Content-Type", ""), body),
+                          "session_id": response.headers.get("Mcp-Session-Id"),
+                          "payment_headers": sanitized_payment_headers(response.headers),
+                      }
+              except urllib.error.HTTPError as exc:
+                  body = exc.read().decode("utf-8", errors="replace")
+                  return {
+                      "status": exc.code,
+                      "body": body[:20000],
+                      "session_id": exc.headers.get("Mcp-Session-Id"),
+                      "payment_headers": sanitized_payment_headers(exc.headers),
+                  }
+
+          initialized = post(
+              {
+                  "jsonrpc": "2.0",
+                  "id": 1,
+                  "method": "initialize",
+                  "params": {
+                      "protocolVersion": "2025-06-18",
+                      "capabilities": {},
+                      "clientInfo": {"name": "forgellm-price-probe", "version": "1.0"},
+                  },
+              }
+          )
+          print("INITIALIZE=" + json.dumps(initialized, sort_keys=True))
+          if initialized["status"] == 402:
+              raise SystemExit(0)
+          if initialized["status"] >= 400:
+              raise RuntimeError(f"initialize HTTP status {initialized['status']}")
+          if "error" in initialized.get("payload", {}):
+              raise RuntimeError(f"initialize protocol error: {initialized['payload']['error']}")
+          session_id = initialized.get("session_id")
+          if not session_id:
+              raise RuntimeError("server did not return Mcp-Session-Id")
+
+          post(
+              {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
+              session_id,
+          )
+          tools = post(
+              {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
+              session_id,
+          )
+          if tools["status"] == 402:
+              print("TOOLS_LIST_QUOTE=" + json.dumps(tools, sort_keys=True))
+              raise SystemExit(0)
+          if tools["status"] >= 400 or "error" in tools.get("payload", {}):
+              raise RuntimeError("tools/list failed")
+
+          available = []
+          review_tool = None
+          for tool in tools.get("payload", {}).get("result", {}).get("tools", []):
+              entry = {
+                  "name": tool.get("name"),
+                  "description": tool.get("description"),
+                  "inputSchema": tool.get("inputSchema"),
+              }
+              available.append(entry)
+              if tool.get("name") == "review_code":
+                  review_tool = tool
+          print("TOOLS=" + json.dumps(available, sort_keys=True))
+          if review_tool is None:
+              raise RuntimeError("review_code tool not found")
+
+          properties = review_tool.get("inputSchema", {}).get("properties", {})
+          required = review_tool.get("inputSchema", {}).get("required", [])
+          synthetic_diff = """diff --git a/demo.rs b/demo.rs
+          index 0000000..1111111 100644
+          --- a/demo.rs
+          +++ b/demo.rs
+          @@ -0,0 +1,3 @@
+          +fn add(a: i32, b: i32) -> i32 {
+          +    a + b
+          +}
+          """
+          candidates = {
+              "payload": synthetic_diff,
+              "diff": synthetic_diff,
+              "code": synthetic_diff,
+              "language": "rust",
+              "depth": "deep",
+              "context": "Price discovery only. Synthetic code; no ForgeLLM source is included.",
+          }
+          arguments = {key: value for key, value in candidates.items() if key in properties}
+          missing = [key for key in required if key not in arguments]
+          if missing:
+              raise RuntimeError(f"cannot safely satisfy review_code schema, missing={missing}")
+
+          review = post(
+              {
+                  "jsonrpc": "2.0",
+                  "id": 3,
+                  "method": "tools/call",
+                  "params": {"name": "review_code", "arguments": arguments},
+              },
+              session_id,
+          )
+          if review["status"] == 402:
+              print("REVIEW_QUOTE=" + json.dumps(review, sort_keys=True))
+              raise SystemExit(0)
+
+          print("REVIEW_NO_PAYMENT_RESPONSE=" + json.dumps(review, sort_keys=True))
+          if review["status"] >= 400:
+              raise RuntimeError(f"review_code HTTP status {review['status']}")
+          PY
