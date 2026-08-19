@@ -375,3 +375,40 @@ def test_makefile_formats_new_loop_python_surface() -> None:
     ):
         assert path in text
     assert "$(PYTHON) -m ruff format --check $(SPECULATIVE_FORMAT_FILES) $(LOOP_FORMAT_FILES)" in text
+
+
+def _load_repository_receipt_template() -> dict:
+    path = ROOT / "artifacts/governance/loop-engineering/receipts/TEMPLATE.yaml"
+    loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
+    assert isinstance(loaded, dict)
+    return loaded
+
+
+def test_receipt_template_cannot_pass_as_final_evidence() -> None:
+    _, validate_loop_receipt, _ = _api()
+    messages = _messages(validate_loop_receipt(_load_repository_receipt_template(), _declaration()))
+    assert messages
+    assert "template" in messages.lower() or "final_commit" in messages
+
+
+def test_receipt_rejects_all_zero_final_commit() -> None:
+    _, validate_loop_receipt, _ = _api()
+    receipt = _receipt()
+    receipt["final_commit"] = "0" * 40
+    messages = _messages(validate_loop_receipt(receipt, _declaration()))
+    assert "final_commit" in messages
+
+
+def test_receipt_rejects_unknown_stop_reason() -> None:
+    _, validate_loop_receipt, _ = _api()
+    receipt = _receipt()
+    receipt["stop_reason"] = "template"
+    messages = _messages(validate_loop_receipt(receipt, _declaration()))
+    assert "stop_reason" in messages
+
+
+def test_receipt_template_has_separate_structural_validator() -> None:
+    from forgellm_governance.loop_engineering import validate_loop_receipt_template
+
+    template = _load_repository_receipt_template()
+    assert validate_loop_receipt_template(template, _declaration()) == []
