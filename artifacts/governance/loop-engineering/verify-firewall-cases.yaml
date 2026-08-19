@@ -1,0 +1,40 @@
+schema_version: '1.0'
+allowed:
+  - git status --short
+  - git diff --check
+  - gh pr view 37 --json headRefOid
+  - python scripts/validate_loop_engineering.py --root .
+  - python -m pytest -q tests/test_loop_engineering.py
+  - make ci
+rejected:
+  - sudo make ci
+  - ssh gpu-host make ci
+  - scp artifact.bin gpu-host:/tmp/artifact.bin
+  - tailscale up
+  - gh secret set SONAR_TOKEN
+  - gh variable set FORGELLM_ENABLE --body true
+  - gh auth login
+  - gh api /repos/leon36000/ForgeLLM -X PATCH -f private=false
+  - sonar-scanner -Dsonar.projectKey=leon36000_ForgeLLM
+  - echo $SONAR_TOKEN
+  - echo '${{ secrets.SONAR_TOKEN }}'
+  - git push origin main
+  - git reset --hard HEAD~1
+  - git clean -fdx
+  - git commit -am mutation
+  - git rebase main
+  - bash -c 'make ci'
+  - sh -c 'make ci'
+  - python -c 'print(1)'
+  - python3 -m pip install unsafe-package
+  - pip install unsafe-package
+  - cargo install unsafe-tool
+  - curl -X POST https://example.invalid/state
+  - curl --data key=value https://example.invalid/state
+  - wget --post-data=key=value https://example.invalid/state
+  - terraform apply -auto-approve
+  - terraform destroy -auto-approve
+  - kubectl delete pod target
+  - kubectl apply -f deployment.yaml
+  - systemctl restart docker
+  - echo $(gh secret list)
