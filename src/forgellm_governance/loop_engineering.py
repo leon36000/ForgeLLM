@@ -307,9 +307,8 @@ def _verify_tool_authority_issue(tokens: Sequence[str]) -> str | None:
     executable = Path(tokens[0]).name
     if executable in _FORBIDDEN_INFRASTRUCTURE_CLIENTS:
         return f"VERIFY command uses infrastructure client {executable!r} and must stop_and_escalate"
-    if executable == "git":
-        if len(tokens) < 2 or tokens[1] not in _ALLOWED_GIT_SUBCOMMANDS:
-            return "VERIFY command uses a Git operation outside the read-only allowlist and must stop_and_escalate"
+    if executable == "git" and (len(tokens) < 2 or tokens[1] not in _ALLOWED_GIT_SUBCOMMANDS):
+        return "VERIFY command uses a Git operation outside the read-only allowlist and must stop_and_escalate"
     if executable == "gh":
         operation = tuple(tokens[1:3]) if len(tokens) >= 3 else ()
         if operation not in _ALLOWED_GH_OPERATIONS:
