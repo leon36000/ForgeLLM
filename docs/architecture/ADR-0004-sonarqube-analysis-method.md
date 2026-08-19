@@ -1,6 +1,6 @@
 # ADR-0004: Use CI-based SonarQube Cloud analysis for ForgeLLM
 
-- **Status:** proposed
+- **Status:** accepted
 - **Date:** 2026-08-18
 - **Owners:** ForgeLLM project owner; chief architect; independent quality and security reviewer roles
 - **Related issue:** #26
@@ -110,9 +110,9 @@ Do not activate or accept the CI method if any of the following holds:
 
 Issue #26 records owner authorization `P0-T09 / subagent-driven` on 2026-08-14. In the 2026-08-18 owner session, the owner delegated operational and project decisions for continued ForgeLLM execution to the chief architect and directed rigorous continued execution. The owner did **not** personally select `ci_based_only`; the chief architect selected it under that delegation.
 
-This ADR remains `proposed` until independent architecture and security review accepts the decision and wording. The initial independent review rejected an unsafe fork-retest formulation because a maintainer-controlled ref can still contain executable untrusted code. The revised design separates secretless code execution from the token-bearing scanner and was independently accepted before Git ref mutation.
+This ADR is accepted for architecture and Task 4B design. The initial independent review rejected an unsafe fork-retest formulation because a maintainer-controlled ref can still contain executable untrusted code. The revised design separates secretless code execution from the token-bearing scanner and was independently accepted; a second independent review accepted the exact two-file pull-request diff.
 
-## Evidence required for acceptance
+## Evidence supporting acceptance and required for implementation
 
 - exact canonical base and final diff;
 - task-packet validation and full repository validation;
