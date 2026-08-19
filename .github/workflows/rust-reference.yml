@@ -1,0 +1,54 @@
+name: Rust reference core
+
+on:
+  pull_request:
+    paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "crates/**"
+      - ".github/workflows/rust-reference.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "crates/**"
+      - ".github/workflows/rust-reference.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  reference-core:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout reviewed source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Install pinned Rust toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.97.1 --profile minimal --component rustfmt,clippy
+          rustup override set 1.97.1
+          rustc --version --verbose
+          cargo --version --verbose
+      - name: Test reference semantics
+        run: cargo test --workspace --all-targets
+      - name: Check formatting
+        run: cargo fmt --all --check
+      - name: Lint reference core
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Reject implementation debt and unsafe code
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git grep -n -E 'todo!|unimplemented!|TODO|FIXME|unsafe[[:space:]]*\{' -- Cargo.toml rust-toolchain.toml crates/forgellm-reference; then
+            echo 'Forbidden Rust implementation-debt or unsafe marker found.' >&2
+            exit 1
+          fi
