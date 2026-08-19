@@ -11,6 +11,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 VALID_COMMIT = "0123456789abcdef0123456789abcdef01234567"
+FINAL_COMMIT = "89abcdef0123456789abcdef0123456789abcdef"
 VERIFY_COMMAND = "python -m pytest -q tests/test_example.py"
 
 
@@ -58,20 +59,24 @@ def _declaration() -> dict:
 
 def _receipt() -> dict:
     return {
-        "schema_version": "1.0",
+        "schema_version": "1.1",
         "project": "ForgeLLM",
         "task_id": "P0-T99",
         "plan": "docs/superpowers/plans/example.md",
         "base_commit": VALID_COMMIT,
-        "final_commit": "89abcdef0123456789abcdef0123456789abcdef",
+        "final_commit": FINAL_COMMIT,
         "iterations": 2,
         "identical_failures_at_stop": 0,
         "stop_reason": "verify_pass",
         "changed_paths": ["src/example.py", "tests/test_example.py"],
         "scope_check": "pass",
         "verify_commands": [VERIFY_COMMAND],
-        "verify_evidence": ["pytest: 1 passed"],
-        "reviewer": "independent-verifier",
+        "verification": {
+            "verifier": "phase0-external-gate",
+            "verified_commit": FINAL_COMMIT,
+            "disposition": "pass",
+            "evidence": ["pytest: 1 passed"],
+        },
     }
 
 
@@ -234,7 +239,7 @@ def test_valid_loop_receipt_passes() -> None:
     assert validate_loop_receipt(_receipt(), _declaration()) == []
 
 
-@pytest.mark.parametrize("missing", ["base_commit", "final_commit", "scope_check", "verify_evidence", "reviewer"])
+@pytest.mark.parametrize("missing", ["base_commit", "final_commit", "scope_check", "verification"])
 def test_receipt_requires_reproducible_evidence_fields(missing: str) -> None:
     _, validate_loop_receipt, _ = _api()
     receipt = _receipt()
@@ -277,6 +282,50 @@ def test_receipt_iteration_count_cannot_exceed_budget() -> None:
     receipt = _receipt()
     receipt["iterations"] = 11
     assert "iterations" in _messages(validate_loop_receipt(receipt, _declaration()))
+
+
+def test_receipt_verify_pass_requires_at_least_one_iteration() -> None:
+    _, validate_loop_receipt, _ = _api()
+    receipt = _receipt()
+    receipt["iterations"] = 0
+    messages = _messages(validate_loop_receipt(receipt, _declaration()))
+    assert "iterations" in messages
+    assert "verify_pass" in messages
+
+
+def test_receipt_verification_commit_must_equal_final_commit() -> None:
+    _, validate_loop_receipt, _ = _api()
+    receipt = _receipt()
+    receipt["verification"]["verified_commit"] = VALID_COMMIT
+    assert "verified_commit" in _messages(validate_loop_receipt(receipt, _declaration()))
+
+
+def test_receipt_verify_pass_requires_passing_verification_disposition() -> None:
+    _, validate_loop_receipt, _ = _api()
+    receipt = _receipt()
+    receipt["verification"]["disposition"] = "failed"
+    messages = _messages(validate_loop_receipt(receipt, _declaration()))
+    assert "disposition" in messages
+    assert "verify_pass" in messages
+
+
+def test_receipt_rejects_legacy_free_text_reviewer_claim() -> None:
+    _, validate_loop_receipt, _ = _api()
+    receipt = _receipt()
+    receipt["reviewer"] = "independent-verifier"
+    messages = _messages(validate_loop_receipt(receipt, _declaration()))
+    assert "reviewer" in messages
+    assert "extra" in messages
+
+
+def test_receipt_verification_requires_structured_evidence() -> None:
+    _, validate_loop_receipt, _ = _api()
+    receipt = _receipt()
+    receipt["verification"] = {"verifier": "self-asserted"}
+    messages = _messages(validate_loop_receipt(receipt, _declaration()))
+    assert "verification" in messages
+    assert "verified_commit" in messages
+    assert "evidence" in messages
 
 
 def test_receipt_task_binding_must_match_declaration() -> None:
@@ -419,4 +468,6 @@ def test_receipt_template_has_separate_structural_validator() -> None:
 
     template = _load_repository_receipt_template()
     declaration = _load_repository_loop_declaration()
+    assert template["schema_version"] == "1.1"
+    assert "verification" in template
     assert validate_loop_receipt_template(template, declaration) == []
