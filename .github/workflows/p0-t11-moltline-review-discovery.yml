@@ -26,6 +26,8 @@ jobs:
           endpoint = os.environ["MOLTLINE_ENDPOINT"]
 
           def parse_body(content_type: str, body: str):
+              if not body.strip():
+                  return {}
               if "application/json" in content_type:
                   return json.loads(body)
               events = []
