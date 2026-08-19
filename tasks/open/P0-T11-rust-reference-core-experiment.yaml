@@ -1,0 +1,90 @@
+schema_version: "1.0"
+task_id: P0-T11
+title: Bootstrap the Rust CPU reference core experiment
+phase: P0
+status: in_progress
+charter_goals:
+  - Build the first executable engine path as a correctness reference.
+  - Keep Rust as the default control-plane/runtime language while preserving explicit semantics.
+  - Reduce later P2 implementation risk without bypassing P0-T04/P1 promotion gates.
+goal: Build and verify a bounded, reusable Rust CPU reference nucleus implementing checked contiguous f32 tensor semantics, deterministic matmul, numerically stable softmax, RMS normalization and deterministic argmax/tie behavior.
+non_goals:
+  - Promote Phase 2 to production or claim the P1/P2 exit gates are satisfied.
+  - Implement CUDA, HIP, a portable accelerator backend, C ABI, scheduler, KV cache, service runtime or distributed execution.
+  - Download models, run real-model inference or publish performance claims.
+  - Build an unbounded generic tensor framework.
+  - Introduce placeholder APIs, TODO implementation debt, panic-based normal error handling, unsafe code or unimplemented production paths.
+inputs:
+  - Owner authorization recorded in issue #42 on 2026-08-19.
+  - Task identity corrected from P0-T10 to P0-T11 on 2026-08-19 because P0-T10 was already allocated to issue #36 / bounded Loop Engineering before this packet was created.
+  - Canonical charter and accepted ADR-0001 Rust/native-backend architecture.
+  - Canonical roadmap gate rule allowing a small later-phase experiment to reduce risk without promoting production implementation.
+  - Canonical P0-T08 exact speculative-decoding oracle remains the later semantic reference and is not modified by this task.
+  - Official Rust release evidence selecting Rust 1.97.1 as the pinned experiment toolchain.
+outputs:
+  - Pinned Rust workspace and toolchain.
+  - Production-quality `forgellm-reference` crate with no third-party runtime dependency in this slice.
+  - Checked contiguous f32 tensor representation and typed errors.
+  - Deterministic reference matmul, softmax, RMSNorm and argmax operations.
+  - Golden, boundary and adversarial Rust tests.
+  - Hosted Rust CI gate when required for reproducible execution.
+  - Fresh independent correctness and code-quality review before merge.
+allowed_paths:
+  - Cargo.toml
+  - Cargo.lock
+  - rust-toolchain.toml
+  - crates/forgellm-reference/
+  - .github/workflows/rust-reference.yml
+  - tasks/open/P0-T11-rust-reference-core-experiment.yaml
+  - tasks/closed/P0-T11-rust-reference-core-experiment.yaml
+  - docs/superpowers/plans/2026-08-19-forgellm-engine-orchestration.md
+  - docs/reviews/
+  - docs/roadmap/PHASE0_TASKS.md
+  - docs/state/CURRENT_STATE.md
+  - docs/state/HANDOFF.md
+forbidden_actions:
+  - Add CUDA, HIP, C/C++ backend or C ABI implementation under this packet.
+  - Add model weights, private datasets, secrets, machine identifiers or unredacted hardware data.
+  - Add third-party Rust runtime dependencies without separate dependency review and packet revision.
+  - Use `unsafe` in the first reference-core slice.
+  - Use `todo!`, `unimplemented!`, placeholder return values or intentionally dead public APIs.
+  - Convert invalid user/model input into process panics when a typed error is appropriate.
+  - Make a performance, superiority or production-readiness claim.
+  - Treat this experiment as satisfying P1 or P2 exit gates.
+acceptance_criteria:
+  - `rust-toolchain.toml` pins exactly Rust 1.97.1 with rustfmt and clippy components.
+  - The workspace builds without third-party Rust runtime dependencies in the reference crate.
+  - Tensor construction rejects empty shape, checked element-count overflow, data-length mismatch and non-finite inputs where an operation requires finite values.
+  - Matmul has deterministic row-major semantics, checked dimensions and typed shape errors.
+  - Softmax is max-shifted, deterministic, rejects empty/non-finite input and is tested on large-magnitude logits without overflow.
+  - RMSNorm validates epsilon, dimensions and finite values and has golden/boundary tests.
+  - Argmax has explicit deterministic first-index tie semantics and rejects empty/non-finite input.
+  - No `unsafe`, TODO implementation markers, stubs or unimplemented production paths exist in the crate.
+  - `cargo fmt --check`, `cargo clippy --workspace --all-targets --locked -- -D warnings` and `cargo test --workspace --all-targets --locked` pass on the exact final head.
+  - Existing `make ci` remains green on the exact final head.
+  - Fresh independent correctness and code-quality reviews record ACCEPT before merge.
+  - The final report explicitly states that the work is a risk-reduction reference experiment, not P2 production promotion.
+verification_commands:
+  - cargo fmt --check
+  - cargo clippy --workspace --all-targets --locked -- -D warnings
+  - cargo test --workspace --all-targets --locked
+  - git grep -n -E 'todo!|unimplemented!|TODO|FIXME|unsafe' -- Cargo.toml rust-toolchain.toml crates/forgellm-reference || true
+  - make ci
+  - git diff --check
+  - git status --short
+evidence_requirements:
+  - Record canonical base, exact implementation head and merge commit.
+  - Record Rust toolchain version and hosted runner environment used for the final gate.
+  - Preserve exact Rust test counts and all failed-to-green corrections.
+  - Record whether any dependency was proposed or rejected.
+  - Record fresh independent review results and residual limitations.
+  - State explicitly that hardware, real-model, numerical-conformance-to-PyTorch and performance evidence remain future gates.
+dependencies:
+  - P0-T03
+owner_role: Project owner and chief architect
+reviewer_role: Independent correctness and Rust code reviewer
+risk_ids:
+  - R-003
+  - R-006
+  - R-007
+  - R-013
