@@ -1,0 +1,73 @@
+schema_version: "1.0"
+task_id: P0-T12
+title: Add deterministic decoder tensor primitives
+phase: P0
+status: in_progress
+charter_goals:
+  - Continue the first executable engine path as a correctness reference.
+  - Build explicit decoder-relevant tensor semantics in Rust before optimization.
+  - Preserve checked resource behavior and reproducible operation contracts.
+goal: Add a bounded stacked reference-core increment implementing reshape, exact-shape elementwise add and multiply, and rank-2 embedding gather with typed errors, checked arithmetic and recoverable operation-created allocations.
+non_goals:
+  - Merge to main before P0-T11 is independently accepted and merged.
+  - Implement attention, RoPE, SiLU, model loading, tokenization, KV cache, scheduling, service runtime, C ABI, CUDA, HIP or distributed execution.
+  - Add third-party Rust dependencies, unsafe code, stubs, TODO implementations or performance claims.
+  - Introduce any new transcendental numerical contract.
+inputs:
+  - Owner authorization to continue Loop Engineering on 2026-08-19.
+  - Canonical P0-T11 stacked base candidate be155b9ec475a208674ab7cab6ef95d6c775c6e5.
+  - Issue #50 records the bounded P0-T12 scope and hard dependency on P0-T11.
+  - Existing forgellm-reference Tensor, typed-error and recoverable-allocation semantics from P0-T11.
+outputs:
+  - Consuming reshape that preserves contiguous data order while validating the new shape.
+  - Exact-shape deterministic elementwise add and multiply.
+  - Rank-2 embedding gather preserving token order and repeated token IDs.
+  - Typed shape/index/result errors and focused golden/boundary/adversarial tests.
+allowed_paths:
+  - crates/forgellm-reference/src/lib.rs
+  - crates/forgellm-reference/tests/
+  - tasks/open/P0-T12-decoder-tensor-primitives.yaml
+  - tasks/closed/P0-T12-decoder-tensor-primitives.yaml
+  - docs/reviews/
+forbidden_actions:
+  - Modify the P0-T11 candidate branch or PR #48 while implementing this task.
+  - Merge this task to main before P0-T11.
+  - Add a dependency, unsafe block, TODO, stub or unimplemented production path.
+  - Add transcendental operations or broaden the P0-T11 softmax numerical contract.
+  - Make performance, accelerator, ABI or production-readiness claims.
+acceptance_criteria:
+  - reshape consumes a Tensor, preserves element order and validates non-empty, non-zero, overflow-safe shape semantics through typed errors.
+  - elementwise_add requires exact shape equality, rejects non-finite inputs, checks non-finite results and uses recoverable output allocation.
+  - elementwise_mul requires exact shape equality, rejects non-finite inputs, checks non-finite results and uses recoverable output allocation.
+  - embedding_gather requires a rank-2 table and non-empty token IDs, rejects out-of-range IDs and non-finite table values, preserves ID order/repetition, checks output element-count overflow and uses recoverable output/shape allocation.
+  - ShapeMismatch and IndexOutOfBounds are explicit typed ReferenceError variants with deterministic semantics.
+  - No third-party Rust dependency, unsafe, TODO, stub or unimplemented production path is introduced.
+  - cargo test --workspace --all-targets --locked passes on the exact final head.
+  - cargo fmt --all --check passes on the exact final head.
+  - cargo clippy --workspace --all-targets --locked -- -D warnings passes on the exact final head.
+  - Existing Phase 0 / make ci remains green.
+  - Independent correctness and Rust code-quality review records ACCEPT before this task is eligible for merge.
+  - Final report states that this is a stacked CPU reference increment and not P1/P2 production promotion.
+verification_commands:
+  - cargo test --workspace --all-targets --locked
+  - cargo fmt --all --check
+  - cargo clippy --workspace --all-targets --locked -- -D warnings
+  - git grep -n -E 'todo!|unimplemented!|TODO|FIXME|unsafe' -- crates/forgellm-reference || true
+  - make ci
+  - git diff --check
+  - git status --short
+evidence_requirements:
+  - Record exact stacked base, RED head, implementation head and eventual merge/rebase lineage.
+  - Preserve exact failed-to-green test output and final Rust test count.
+  - Record all CI conclusions and characterize skipped checks honestly.
+  - Record independent review verdict and residual limitations.
+  - Record that P0-T11 merge remains a hard prerequisite for landing P0-T12 on main.
+dependencies:
+  - P0-T11
+owner_role: Project owner and chief architect
+reviewer_role: Independent correctness and Rust code reviewer
+risk_ids:
+  - R-003
+  - R-006
+  - R-007
+  - R-013
