@@ -210,15 +210,16 @@ jobs:
             -m reviewer.gguf \
             -f review-prompt.txt \
             -c 24576 \
-            -n 1800 \
+            -n 512 \
             -t 4 \
             --temp 0.1 \
+            --no-display-prompt \
             > review-output.txt \
             2> reviewer-runtime.log
           echo '--- REVIEWER VERDICT ---'
           cat review-output.txt
           echo '--- REVIEWER RUNTIME TAIL ---'
           tail -n 25 reviewer-runtime.log
-          verdict="$(grep -m1 '^VERDICT=' review-output.txt || true)"
+          verdict="$(sed -n '/[^[:space:]]/ {s/\r$//; p; q;}' review-output.txt)"
           echo "PARSED_VERDICT=${verdict}"
           test "${verdict}" = "VERDICT=ACCEPT"
