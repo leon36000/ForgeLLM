@@ -85,41 +85,47 @@ _FORBIDDEN_VERIFY_TOKENS = {
     "nohup",
     "watch",
 }
-_FORBIDDEN_GIT_SUBCOMMANDS = {
-    "push",
-    "commit",
-    "merge",
-    "rebase",
-    "reset",
-    "clean",
-    "checkout",
-    "switch",
-    "tag",
-    "cherry-pick",
-    "revert",
-}
-_FORBIDDEN_GH_SUBCOMMANDS = {"api", "auth", "secret", "variable"}
-_FORBIDDEN_TERRAFORM_SUBCOMMANDS = {"apply", "destroy", "import", "taint", "untaint", "force-unlock"}
-_FORBIDDEN_KUBECTL_SUBCOMMANDS = {
-    "apply",
-    "annotate",
-    "cordon",
-    "cp",
-    "create",
-    "delete",
-    "drain",
-    "edit",
+_FORBIDDEN_VERIFY_WRAPPERS = {
+    "busybox",
+    "chrt",
+    "command",
+    "env",
     "exec",
-    "label",
-    "patch",
-    "port-forward",
-    "replace",
-    "rollout",
-    "scale",
-    "set",
-    "taint",
-    "uncordon",
+    "ionice",
+    "nice",
+    "parallel",
+    "setsid",
+    "stdbuf",
+    "timeout",
+    "xargs",
 }
+_ALLOWED_GIT_SUBCOMMANDS = {
+    "cat-file",
+    "describe",
+    "diff",
+    "log",
+    "ls-files",
+    "ls-tree",
+    "rev-parse",
+    "show",
+    "status",
+}
+_ALLOWED_GH_OPERATIONS = {("pr", "view")}
+_FORBIDDEN_INFRASTRUCTURE_CLIENTS = {
+    "ansible",
+    "aws",
+    "az",
+    "docker",
+    "gcloud",
+    "helm",
+    "kubectl",
+    "nomad",
+    "podman",
+    "terraform",
+    "vault",
+}
+_SHELL_PUNCTUATION = ";&|<>"
+_ENV_ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 _CURL_MUTATION_FLAGS = {
     "-d",
     "--data",
@@ -266,6 +272,22 @@ def _verify_preparse_issue(command: Any) -> str | None:
     return None
 
 
+def _split_verify_tokens(command: str) -> list[str]:
+    lexer = shlex.shlex(command, posix=True, punctuation_chars=_SHELL_PUNCTUATION)
+    lexer.whitespace_split = True
+    lexer.commenters = ""
+    return list(lexer)
+
+
+def _verify_shell_structure_issue(tokens: Sequence[str]) -> str | None:
+    for token in tokens:
+        if token and set(token) <= set(_SHELL_PUNCTUATION):
+            return "VERIFY command uses shell control or redirection syntax and must stop_and_escalate"
+    if tokens and _ENV_ASSIGNMENT.match(tokens[0]):
+        return "VERIFY command starts with an environment assignment and must stop_and_escalate"
+    return None
+
+
 def _verify_token_issue(tokens: Sequence[str]) -> str | None:
     token_names = {Path(token).name for token in tokens}
     forbidden = sorted(token_names & _FORBIDDEN_VERIFY_TOKENS)
@@ -274,27 +296,24 @@ def _verify_token_issue(tokens: Sequence[str]) -> str | None:
     return None
 
 
-def _verify_tool_mutation_issue(tokens: Sequence[str]) -> str | None:
+def _verify_wrapper_issue(tokens: Sequence[str]) -> str | None:
     executable = Path(tokens[0]).name
-    subcommand = _first_subcommand(tokens, executable)
-    forbidden_subcommands = {
-        "git": (_FORBIDDEN_GIT_SUBCOMMANDS, "VERIFY command mutates Git state and must stop_and_escalate"),
-        "gh": (
-            _FORBIDDEN_GH_SUBCOMMANDS,
-            "VERIFY command uses GitHub administration/API surface and must stop_and_escalate",
-        ),
-        "terraform": (
-            _FORBIDDEN_TERRAFORM_SUBCOMMANDS,
-            "VERIFY command mutates infrastructure through Terraform and must stop_and_escalate",
-        ),
-        "kubectl": (
-            _FORBIDDEN_KUBECTL_SUBCOMMANDS,
-            "VERIFY command mutates or enters cluster state and must stop_and_escalate",
-        ),
-    }
-    rule = forbidden_subcommands.get(executable)
-    if rule is not None and subcommand in rule[0]:
-        return rule[1]
+    if executable in _FORBIDDEN_VERIFY_WRAPPERS:
+        return f"VERIFY command uses wrapper {executable!r} and must stop_and_escalate"
+    return None
+
+
+def _verify_tool_authority_issue(tokens: Sequence[str]) -> str | None:
+    executable = Path(tokens[0]).name
+    if executable in _FORBIDDEN_INFRASTRUCTURE_CLIENTS:
+        return f"VERIFY command uses infrastructure client {executable!r} and must stop_and_escalate"
+    if executable == "git":
+        if len(tokens) < 2 or tokens[1] not in _ALLOWED_GIT_SUBCOMMANDS:
+            return "VERIFY command uses a Git operation outside the read-only allowlist and must stop_and_escalate"
+    if executable == "gh":
+        operation = tuple(tokens[1:3]) if len(tokens) >= 3 else ()
+        if operation not in _ALLOWED_GH_OPERATIONS:
+            return "VERIFY command uses a GitHub operation outside the read-only allowlist and must stop_and_escalate"
     if executable == "curl" and _curl_mutates(tokens):
         return "VERIFY command performs an HTTP mutation and must stop_and_escalate"
     if executable == "wget" and _wget_mutates(tokens):
@@ -332,12 +351,20 @@ def validate_loop_verify_command(command: Any) -> list[str]:
         return [preparse_issue]
     assert isinstance(command, str)
     try:
-        tokens = shlex.split(command, posix=True)
+        tokens = _split_verify_tokens(command)
     except ValueError as exc:
         return [f"VERIFY command cannot be parsed safely: {exc}"]
     if not tokens:
         return ["VERIFY command must be non-empty after parsing"]
-    for check in (_verify_token_issue, _verify_tool_mutation_issue, _verify_inline_issue, _verify_install_issue):
+    checks = (
+        _verify_shell_structure_issue,
+        _verify_token_issue,
+        _verify_wrapper_issue,
+        _verify_tool_authority_issue,
+        _verify_inline_issue,
+        _verify_install_issue,
+    )
+    for check in checks:
         issue = check(tokens)
         if issue is not None:
             return [issue]
