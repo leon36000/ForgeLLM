@@ -20,7 +20,8 @@
 - Record exact check, workflow, analysis-task, project-binding, and configuration identifiers.
 - A token-bearing process never executes contributor-controlled commands, code, dependencies, build scripts, package-manager hooks, proc macros, tests, or binaries.
 - Never use `pull_request_target`; disable automatic Clippy in the token-bearing scanner and import only bounded, validated reports produced without privileged credentials through trusted fixed paths.
-- Inject `SONAR_TOKEN` only into the final approved scanner step. Workflow-level and job-level token environments are forbidden; checkout, artifact acquisition/extraction, validation, and every other pre-scan step remain secretless, and no token-bearing post-processing step is permitted.
+- Inject `SONAR_TOKEN` only into the final approved scanner step. Workflow/job/container/service environments, same-repository or fork `pull_request` secret delivery, reusable-workflow forwarding, `secrets: inherit`, token propagation through outputs/state, and every earlier/later step are forbidden. Checkout, source/report acquisition, extraction, normalization and validation remain secretless, and no token-bearing post-processing is permitted.
+- The eventual scanner job never checks out contributor-originated source and never executes repository-local actions/scripts or contributor-controlled action metadata. Source/reports enter only as validated data through a separately reviewed secretless transfer boundary. The final scanner step uses only an immutable reviewed external scanner action/invocation whose complete pre/main/post behavior is reviewed.
 - `workflow_run` is forbidden for the current Sonar implementation. Any future PR trusted-data bridge that needs a privileged follow-up trigger requires a separate reviewed design update before that trigger may be introduced.
 - Record immutable action SHA separately from scanner binary version and GPG/signature verification. The exact scanner archive digest remains an open limitation unless independently proven.
 
@@ -114,7 +115,7 @@
 
 #### Task 4B.0: Prove the semantic guard before scanner configuration
 
-- [ ] Write unsafe fixtures and demonstrate RED for overlap, activation without disabled readback, `pull_request_target`, `workflow_run`, workflow/job/multi-step secret scope, token-bearing contributor-code execution, automatic Clippy, untrusted configuration/report paths, unbounded bridge inputs, and mutable/unverified scanner provenance.
+- [ ] Write unsafe fixtures and demonstrate RED for overlap, activation without disabled readback, direct same-repository/fork `pull_request` secret delivery, `pull_request_target`, `workflow_run`, workflow/job/container/service secret scope, reusable workflows with explicit secret forwarding or `secrets: inherit`, token propagation through outputs/state, reusable/composite/local actions receiving the token, repository-local scripts/actions in the scanner step, contributor-source checkout in the eventual scanner job, scanner/action pre/post hooks or any token-bearing post execution, token-bearing contributor-code execution, automatic Clippy, untrusted configuration/report paths, unbounded bridge inputs, and mutable/unverified scanner provenance.
 - [ ] Implement the smallest semantic governance validator and demonstrate GREEN on safe fixtures while every unsafe fixture remains rejected.
 - [ ] Complete this RED-to-GREEN proof before adding scanner workflow or properties configuration; syntax and grep checks alone do not satisfy the gate.
 
@@ -122,10 +123,11 @@
 
 - [ ] Prepare a protected trusted-ref token-bearing scanner path that is default-off and mechanically incapable of submission until activation.
 - [ ] Source workflow, connection/project configuration, scanner source/version, token handling, and report paths only from trusted configuration that contributor content cannot override.
-- [ ] Use least-privilege permissions, non-persistent checkout credentials, and only sufficient attribution history.
+- [ ] Use least-privilege permissions. Any contributor-source checkout and source/report preparation occur only in a separate secretless producer boundary; the eventual scanner job never checks out contributor-originated source. Where checkout is used in a producer, use immutable action pins, non-persistent credentials and only sufficient attribution history.
+- [ ] In the eventual scanner job, prohibit repository-local actions/scripts, reusable workflows, `secrets: inherit`, containers/services that receive the token, and any other contributor-controlled action metadata or executable path. The final scanner step must use only the reviewed immutable external scanner action/invocation, with its complete pre/main/post behavior reviewed.
 - [ ] Disable automatic Clippy and duplicate ingestion. The token-bearing process executes no contributor-controlled commands, code, dependencies, build scripts, package-manager hooks, proc macros, tests, or binaries.
 - [ ] Pin actions to immutable full commit SHAs. Separately pin the scanner binary version and verify its published GPG/signature chain. Do not claim an exact archive digest unless independently proven; carry it as an explicit open limitation.
-- [ ] Bind `SONAR_TOKEN` only on the final approved scanner step. Prohibit workflow/job-level secret environments, ensure checkout/download/extraction/validation complete before token injection, and prohibit token-bearing post-processing.
+- [ ] Bind `SONAR_TOKEN` only on the final approved scanner step. Prohibit workflow/job/container/service secret environments, direct PR secret delivery, reusable-workflow forwarding, `secrets: inherit`, outputs/state propagation, and all other step scopes; ensure source/report acquisition/extraction/normalization/validation complete before token injection; prohibit token-bearing post-processing and unreviewed action pre/post hooks.
 - [ ] Fail clearly on secret absence without printing or probing the value.
 
 #### Task 4B.2: Review token identity and lifecycle before provisioning
