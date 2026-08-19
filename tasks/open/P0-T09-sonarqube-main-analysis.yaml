@@ -37,6 +37,12 @@ inputs:
 - "Post-remediation Billing & usage readback: Free plan, 50,000 private-LOC entitlement, 48,248 private LOC consumed, approximately 1.8k remaining. The organization is below the private-LOC limit after the visibility correction."
 - Public GitHub main remains `484fec34007fd89f554c9c03bffa9a5275676602`; Sonar's latest completed main analysis remains stale at revision `d5cd25bd9d6fc3f9cded27781c2051939dcdde85`, so a controlled post-remediation PR/main cycle is still required.
 - "Final administrative readback records binding `leon36000/ForgeLLM`, New Code `previous_version`, default/no custom scope or issue-ignore settings, Automatic Analysis enabled with SonarQube Cloud/Autoscan as the observed method, no CI method selected, and default `Sonar way` Quality Gate. No canonical or selected CI scanner is observed. The historical failed-task-to-revision field remains strong correlation rather than a shared-ID proof. No final analysis method has been selected."
+- "Post-remediation pull request #32 exact head 4c6b9be358c68aaae7f440d78b1a6b5eb25d3e02 passed Sonar Quality Gate, Phase 0 run 32093231786, CodeQL run 32093231780, and GitGuardian check-run 95579459513; Dependency Review run 32093231806 / job 95579461797 was terminal skipped and is not success."
+- "Post-merge canonical main 86f32319847a011fb4d48c98f0c467282fcfbe49 supersedes earlier current-main snapshots for Task 3; Sonar main check 95580373383, Phase 0 check 95580302118, and analyze-python check 95580302432 succeeded, and anonymous Sonar readback reports exact revision 86f32319847a011fb4d48c98f0c467282fcfbe49, Quality Gate OK, public visibility, and ncloc 6939."
+- "Current official SonarQube Cloud documentation reviewed 2026-08-18 states Automatic Analysis and CI analysis are mutually exclusive, Automatic Analysis is not eligible for Rust and lacks logs, coverage import, and external-rule-report import, while CI/SonarScanner supports Rust with Cargo/Clippy and coverage/report import; CI requires SONAR_TOKEN and does not bypass LOC entitlement."
+- "On 2026-08-18 the owner delegated operational and project decisions for continued ForgeLLM execution to the chief architect under the existing P0-T09 authorization; the chief architect selected ci_based_only for ADR-0004. This records delegated decision authority and does not claim that the owner personally chose the method. ADR status remains proposed pending independent review."
+- "For ci_based_only, fork-originated or otherwise untrusted code remains untrusted after ref promotion. No token-bearing job may execute contributor-controlled code. Rust Cargo/Clippy/coverage production must be secretless, and the token-bearing scanner must use trusted configuration with automatic Clippy disabled and import validated reports as data; otherwise CI activation is blocked."
+- "ADR-0004 was accepted on 2026-08-18 after the revised security design received Terra-Pro ACCEPT and the exact two-file pull-request diff received Luna-Pro ACCEPT_FINAL_DIFF. This accepts ci_based_only for Task 4B design only; no CI scanner activation, SONAR_TOKEN provisioning, Automatic Analysis change, or Task 4 implementation has occurred, and final exact-head repository/security gates remain required before merge and implementation transition."
 outputs:
 - Sanitized machine-readable baseline of pull-request and main analysis evidence.
 - Read-only diagnosis and explicit failure classification.
@@ -104,6 +110,7 @@ evidence_requirements:
 - Record scanner action SHA, workflow permissions, secret name, and token scope when CI-based analysis is selected without exposing the token value.
 - Record every Sonar finding and its fix or reviewed disposition; suppression is not an implicit disposition.
 - Record complete Phase 0, CodeQL, GitGuardian, Dependency Review, and Sonar outcomes.
+- Record the delegated method-selection authorization, ADR-0004 review disposition, and exact selected method before implementation.
 - Close issue #26 only after reproducible successful pull-request and main analyses.
 - Preserve P0-T04 and P0-T05 without modification.
 dependencies:
