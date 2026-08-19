@@ -42,6 +42,11 @@ _SONAR_TRUSTED_ARGUMENTS = (
     "sonar.qualitygate.wait=true",
     "sonar.qualitygate.timeout=300",
 )
+_SONAR_PR_ARGUMENTS = (
+    "sonar.pullrequest.key=${{ inputs.pr_number }}",
+    "sonar.pullrequest.branch=${{ inputs.head_ref }}",
+    "sonar.pullrequest.base=main",
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -372,19 +377,46 @@ def _workflow_trigger_targets_main(value: Any) -> bool:
     return isinstance(branches, Sequence) and not isinstance(branches, (str, bytes)) and "main" in branches
 
 
+def _validate_sonar_dispatch_inputs(workflow_path: Path, dispatch: Any) -> list[ValidationIssue]:
+    if not isinstance(dispatch, Mapping):
+        return [ValidationIssue(str(workflow_path), "Sonar workflow_dispatch must define trusted PR inputs")]
+    inputs = dispatch.get("inputs")
+    if not isinstance(inputs, Mapping):
+        return [ValidationIssue(str(workflow_path), "Sonar workflow_dispatch inputs mapping is required")]
+
+    expected_types = {"pr_number": "number", "head_sha": "string", "head_ref": "string"}
+    issues: list[ValidationIssue] = []
+    for input_name, input_type in expected_types.items():
+        specification = inputs.get(input_name)
+        if not isinstance(specification, Mapping):
+            issues.append(ValidationIssue(str(workflow_path), f"Sonar workflow_dispatch input {input_name} is required"))
+            continue
+        if specification.get("required") is not True or specification.get("type") != input_type:
+            issues.append(
+                ValidationIssue(
+                    str(workflow_path),
+                    f"Sonar workflow_dispatch input {input_name} must be required with type {input_type}",
+                )
+            )
+    return issues
+
+
 def _validate_sonar_triggers(workflow_path: Path, document: Mapping[Any, Any]) -> list[ValidationIssue]:
     triggers = document.get("on", document.get(True))
     if not isinstance(triggers, Mapping):
         return [ValidationIssue(str(workflow_path), "Sonar workflow 'on' triggers must be a mapping")]
 
-    issues = [
-        ValidationIssue(str(workflow_path), f"Sonar workflow must define {event_name}")
-        for event_name in ("push", "pull_request", "workflow_dispatch")
-        if event_name not in triggers
-    ]
-    for event_name in ("push", "pull_request"):
-        if event_name in triggers and not _workflow_trigger_targets_main(triggers[event_name]):
-            issues.append(ValidationIssue(str(workflow_path), f"Sonar workflow {event_name} must target main"))
+    issues: list[ValidationIssue] = []
+    if "push" not in triggers:
+        issues.append(ValidationIssue(str(workflow_path), "Sonar workflow must define push"))
+    elif not _workflow_trigger_targets_main(triggers["push"]):
+        issues.append(ValidationIssue(str(workflow_path), "Sonar workflow push must target main"))
+    if "workflow_dispatch" not in triggers:
+        issues.append(ValidationIssue(str(workflow_path), "Sonar workflow must define workflow_dispatch"))
+    else:
+        issues.extend(_validate_sonar_dispatch_inputs(workflow_path, triggers["workflow_dispatch"]))
+    if "pull_request" in triggers:
+        issues.append(ValidationIssue(str(workflow_path), "pull_request is forbidden in secret-bearing Sonar workflow"))
     if "workflow_run" in triggers:
         issues.append(ValidationIssue(str(workflow_path), "workflow_run is forbidden in Sonar workflow"))
     return issues
@@ -408,88 +440,104 @@ def _find_action_step(steps: list[Any], prefix: str) -> Mapping[str, Any] | None
     )
 
 
-def _find_sonar_scanner_job(
+def _sonar_scanner_jobs(
     workflow_path: Path, document: Mapping[Any, Any]
-) -> tuple[Mapping[str, Any] | None, list[Any], list[ValidationIssue]]:
+) -> tuple[dict[str, Mapping[str, Any]], list[ValidationIssue]]:
     jobs = document.get("jobs")
     if not isinstance(jobs, Mapping):
-        return None, [], [ValidationIssue(str(workflow_path), "Sonar workflow jobs must be a mapping")]
+        return {}, [ValidationIssue(str(workflow_path), "Sonar workflow jobs must be a mapping")]
 
-    candidates = []
-    for job in jobs.values():
-        steps = _sonar_job_steps(job)
-        if _find_action_step(steps, "SonarSource/sonarqube-scan-action@") is not None:
-            candidates.append((job, steps))
-    if len(candidates) != 1:
-        return None, [], [ValidationIssue(str(workflow_path), "Sonar workflow must contain exactly one scanner job")]
-    scanner_job, steps = candidates[0]
-    return scanner_job, steps, []
-
-
-def _validate_sonar_job_guards(workflow_path: Path, scanner_job: Mapping[str, Any]) -> list[ValidationIssue]:
-    job_if = str(scanner_job.get("if", ""))
+    found: dict[str, Mapping[str, Any]] = {}
     issues: list[ValidationIssue] = []
-    if "vars.FORGELLM_SONAR_CI_ENABLED == 'true'" not in job_if:
-        issues.append(
-            ValidationIssue(
-                str(workflow_path),
-                "Sonar scanner job requires FORGELLM_SONAR_CI_ENABLED == 'true' guard",
-            )
-        )
-    if "github.event.pull_request.head.repo.fork == false" not in job_if:
-        issues.append(
-            ValidationIssue(
-                str(workflow_path),
-                "Sonar scanner job requires fork guard github.event.pull_request.head.repo.fork == false",
-            )
-        )
-    return issues
+    for job_name in ("main", "pull_request"):
+        job = jobs.get(job_name)
+        steps = _sonar_job_steps(job)
+        if not isinstance(job, Mapping) or _find_action_step(steps, "SonarSource/sonarqube-scan-action@") is None:
+            issues.append(ValidationIssue(str(workflow_path), f"Sonar workflow scanner job {job_name} is required"))
+            continue
+        found[job_name] = job
+    return found, issues
 
 
-def _validate_sonar_checkout(workflow_path: Path, steps: list[Any]) -> list[ValidationIssue]:
+def _require_job_if_marker(workflow_path: Path, job_name: str, job_if: str, marker: str, purpose: str) -> ValidationIssue | None:
+    if marker in job_if:
+        return None
+    return ValidationIssue(str(workflow_path), f"Sonar {job_name} job requires {purpose}: {marker}")
+
+
+def _validate_sonar_job_guards(workflow_path: Path, job_name: str, job: Mapping[str, Any]) -> list[ValidationIssue]:
+    job_if = str(job.get("if", ""))
+    required = [("vars.FORGELLM_SONAR_CI_ENABLED == 'true'", "enable guard")]
+    if job_name == "main":
+        required.extend(
+            [
+                ("github.event_name == 'push'", "push event guard"),
+                ("github.ref == 'refs/heads/main'", "main ref guard"),
+            ]
+        )
+    else:
+        required.extend(
+            [
+                ("github.event_name == 'workflow_dispatch'", "dispatch event guard"),
+                ("github.ref == 'refs/heads/main'", "dispatch refs/heads/main guard"),
+                ("github.actor == github.repository_owner", "repository_owner actor guard"),
+            ]
+        )
+    return [
+        issue
+        for marker, purpose in required
+        if (issue := _require_job_if_marker(workflow_path, job_name, job_if, marker, purpose)) is not None
+    ]
+
+
+def _validate_sonar_checkout(
+    workflow_path: Path, job_name: str, steps: list[Any], *, required_ref: str | None = None
+) -> list[ValidationIssue]:
     checkout_step = _find_action_step(steps, "actions/checkout@")
     if checkout_step is None:
-        return [ValidationIssue(str(workflow_path), "Sonar scanner job requires actions/checkout")]
+        return [ValidationIssue(str(workflow_path), f"Sonar {job_name} job requires actions/checkout")]
 
     issues: list[ValidationIssue] = []
     if checkout_step.get("uses") != _SONAR_CHECKOUT_ACTION:
-        issues.append(ValidationIssue(str(workflow_path), "Sonar checkout action must use the reviewed immutable SHA"))
+        issues.append(ValidationIssue(str(workflow_path), f"Sonar {job_name} checkout must use the reviewed immutable SHA"))
     checkout_with = checkout_step.get("with")
     if not isinstance(checkout_with, Mapping) or checkout_with.get("persist-credentials") is not False:
-        issues.append(ValidationIssue(str(workflow_path), "Sonar checkout requires persist-credentials: false"))
+        issues.append(ValidationIssue(str(workflow_path), f"Sonar {job_name} checkout requires persist-credentials: false"))
     if not isinstance(checkout_with, Mapping) or checkout_with.get("fetch-depth") != 0:
-        issues.append(ValidationIssue(str(workflow_path), "Sonar checkout requires fetch-depth: 0"))
+        issues.append(ValidationIssue(str(workflow_path), f"Sonar {job_name} checkout requires fetch-depth: 0"))
+    if required_ref is not None and (not isinstance(checkout_with, Mapping) or checkout_with.get("ref") != required_ref):
+        issues.append(ValidationIssue(str(workflow_path), f"Sonar {job_name} checkout ref must be {required_ref}"))
     return issues
 
 
-def _validate_sonar_scanner_step(workflow_path: Path, steps: list[Any]) -> list[ValidationIssue]:
+def _validate_sonar_scanner_step(
+    workflow_path: Path, job_name: str, steps: list[Any], *, extra_arguments: Sequence[str] = ()
+) -> list[ValidationIssue]:
     scanner_step = _find_action_step(steps, "SonarSource/sonarqube-scan-action@")
     if scanner_step is None:
-        return [ValidationIssue(str(workflow_path), "Sonar scanner action is missing")]
+        return [ValidationIssue(str(workflow_path), f"Sonar scanner action is missing from {job_name} job")]
 
     issues: list[ValidationIssue] = []
     if scanner_step.get("uses") != _SONAR_SCANNER_ACTION:
-        issues.append(ValidationIssue(str(workflow_path), "Sonar scanner action must use the reviewed immutable SHA"))
+        issues.append(ValidationIssue(str(workflow_path), f"Sonar {job_name} scanner action must use the reviewed immutable SHA"))
 
     scanner_with = scanner_step.get("with")
     if not isinstance(scanner_with, Mapping):
-        issues.append(ValidationIssue(str(workflow_path), "Sonar scanner step requires a with mapping"))
+        issues.append(ValidationIssue(str(workflow_path), f"Sonar {job_name} scanner step requires a with mapping"))
         scanner_with = {}
     scanner_version = scanner_with.get("scannerVersion")
     if not isinstance(scanner_version, str) or not scanner_version.strip():
-        issues.append(ValidationIssue(str(workflow_path), "Sonar scanner requires non-empty scannerVersion"))
+        issues.append(ValidationIssue(str(workflow_path), f"Sonar {job_name} scanner requires non-empty scannerVersion"))
 
     scanner_args = scanner_with.get("args", "")
     scanner_args = scanner_args if isinstance(scanner_args, str) else ""
-    issues.extend(
-        ValidationIssue(str(workflow_path), f"Sonar scanner trusted argument is missing: {marker}")
-        for marker in _SONAR_TRUSTED_ARGUMENTS
-        if marker not in scanner_args
-    )
+    for marker in (*_SONAR_TRUSTED_ARGUMENTS, *extra_arguments):
+        if marker not in scanner_args:
+            issues.append(ValidationIssue(str(workflow_path), f"Sonar scanner trusted argument is missing: {marker}"))
 
     scanner_env = scanner_step.get("env")
     if not isinstance(scanner_env, Mapping) or scanner_env.get("SONAR_TOKEN") != _SONAR_TOKEN_REFERENCE:
-        issues.append(ValidationIssue(str(workflow_path), "Sonar scanner auth must use exactly secrets.SONAR_TOKEN"))
+        issues.append(ValidationIssue(str(workflow_path), f"Sonar {job_name} scanner auth must use exactly secrets.SONAR_TOKEN"))
     return issues
 
 
@@ -510,9 +558,9 @@ def _run_step_command(run_script: str) -> str:
 
 
 def _validate_sonar_token_runs(
-    workflow_path: Path, scanner_job: Mapping[str, Any], steps: list[Any]
+    workflow_path: Path, job_name: str, job: Mapping[str, Any], steps: list[Any]
 ) -> list[ValidationIssue]:
-    if _SONAR_TOKEN_REFERENCE not in yaml.safe_dump(scanner_job, sort_keys=False):
+    if _SONAR_TOKEN_REFERENCE not in yaml.safe_dump(job, sort_keys=False):
         return []
 
     issues: list[ValidationIssue] = []
@@ -526,9 +574,22 @@ def _validate_sonar_token_runs(
         issues.append(
             ValidationIssue(
                 str(workflow_path),
-                f"token-bearing Sonar job must not execute project commands; rejected run step starting with {command}",
+                f"token-bearing Sonar {job_name} job must not execute project commands; rejected run step starting with {command}",
             )
         )
+    return issues
+
+
+def _validate_sonar_scanner_job(
+    workflow_path: Path, job_name: str, job: Mapping[str, Any]
+) -> list[ValidationIssue]:
+    steps = _sonar_job_steps(job)
+    issues = _validate_sonar_job_guards(workflow_path, job_name, job)
+    required_ref = _SONAR_PR_ARGUMENTS[0] and "${{ inputs.head_sha }}" if job_name == "pull_request" else None
+    extra_arguments = _SONAR_PR_ARGUMENTS if job_name == "pull_request" else ()
+    issues.extend(_validate_sonar_checkout(workflow_path, job_name, steps, required_ref=required_ref))
+    issues.extend(_validate_sonar_scanner_step(workflow_path, job_name, steps, extra_arguments=extra_arguments))
+    issues.extend(_validate_sonar_token_runs(workflow_path, job_name, job, steps))
     return issues
 
 
@@ -541,15 +602,10 @@ def _validate_sonar_workflow(workflow_path: Path, workflow_text: str) -> list[Va
     if document.get("permissions") != {"contents": "read"}:
         issues.append(ValidationIssue(str(workflow_path), "Sonar workflow permissions must be exactly contents: read"))
 
-    scanner_job, steps, job_issues = _find_sonar_scanner_job(workflow_path, document)
+    jobs, job_issues = _sonar_scanner_jobs(workflow_path, document)
     issues.extend(job_issues)
-    if scanner_job is None:
-        return issues
-
-    issues.extend(_validate_sonar_job_guards(workflow_path, scanner_job))
-    issues.extend(_validate_sonar_checkout(workflow_path, steps))
-    issues.extend(_validate_sonar_scanner_step(workflow_path, steps))
-    issues.extend(_validate_sonar_token_runs(workflow_path, scanner_job, steps))
+    for job_name, job in jobs.items():
+        issues.extend(_validate_sonar_scanner_job(workflow_path, job_name, job))
     return issues
 
 
