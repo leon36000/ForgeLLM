@@ -40,6 +40,13 @@ jobs:
           cargo --version --verbose
       - name: Test reference semantics
         run: cargo test --workspace --all-targets
+      - name: Show generated lockfile for canonicalization
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s\n' '--- BEGIN GENERATED Cargo.lock ---'
+          cat Cargo.lock
+          printf '%s\n' '--- END GENERATED Cargo.lock ---'
       - name: Check formatting
         run: cargo fmt --all --check
       - name: Lint reference core
