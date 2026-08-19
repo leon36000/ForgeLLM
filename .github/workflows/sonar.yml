@@ -31,6 +31,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      - name: Create trusted Sonar settings
+        shell: bash
+        run: |
+          umask 077
+          printf '%s\n' \
+            'sonar.sources=.' \
+            'sonar.tests=tests' \
+            'sonar.exclusions=tests/**' \
+            > "${RUNNER_TEMP}/forgellm-sonar.properties"
       - name: Require SONAR_TOKEN
         shell: bash
         env:
@@ -55,6 +64,7 @@ jobs:
             -Dsonar.host.url=https://sonarcloud.io
             -Dsonar.organization=leon36000
             -Dsonar.projectKey=leon36000_ForgeLLM
+            -Dproject.settings=${{ runner.temp }}/forgellm-sonar.properties
             -Dsonar.sca.enabled=false
             -Dsonar.rust.clippy.enable=false
             -Dsonar.qualitygate.wait=true
@@ -64,6 +74,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      - name: Create trusted Sonar settings
+        shell: bash
+        run: |
+          umask 077
+          printf '%s\n' \
+            'sonar.sources=.' \
+            'sonar.tests=tests' \
+            'sonar.exclusions=tests/**' \
+            > "${RUNNER_TEMP}/forgellm-sonar.properties"
       - name: Require SONAR_TOKEN
         shell: bash
         env:
@@ -89,6 +108,7 @@ jobs:
             -Dsonar.host.url=https://sonarcloud.io
             -Dsonar.organization=leon36000
             -Dsonar.projectKey=leon36000_ForgeLLM
+            -Dproject.settings=${{ runner.temp }}/forgellm-sonar.properties
             -Dsonar.sca.enabled=false
             -Dsonar.rust.clippy.enable=false
             -Dsonar.qualitygate.wait=true
