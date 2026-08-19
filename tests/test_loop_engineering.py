@@ -293,3 +293,58 @@ def test_repository_loop_gate_runs_successfully() -> None:
     output = result.stdout + result.stderr
     assert result.returncode == 0, output
     assert "OK: bounded Loop Engineering contract is valid" in result.stdout
+
+
+LOOP_SKILL_PATHS = (
+    ROOT / ".agents/skills/forgellm-loop-engineering/SKILL.md",
+    ROOT / ".claude/skills/forgellm-loop-engineering/SKILL.md",
+)
+LOOP_AGREEMENT_BEGIN = "<!-- forgellm-loop-engineering:begin -->"
+LOOP_AGREEMENT_END = "<!-- forgellm-loop-engineering:end -->"
+
+
+def test_project_local_loop_agent_skills_exist_and_match() -> None:
+    texts = []
+    for path in LOOP_SKILL_PATHS:
+        assert path.is_file(), f"missing project-local bounded loop skill: {path}"
+        texts.append(path.read_text(encoding="utf-8"))
+    assert texts[0] == texts[1]
+
+
+def test_project_local_loop_agent_skills_preserve_authority_and_bounds() -> None:
+    for path in LOOP_SKILL_PATHS:
+        text = path.read_text(encoding="utf-8")
+        lowered = text.lower()
+        for marker in ("GOAL", "SCOPE", "VERIFY", "BUDGET", "STOP", "RECEIPT"):
+            assert marker in text
+        for marker in (
+            "task packet",
+            "accepted adr",
+            "stop_and_escalate",
+            "independent",
+            "isolated",
+            "worktree",
+            "never execute vendored scripts",
+        ):
+            assert marker in lowered
+        for forbidden in (".claude/hooks", ".codex/hooks", "stop-verify.sh", "./install.sh"):
+            assert forbidden not in text
+
+
+def test_agent_working_agreement_installs_bounded_loop_precedence() -> None:
+    for relative in ("AGENTS.md", "CLAUDE.md"):
+        text = (ROOT / relative).read_text(encoding="utf-8")
+        assert text.count(LOOP_AGREEMENT_BEGIN) == 1
+        assert text.count(LOOP_AGREEMENT_END) == 1
+        bounded = text.split(LOOP_AGREEMENT_BEGIN, 1)[1].split(LOOP_AGREEMENT_END, 1)[0]
+        assert "task packets and accepted ADRs remain authoritative" in bounded
+        assert "may narrow but never widen SCOPE/VERIFY/privilege" in bounded
+        assert "No upstream installer, eval runner, Stop hook" in bounded
+
+
+def test_project_local_loop_skills_are_reference_only_for_upstream_content() -> None:
+    for path in LOOP_SKILL_PATHS:
+        text = path.read_text(encoding="utf-8")
+        assert "third_party/loop-engineering/core/METHODOLOGY.md" in text
+        assert "third_party/loop-engineering/core/COMMANDS.md" in text
+        assert "reference only" in text.lower()
