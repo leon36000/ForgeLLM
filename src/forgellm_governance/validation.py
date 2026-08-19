@@ -33,10 +33,24 @@ _TEXT_SUFFIXES = {".md", ".txt", ".yaml", ".yml", ".json", ".toml", ".py", ".sh"
 _SONAR_CHECKOUT_ACTION = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"
 _SONAR_SCANNER_ACTION = "SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f"
 _SONAR_TOKEN_REFERENCE = "${{ secrets.SONAR_TOKEN }}"
+_SONAR_TRUSTED_SETTINGS_NAME = "Create trusted Sonar settings"
+_SONAR_TRUSTED_SETTINGS_SCRIPT = """umask 077
+printf '%s\\n' \\
+  'sonar.sources=.' \\
+  'sonar.tests=tests' \\
+  'sonar.exclusions=tests/**' \\
+  > "${RUNNER_TEMP}/forgellm-sonar.properties"
+"""
+_SONAR_TRUSTED_SCOPE_LINES = (
+    "sonar.sources=.",
+    "sonar.tests=tests",
+    "sonar.exclusions=tests/**",
+)
 _SONAR_TRUSTED_ARGUMENTS = (
     "sonar.host.url=https://sonarcloud.io",
     "sonar.organization=leon36000",
     "sonar.projectKey=leon36000_ForgeLLM",
+    "project.settings=${{ runner.temp }}/forgellm-sonar.properties",
     "sonar.sca.enabled=false",
     "sonar.rust.clippy.enable=false",
     "sonar.qualitygate.wait=true",
@@ -490,6 +504,76 @@ def _validate_sonar_job_guards(workflow_path: Path, job_name: str, job: Mapping[
     ]
 
 
+def _find_step_index(steps: list[Any], predicate: Any) -> int | None:
+    for index, step in enumerate(steps):
+        if isinstance(step, Mapping) and predicate(step):
+            return index
+    return None
+
+
+def _validate_sonar_trusted_settings(workflow_path: Path, job_name: str, steps: list[Any]) -> list[ValidationIssue]:
+    named = [
+        (index, step)
+        for index, step in enumerate(steps)
+        if isinstance(step, Mapping) and step.get("name") == _SONAR_TRUSTED_SETTINGS_NAME
+    ]
+    if len(named) != 1:
+        return [
+            ValidationIssue(
+                str(workflow_path),
+                f"Sonar {job_name} job requires exactly one trusted Sonar settings initializer",
+            )
+        ]
+
+    settings_index, settings_step = named[0]
+    issues: list[ValidationIssue] = []
+    if settings_step.get("shell") != "bash":
+        issues.append(ValidationIssue(str(workflow_path), f"Sonar {job_name} trusted Sonar settings must use bash"))
+
+    step_dump = yaml.safe_dump(settings_step, sort_keys=False)
+    step_env = settings_step.get("env")
+    if _SONAR_TOKEN_REFERENCE in step_dump or (isinstance(step_env, Mapping) and "SONAR_TOKEN" in step_env):
+        issues.append(
+            ValidationIssue(
+                str(workflow_path),
+                f"Sonar {job_name} trusted Sonar settings must not receive SONAR_TOKEN",
+            )
+        )
+
+    run_script = settings_step.get("run")
+    if not isinstance(run_script, str):
+        issues.append(ValidationIssue(str(workflow_path), f"Sonar {job_name} trusted Sonar settings requires a static run script"))
+    else:
+        for marker in _SONAR_TRUSTED_SCOPE_LINES:
+            if marker not in run_script:
+                issues.append(
+                    ValidationIssue(
+                        str(workflow_path),
+                        f"Sonar {job_name} trusted Sonar settings must include exact scope: {marker}",
+                    )
+                )
+        if run_script.strip() != _SONAR_TRUSTED_SETTINGS_SCRIPT.strip():
+            issues.append(
+                ValidationIssue(
+                    str(workflow_path),
+                    f"Sonar {job_name} trusted Sonar settings initializer must match the reviewed static script",
+                )
+            )
+
+    checkout_index = _find_step_index(
+        steps,
+        lambda step: str(step.get("uses", "")).startswith("actions/checkout@"),
+    )
+    if checkout_index is not None and settings_index >= checkout_index:
+        issues.append(
+            ValidationIssue(
+                str(workflow_path),
+                f"Sonar {job_name} trusted Sonar settings initializer must run before checkout",
+            )
+        )
+    return issues
+
+
 def _validate_sonar_checkout(
     workflow_path: Path, job_name: str, steps: list[Any], *, required_ref: str | None = None
 ) -> list[ValidationIssue]:
@@ -552,6 +636,19 @@ def _is_sonar_token_preflight(step: Mapping[str, Any], run_script: str) -> bool:
     )
 
 
+def _is_sonar_trusted_settings_step(step: Mapping[str, Any], run_script: str) -> bool:
+    step_env = step.get("env")
+    has_token = _SONAR_TOKEN_REFERENCE in yaml.safe_dump(step, sort_keys=False) or (
+        isinstance(step_env, Mapping) and "SONAR_TOKEN" in step_env
+    )
+    return (
+        step.get("name") == _SONAR_TRUSTED_SETTINGS_NAME
+        and step.get("shell") == "bash"
+        and not has_token
+        and run_script.strip() == _SONAR_TRUSTED_SETTINGS_SCRIPT.strip()
+    )
+
+
 def _run_step_command(run_script: str) -> str:
     first_command = next((line.strip() for line in run_script.splitlines() if line.strip()), "run")
     return first_command.split()[0] if first_command else "run"
@@ -568,7 +665,9 @@ def _validate_sonar_token_runs(
         if not isinstance(step, Mapping):
             continue
         run_script = step.get("run")
-        if not isinstance(run_script, str) or _is_sonar_token_preflight(step, run_script):
+        if not isinstance(run_script, str):
+            continue
+        if _is_sonar_token_preflight(step, run_script) or _is_sonar_trusted_settings_step(step, run_script):
             continue
         command = _run_step_command(run_script)
         issues.append(
@@ -587,6 +686,7 @@ def _validate_sonar_scanner_job(
     issues = _validate_sonar_job_guards(workflow_path, job_name, job)
     required_ref = _SONAR_PR_ARGUMENTS[0] and "${{ inputs.head_sha }}" if job_name == "pull_request" else None
     extra_arguments = _SONAR_PR_ARGUMENTS if job_name == "pull_request" else ()
+    issues.extend(_validate_sonar_trusted_settings(workflow_path, job_name, steps))
     issues.extend(_validate_sonar_checkout(workflow_path, job_name, steps, required_ref=required_ref))
     issues.extend(_validate_sonar_scanner_step(workflow_path, job_name, steps, extra_arguments=extra_arguments))
     issues.extend(_validate_sonar_token_runs(workflow_path, job_name, job, steps))
