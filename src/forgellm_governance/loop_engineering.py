@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import re
+import shlex
+from collections.abc import Mapping, Sequence
+from pathlib import Path
 from typing import Any
 
 from . import loop_engineering_legacy as _legacy
@@ -17,9 +20,189 @@ EXPECTED_VENDOR_FILES = _legacy.EXPECTED_VENDOR_FILES
 EXPECTED_EXCLUDED_EXECUTABLE_SURFACES = _legacy.EXPECTED_EXCLUDED_EXECUTABLE_SURFACES
 EXPECTED_EXCLUDED_SHADOW_TEMPLATES = _legacy.EXPECTED_EXCLUDED_SHADOW_TEMPLATES
 
-validate_loop_verify_command = _legacy.validate_loop_verify_command
-validate_loop_declaration = _legacy.validate_loop_declaration
 validate_vendor_provenance = _legacy.validate_vendor_provenance
+
+_SHELL_PUNCTUATION = "();&|<>"
+_ENV_ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=.*$")
+_GIT_READ_ONLY_SUBCOMMANDS = {
+    "cat-file",
+    "diff",
+    "grep",
+    "log",
+    "ls-files",
+    "ls-tree",
+    "rev-parse",
+    "show",
+    "status",
+}
+_GIT_EXTERNAL_EXECUTION_FLAGS = {"--ext-diff", "--textconv", "--open-files-in-pager", "-O"}
+_GH_READ_ONLY_COMMANDS = {
+    ("issue", "list"),
+    ("issue", "status"),
+    ("issue", "view"),
+    ("pr", "checks"),
+    ("pr", "diff"),
+    ("pr", "list"),
+    ("pr", "status"),
+    ("pr", "view"),
+    ("repo", "list"),
+    ("repo", "view"),
+    ("run", "list"),
+    ("run", "view"),
+    ("workflow", "list"),
+    ("workflow", "view"),
+}
+_FORBIDDEN_LONG_RUNNING_FLAGS = {"--follow", "--watch"}
+_HTTP_MUTATION_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+_CURL_LONG_MUTATION_FLAGS = {
+    "--data",
+    "--data-ascii",
+    "--data-binary",
+    "--data-raw",
+    "--data-urlencode",
+    "--form",
+    "--upload-file",
+}
+
+
+def _shell_lex(command: str) -> list[str]:
+    lexer = shlex.shlex(command, posix=True, punctuation_chars=_SHELL_PUNCTUATION)
+    lexer.whitespace_split = True
+    lexer.commenters = ""
+    return list(lexer)
+
+
+def _shell_composition_issue(command: str) -> str | None:
+    try:
+        tokens = _shell_lex(command)
+    except ValueError as exc:
+        return f"VERIFY command cannot be parsed safely: {exc}"
+    if any(token and all(character in _SHELL_PUNCTUATION for character in token) for token in tokens):
+        return "VERIFY command composes shell commands or redirects I/O and must stop_and_escalate"
+    return None
+
+
+def _environment_wrapper_issue(tokens: Sequence[str]) -> str | None:
+    executable = Path(tokens[0]).name
+    if executable == "env" or _ENV_ASSIGNMENT.fullmatch(tokens[0]) is not None:
+        return "VERIFY command uses environment indirection and must stop_and_escalate"
+    return None
+
+
+def _git_command_issue(tokens: Sequence[str]) -> str | None:
+    if Path(tokens[0]).name != "git":
+        return None
+    if len(tokens) < 2 or tokens[1] not in _GIT_READ_ONLY_SUBCOMMANDS:
+        return "VERIFY command uses a non-read-only or globally configured Git form and must stop_and_escalate"
+    if any(token in _GIT_EXTERNAL_EXECUTION_FLAGS for token in tokens[2:]):
+        return "VERIFY command permits Git to execute an external helper and must stop_and_escalate"
+    return None
+
+
+def _gh_command_issue(tokens: Sequence[str]) -> str | None:
+    if Path(tokens[0]).name != "gh":
+        return None
+    if len(tokens) == 2 and tokens[1] == "status":
+        return None
+    if len(tokens) < 3 or (tokens[1], tokens[2]) not in _GH_READ_ONLY_COMMANDS:
+        return "VERIFY command uses a non-read-only GitHub CLI form and must stop_and_escalate"
+    if any(token in _FORBIDDEN_LONG_RUNNING_FLAGS or token == "--web" for token in tokens[3:]):
+        return "VERIFY command uses an interactive or unbounded GitHub CLI mode and must stop_and_escalate"
+    return None
+
+
+def _curl_mutation_issue(tokens: Sequence[str]) -> str | None:
+    if Path(tokens[0]).name != "curl":
+        return None
+    for index, token in enumerate(tokens[1:], start=1):
+        if token in _legacy._CURL_MUTATION_FLAGS:
+            return "VERIFY command performs an HTTP mutation and must stop_and_escalate"
+        if any(token.startswith(flag + "=") for flag in _CURL_LONG_MUTATION_FLAGS):
+            return "VERIFY command performs an HTTP mutation and must stop_and_escalate"
+        if len(token) > 2 and token[:2] in {"-d", "-F", "-T"}:
+            return "VERIFY command performs an HTTP mutation and must stop_and_escalate"
+        if token.startswith("-X") and len(token) > 2 and token[2:].upper() in _HTTP_MUTATION_METHODS:
+            return "VERIFY command performs an HTTP mutation and must stop_and_escalate"
+        if token in {"-X", "--request"} and index + 1 < len(tokens):
+            if tokens[index + 1].upper() in _HTTP_MUTATION_METHODS:
+                return "VERIFY command performs an HTTP mutation and must stop_and_escalate"
+        if token.startswith("--request=") and token.split("=", 1)[1].upper() in _HTTP_MUTATION_METHODS:
+            return "VERIFY command performs an HTTP mutation and must stop_and_escalate"
+    return None
+
+
+def _wget_mutation_issue(tokens: Sequence[str]) -> str | None:
+    if Path(tokens[0]).name != "wget":
+        return None
+    for index, token in enumerate(tokens[1:], start=1):
+        lowered = token.lower()
+        if lowered.startswith(("--post-data", "--post-file")):
+            return "VERIFY command performs an HTTP mutation and must stop_and_escalate"
+        if token == "--method" and index + 1 < len(tokens):
+            if tokens[index + 1].upper() in _HTTP_MUTATION_METHODS:
+                return "VERIFY command performs an HTTP mutation and must stop_and_escalate"
+        if lowered.startswith("--method=") and lowered.split("=", 1)[1].upper() in _HTTP_MUTATION_METHODS:
+            return "VERIFY command performs an HTTP mutation and must stop_and_escalate"
+    return None
+
+
+def _privileged_tool_issue(tokens: Sequence[str]) -> str | None:
+    executable = Path(tokens[0]).name
+    if executable in {"kubectl", "terraform"}:
+        return f"VERIFY command uses privileged external tool {executable!r} and must stop_and_escalate"
+    return None
+
+
+def _hardened_verify_issue(command: Any) -> str | None:
+    if not isinstance(command, str) or not command.strip():
+        return None
+    composition_issue = _shell_composition_issue(command)
+    if composition_issue is not None:
+        return composition_issue
+    try:
+        tokens = shlex.split(command, posix=True)
+    except ValueError as exc:
+        return f"VERIFY command cannot be parsed safely: {exc}"
+    if not tokens:
+        return "VERIFY command must be non-empty after parsing"
+    for check in (
+        _environment_wrapper_issue,
+        _git_command_issue,
+        _gh_command_issue,
+        _curl_mutation_issue,
+        _wget_mutation_issue,
+        _privileged_tool_issue,
+    ):
+        issue = check(tokens)
+        if issue is not None:
+            return issue
+    return None
+
+
+def validate_loop_verify_command(command: Any) -> list[str]:
+    """Reject VERIFY commands that widen authority through shell or tool-specific indirection."""
+
+    legacy_issues = _legacy.validate_loop_verify_command(command)
+    if legacy_issues:
+        return legacy_issues
+    issue = _hardened_verify_issue(command)
+    return [issue] if issue is not None else []
+
+
+def validate_loop_declaration(declaration: Mapping[str, Any], task_packet: Mapping[str, Any]) -> list[str]:
+    """Validate a declaration and apply the hardened public VERIFY firewall."""
+
+    issues = _legacy.validate_loop_declaration(declaration, task_packet)
+    verify = declaration.get("VERIFY") if isinstance(declaration, Mapping) else None
+    authorized = task_packet.get("verification_commands") if isinstance(task_packet, Mapping) else None
+    if _legacy._is_sequence(verify) and _legacy._is_sequence(authorized):
+        for command in verify:
+            if isinstance(command, str) and command in authorized:
+                issue = _hardened_verify_issue(command)
+                if issue is not None and issue not in issues:
+                    issues.append(issue)
+    return issues
+
 
 _REQUIRED_RECEIPT_FIELDS = {
     "schema_version",
