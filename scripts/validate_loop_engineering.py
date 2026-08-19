@@ -9,7 +9,7 @@ import yaml
 
 from forgellm_governance.loop_engineering import (
     validate_loop_declaration,
-    validate_loop_receipt,
+    validate_loop_receipt_template,
     validate_vendor_provenance,
 )
 
@@ -44,7 +44,7 @@ def validate_repository(root: Path) -> list[str]:
     if task_packet is not None and declaration is not None:
         issues.extend(validate_loop_declaration(declaration, task_packet))
     if declaration is not None and receipt is not None:
-        issues.extend(validate_loop_receipt(receipt, declaration))
+        issues.extend(validate_loop_receipt_template(receipt, declaration))
     return issues
 
 

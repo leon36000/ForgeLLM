@@ -3,7 +3,7 @@ project: ForgeLLM
 task_id: P0-T10
 plan: docs/superpowers/plans/2026-08-19-bounded-loop-engineering.md
 base_commit: 8594ef5abb19ca7a870fe6d71ae7aad8e15f4602
-final_commit: '0000000000000000000000000000000000000000'
+final_commit: REPLACE_WITH_FINAL_COMMIT
 iterations: 0
 identical_failures_at_stop: 0
 stop_reason: template

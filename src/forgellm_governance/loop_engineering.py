@@ -39,6 +39,17 @@ EXPECTED_EXCLUDED_SHADOW_TEMPLATES = {
 }
 _RECEIPT_PREFIX = "artifacts/governance/loop-engineering/receipts/"
 _FULL_SHA = re.compile(r"^[0-9a-f]{40}$")
+_ZERO_SHA = "0" * 40
+_TEMPLATE_FINAL_COMMIT = "REPLACE_WITH_FINAL_COMMIT"
+_TEMPLATE_STOP_REASON = "template"
+_TEMPLATE_PREFIX = "TEMPLATE:"
+_VALID_FINAL_STOP_REASONS = {
+    "verify_pass",
+    "budget_exhausted",
+    "identical_failure_limit",
+    "privileged_operation",
+    "manual_stop",
+}
 _REQUIRED_RECEIPT_FIELDS = {
     "schema_version",
     "project",
@@ -67,6 +78,10 @@ def _positive_int(value: Any) -> bool:
 
 def _non_negative_int(value: Any) -> bool:
     return isinstance(value, int) and not isinstance(value, bool) and value >= 0
+
+
+def _is_nonzero_full_sha(value: Any) -> bool:
+    return isinstance(value, str) and value != _ZERO_SHA and _FULL_SHA.fullmatch(value) is not None
 
 
 def _normalize_repo_path(value: Any) -> str | None:
@@ -112,9 +127,8 @@ def _validate_loop_fields(declaration: Mapping[str, Any]) -> list[str]:
         issues.append("project must be exactly ForgeLLM")
     if not isinstance(declaration.get("GOAL"), str) or not declaration["GOAL"].strip():
         issues.append("GOAL must be a non-empty sentence")
-    base_commit = declaration.get("base_commit")
-    if not isinstance(base_commit, str) or _FULL_SHA.fullmatch(base_commit) is None:
-        issues.append("base_commit must be a 40-character lowercase Git SHA")
+    if not _is_nonzero_full_sha(declaration.get("base_commit")):
+        issues.append("base_commit must be a non-zero 40-character lowercase Git SHA")
     return issues
 
 
@@ -306,12 +320,22 @@ def _receipt_keys(receipt: Mapping[str, Any]) -> list[str]:
     return [f"receipt requires exact evidence fields; missing={missing}, extra={extra}"]
 
 
+def _validate_receipt_binding(receipt: Mapping[str, Any], declaration: Mapping[str, Any]) -> list[str]:
+    issues: list[str] = []
+    if receipt.get("schema_version") != "1.0":
+        issues.append("receipt schema_version must be exactly '1.0'")
+    if receipt.get("project") != declaration.get("project") or receipt.get("project") != "ForgeLLM":
+        issues.append("receipt project must match ForgeLLM loop declaration")
+    if receipt.get("task_id") != declaration.get("task_id"):
+        issues.append("receipt task_id must match loop declaration task_id")
+    return issues
+
+
 def _validate_receipt_commits(receipt: Mapping[str, Any], declaration: Mapping[str, Any]) -> list[str]:
     issues: list[str] = []
     for field in ("base_commit", "final_commit"):
-        value = receipt.get(field)
-        if not isinstance(value, str) or _FULL_SHA.fullmatch(value) is None:
-            issues.append(f"receipt {field} must be a 40-character lowercase Git SHA")
+        if not _is_nonzero_full_sha(receipt.get(field)):
+            issues.append(f"receipt {field} must be a non-zero 40-character lowercase Git SHA")
     if receipt.get("base_commit") != declaration.get("base_commit"):
         issues.append("receipt base_commit must equal the loop declaration base_commit")
     return issues
@@ -353,17 +377,6 @@ def _validate_receipt_scope(receipt: Mapping[str, Any], declaration: Mapping[str
     return issues
 
 
-def _validate_receipt_binding(receipt: Mapping[str, Any], declaration: Mapping[str, Any]) -> list[str]:
-    issues: list[str] = []
-    if receipt.get("schema_version") != "1.0":
-        issues.append("receipt schema_version must be exactly '1.0'")
-    if receipt.get("project") != declaration.get("project") or receipt.get("project") != "ForgeLLM":
-        issues.append("receipt project must match ForgeLLM loop declaration")
-    if receipt.get("task_id") != declaration.get("task_id"):
-        issues.append("receipt task_id must match loop declaration task_id")
-    return issues
-
-
 def _validate_receipt_evidence(receipt: Mapping[str, Any], declaration: Mapping[str, Any]) -> list[str]:
     issues: list[str] = []
     if receipt.get("verify_commands") != declaration.get("VERIFY"):
@@ -371,19 +384,20 @@ def _validate_receipt_evidence(receipt: Mapping[str, Any], declaration: Mapping[
     evidence = receipt.get("verify_evidence")
     if not _is_sequence(evidence) or not evidence or not all(isinstance(item, str) and item for item in evidence):
         issues.append("receipt verify_evidence must be a non-empty array of evidence strings")
-    for field, message in (
-        ("reviewer", "receipt reviewer must identify the independent verifier"),
-        ("plan", "receipt plan must identify the controlling plan"),
-        ("stop_reason", "receipt stop_reason must be non-empty"),
-    ):
-        value = receipt.get(field)
-        if not isinstance(value, str) or not value.strip():
-            issues.append(message)
+    reviewer = receipt.get("reviewer")
+    if not isinstance(reviewer, str) or not reviewer.strip() or reviewer.startswith(_TEMPLATE_PREFIX):
+        issues.append("receipt reviewer must identify the independent verifier and cannot be a template marker")
+    plan = receipt.get("plan")
+    if not isinstance(plan, str) or not plan.strip():
+        issues.append("receipt plan must identify the controlling plan")
+    stop_reason = receipt.get("stop_reason")
+    if stop_reason not in _VALID_FINAL_STOP_REASONS:
+        issues.append(f"receipt stop_reason must be one of {sorted(_VALID_FINAL_STOP_REASONS)}")
     return issues
 
 
 def validate_loop_receipt(receipt: Mapping[str, Any], declaration: Mapping[str, Any]) -> list[str]:
-    """Validate reproducible loop evidence without granting the receipt any authority."""
+    """Validate final reproducible evidence; templates are intentionally rejected."""
 
     if not isinstance(receipt, Mapping):
         return ["receipt must be a mapping"]
@@ -396,4 +410,47 @@ def validate_loop_receipt(receipt: Mapping[str, Any], declaration: Mapping[str, 
     issues.extend(_validate_receipt_counts(receipt, declaration))
     issues.extend(_validate_receipt_scope(receipt, declaration))
     issues.extend(_validate_receipt_evidence(receipt, declaration))
+    return issues
+
+
+def validate_loop_receipt_template(receipt: Mapping[str, Any], declaration: Mapping[str, Any]) -> list[str]:
+    """Validate the inert receipt template without promoting it to final evidence."""
+
+    if not isinstance(receipt, Mapping):
+        return ["receipt template must be a mapping"]
+    if not isinstance(declaration, Mapping):
+        return ["loop declaration must be a mapping before validating its receipt template"]
+
+    issues = _receipt_keys(receipt)
+    issues.extend(_validate_receipt_binding(receipt, declaration))
+    if not _is_nonzero_full_sha(receipt.get("base_commit")):
+        issues.append("receipt template base_commit must be a non-zero full Git SHA")
+    if receipt.get("base_commit") != declaration.get("base_commit"):
+        issues.append("receipt template base_commit must equal the loop declaration base_commit")
+    if receipt.get("final_commit") != _TEMPLATE_FINAL_COMMIT:
+        issues.append(f"receipt template final_commit must be exactly {_TEMPLATE_FINAL_COMMIT}")
+    if receipt.get("iterations") != 0:
+        issues.append("receipt template iterations must be 0")
+    if receipt.get("identical_failures_at_stop") != 0:
+        issues.append("receipt template identical_failures_at_stop must be 0")
+    if receipt.get("stop_reason") != _TEMPLATE_STOP_REASON:
+        issues.append("receipt template stop_reason must be exactly template")
+    if receipt.get("changed_paths") != []:
+        issues.append("receipt template changed_paths must be empty")
+    if receipt.get("scope_check") != "pass":
+        issues.append("receipt template scope_check must be pass")
+    if receipt.get("verify_commands") != declaration.get("VERIFY"):
+        issues.append("receipt template verify_commands must exactly equal declared VERIFY")
+
+    evidence = receipt.get("verify_evidence")
+    if not _is_sequence(evidence) or not evidence:
+        issues.append("receipt template verify_evidence must contain a TEMPLATE marker")
+    elif not all(isinstance(item, str) and item.startswith(_TEMPLATE_PREFIX) for item in evidence):
+        issues.append("receipt template verify_evidence entries must start with TEMPLATE:")
+    reviewer = receipt.get("reviewer")
+    if not isinstance(reviewer, str) or not reviewer.startswith(_TEMPLATE_PREFIX):
+        issues.append("receipt template reviewer must start with TEMPLATE:")
+    plan = receipt.get("plan")
+    if not isinstance(plan, str) or not plan.strip():
+        issues.append("receipt template plan must identify the controlling plan")
     return issues
