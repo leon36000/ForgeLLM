@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+import shlex
 from collections.abc import Mapping, Sequence
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -65,6 +66,71 @@ _REQUIRED_RECEIPT_FIELDS = {
     "verify_commands",
     "verify_evidence",
     "reviewer",
+}
+_SECRET_VERIFY_MARKERS = (
+    "SONAR_TOKEN",
+    "GITHUB_TOKEN",
+    "AWS_SECRET_ACCESS_KEY",
+    "${{ secrets.",
+    "secrets.",
+)
+_FORBIDDEN_VERIFY_TOKENS = {
+    "sudo",
+    "ssh",
+    "scp",
+    "tailscale",
+    "sonar-scanner",
+    "sonar-scanner-cli",
+    "systemctl",
+    "nohup",
+    "watch",
+}
+_FORBIDDEN_GIT_SUBCOMMANDS = {
+    "push",
+    "commit",
+    "merge",
+    "rebase",
+    "reset",
+    "clean",
+    "checkout",
+    "switch",
+    "tag",
+    "cherry-pick",
+    "revert",
+}
+_FORBIDDEN_GH_SUBCOMMANDS = {"api", "auth", "secret", "variable"}
+_FORBIDDEN_TERRAFORM_SUBCOMMANDS = {"apply", "destroy", "import", "taint", "untaint", "force-unlock"}
+_FORBIDDEN_KUBECTL_SUBCOMMANDS = {
+    "apply",
+    "annotate",
+    "cordon",
+    "cp",
+    "create",
+    "delete",
+    "drain",
+    "edit",
+    "exec",
+    "label",
+    "patch",
+    "port-forward",
+    "replace",
+    "rollout",
+    "scale",
+    "set",
+    "taint",
+    "uncordon",
+}
+_CURL_MUTATION_FLAGS = {
+    "-d",
+    "--data",
+    "--data-ascii",
+    "--data-binary",
+    "--data-raw",
+    "--data-urlencode",
+    "-F",
+    "--form",
+    "-T",
+    "--upload-file",
 }
 
 
@@ -151,6 +217,94 @@ def _validate_scope(declaration: Mapping[str, Any], task_packet: Mapping[str, An
     return issues
 
 
+def _first_subcommand(tokens: Sequence[str], executable: str) -> str | None:
+    if not tokens or Path(tokens[0]).name != executable:
+        return None
+    for token in tokens[1:]:
+        if token == "--":
+            continue
+        if token.startswith("-"):
+            continue
+        return token
+    return None
+
+
+def _curl_mutates(tokens: Sequence[str]) -> bool:
+    for index, token in enumerate(tokens):
+        if token in _CURL_MUTATION_FLAGS:
+            return True
+        if token in {"-X", "--request"} and index + 1 < len(tokens):
+            if tokens[index + 1].upper() in {"POST", "PUT", "PATCH", "DELETE"}:
+                return True
+        if token.startswith("--request=") and token.split("=", 1)[1].upper() in {"POST", "PUT", "PATCH", "DELETE"}:
+            return True
+    return False
+
+
+def _wget_mutates(tokens: Sequence[str]) -> bool:
+    for token in tokens:
+        lowered = token.lower()
+        if lowered.startswith(("--post-data", "--post-file")):
+            return True
+        if lowered.startswith("--method=") and lowered.split("=", 1)[1].upper() in {"POST", "PUT", "PATCH", "DELETE"}:
+            return True
+    return False
+
+
+def validate_loop_verify_command(command: Any) -> list[str]:
+    """Reject verifier commands that cross the loop privilege or mutation firewall."""
+
+    if not isinstance(command, str) or not command.strip():
+        return ["VERIFY command must be a non-empty string"]
+    if "\n" in command or "\r" in command:
+        return ["VERIFY command must be one physical command line"]
+    if "$(" in command or "`" in command:
+        return ["VERIFY command uses shell command substitution and must stop_and_escalate"]
+    if any(marker in command for marker in _SECRET_VERIFY_MARKERS):
+        return ["VERIFY command references a secret-bearing environment and must stop_and_escalate"]
+
+    try:
+        tokens = shlex.split(command, posix=True)
+    except ValueError as exc:
+        return [f"VERIFY command cannot be parsed safely: {exc}"]
+    if not tokens:
+        return ["VERIFY command must be non-empty after parsing"]
+
+    token_names = {Path(token).name for token in tokens}
+    forbidden = sorted(token_names & _FORBIDDEN_VERIFY_TOKENS)
+    if forbidden:
+        return [f"VERIFY command uses privileged/external token {forbidden[0]!r} and must stop_and_escalate"]
+
+    executable = Path(tokens[0]).name
+    if executable == "git" and _first_subcommand(tokens, "git") in _FORBIDDEN_GIT_SUBCOMMANDS:
+        return ["VERIFY command mutates Git state and must stop_and_escalate"]
+    if executable == "gh" and _first_subcommand(tokens, "gh") in _FORBIDDEN_GH_SUBCOMMANDS:
+        return ["VERIFY command uses GitHub administration/API surface and must stop_and_escalate"]
+    if executable == "terraform" and _first_subcommand(tokens, "terraform") in _FORBIDDEN_TERRAFORM_SUBCOMMANDS:
+        return ["VERIFY command mutates infrastructure through Terraform and must stop_and_escalate"]
+    if executable == "kubectl" and _first_subcommand(tokens, "kubectl") in _FORBIDDEN_KUBECTL_SUBCOMMANDS:
+        return ["VERIFY command mutates or enters cluster state and must stop_and_escalate"]
+    if executable == "curl" and _curl_mutates(tokens):
+        return ["VERIFY command performs an HTTP mutation and must stop_and_escalate"]
+    if executable == "wget" and _wget_mutates(tokens):
+        return ["VERIFY command performs an HTTP mutation and must stop_and_escalate"]
+
+    if executable in {"bash", "dash", "ksh", "sh", "zsh"} and "-c" in tokens[1:]:
+        return ["VERIFY command executes inline shell code and must stop_and_escalate"]
+    if executable in {"python", "python3", "pypy", "pypy3"} and "-c" in tokens[1:]:
+        return ["VERIFY command executes inline Python code and must stop_and_escalate"]
+    if executable == "node" and any(token in {"-e", "--eval"} for token in tokens[1:]):
+        return ["VERIFY command executes inline Node code and must stop_and_escalate"]
+
+    if executable in {"pip", "pip3"} and _first_subcommand(tokens, executable) == "install":
+        return ["VERIFY command installs Python packages and must stop_and_escalate"]
+    if executable in {"python", "python3"} and len(tokens) >= 4 and tokens[1:4] == ["-m", "pip", "install"]:
+        return ["VERIFY command installs Python packages and must stop_and_escalate"]
+    if executable == "cargo" and _first_subcommand(tokens, "cargo") == "install":
+        return ["VERIFY command installs Cargo tools and must stop_and_escalate"]
+    return []
+
+
 def _validate_verify(declaration: Mapping[str, Any], task_packet: Mapping[str, Any]) -> list[str]:
     verify = declaration.get("VERIFY")
     authorized = task_packet.get("verification_commands")
@@ -158,11 +312,14 @@ def _validate_verify(declaration: Mapping[str, Any], task_packet: Mapping[str, A
         return ["VERIFY must be a non-empty array of task packet verification_commands"]
     if not _is_sequence(authorized):
         return ["task packet verification_commands must be an array before validating VERIFY"]
-    return [
-        f"VERIFY command {command!r} is not present in task packet verification_commands"
-        for command in verify
-        if not isinstance(command, str) or command not in authorized
-    ]
+
+    issues: list[str] = []
+    for command in verify:
+        if not isinstance(command, str) or command not in authorized:
+            issues.append(f"VERIFY command {command!r} is not present in task packet verification_commands")
+            continue
+        issues.extend(validate_loop_verify_command(command))
+    return issues
 
 
 def _validate_budget_and_stop(declaration: Mapping[str, Any]) -> list[str]:
