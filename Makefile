@@ -69,7 +69,7 @@ verify-speculative:
 	  tests/test_speculative_trace.py \
 	  tests/test_speculative_adversarial.py
 
-ci: lint verify verify-speculative simulate-cache-draft
+ci: validate-loop lint verify verify-speculative simulate-cache-draft
 
 mobile-hashes:
 	$(PYTHON) scripts/hash_mobile_context.py --root .
