@@ -138,11 +138,7 @@ fn elementwise_mul_rejects_non_finite_result() {
 
 #[test]
 fn embedding_gather_preserves_token_order_and_repetition() {
-    let table = Tensor::new(
-        vec![3, 2],
-        vec![10.0, 11.0, 20.0, 21.0, 30.0, 31.0],
-    )
-    .unwrap();
+    let table = Tensor::new(vec![3, 2], vec![10.0, 11.0, 20.0, 21.0, 30.0, 31.0]).unwrap();
 
     let output = embedding_gather(&table, &[2, 0, 2]).unwrap();
 
