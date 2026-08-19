@@ -125,7 +125,7 @@ _FORBIDDEN_INFRASTRUCTURE_CLIENTS = {
     "vault",
 }
 _SHELL_PUNCTUATION = ";&|<>"
-_ENV_ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+_ENV_ASSIGNMENT = re.compile(r"^[A-Za-z_]\w*=", re.ASCII)
 _CURL_MUTATION_FLAGS = {
     "-d",
     "--data",
