@@ -1,0 +1,16 @@
+schema_version: '999.0'
+project: OtherProject
+task_id: P0-INVALID
+plan: ../../outside-authority.md
+base_commit: not-a-git-sha
+final_commit: not-a-git-sha
+iterations: -99
+identical_failures_at_stop: -1
+stop_reason: template
+changed_paths:
+  - ../../outside-scope
+scope_check: fabricated
+verify_commands:
+  - gh secret set FORGELLM_TEST value
+verify_evidence: []
+reviewer: 'TEMPLATE: writer self-certification'
