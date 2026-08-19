@@ -65,14 +65,15 @@ jobs:
                           pass
               return result
 
-          def post(payload, session_id=None):
+          def post(payload, session_id=None, initialized=False):
               headers = {
                   "Accept": "application/json, text/event-stream",
                   "Content-Type": "application/json",
               }
+              if initialized:
+                  headers["MCP-Protocol-Version"] = "2025-06-18"
               if session_id:
                   headers["Mcp-Session-Id"] = session_id
-                  headers["MCP-Protocol-Version"] = "2025-06-18"
               request = urllib.request.Request(
                   endpoint,
                   data=json.dumps(payload).encode("utf-8"),
@@ -117,16 +118,19 @@ jobs:
           if "error" in initialized.get("payload", {}):
               raise RuntimeError(f"initialize protocol error: {initialized['payload']['error']}")
           session_id = initialized.get("session_id")
-          if not session_id:
-              raise RuntimeError("server did not return Mcp-Session-Id")
 
-          post(
+          notification = post(
               {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
               session_id,
+              initialized=True,
           )
+          if notification["status"] >= 400 and notification["status"] != 402:
+              raise RuntimeError(f"initialized notification HTTP status {notification['status']}")
+
           tools = post(
               {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
               session_id,
+              initialized=True,
           )
           if tools["status"] == 402:
               print("TOOLS_LIST_QUOTE=" + json.dumps(tools, sort_keys=True))
@@ -181,6 +185,7 @@ jobs:
                   "params": {"name": "review_code", "arguments": arguments},
               },
               session_id,
+              initialized=True,
           )
           if review["status"] == 402:
               print("REVIEW_QUOTE=" + json.dumps(review, sort_keys=True))
