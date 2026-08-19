@@ -1,0 +1,100 @@
+schema_version: '1.0'
+task_id: P0-T10
+title: Adopt bounded Loop Engineering orchestration
+phase: P0
+status: in_progress
+charter_goals:
+- Preserve Git and accepted ADRs as ForgeLLM source of truth.
+- Make long-running agent work bounded, reproducible, interruptible, and independently verifiable.
+- Improve agent productivity without expanding privilege or weakening correctness gates.
+goal: Adopt a pinned and reviewed Loop Engineering methodology through a ForgeLLM-specific bridge that preserves existing task-packet authority, enforces bounded loops and external verification, and records reproducible receipts without creating a shadow project state.
+non_goals:
+- Replace ForgeLLM task packets, CURRENT_STATE, accepted ADRs, plans, or handoffs with upstream GOALS or STATUS files.
+- Run model inference, hardware probing, CUDA, ROCm, backend, kernel, benchmark, or distributed-runtime work.
+- Activate Sonar CI, provision SONAR_TOKEN, alter Sonar settings, or modify the P0-T09 implementation branch.
+- Install upstream Loop Engineering globally or execute its unmodified headless runner or Stop hooks.
+- Grant loops authority over GitHub administration, Sonar administration, secrets, accounts, privileged hosts, Tailscale, runners, billing, or production machines.
+inputs:
+- Owner approval on 2026-08-19 to proceed with design B, the vendored and ForgeLLM-bridged Loop Engineering integration.
+- Canonical ForgeLLM main 8594ef5abb19ca7a870fe6d71ae7aad8e15f4602 and issue #36.
+- ForgeLLM Project Charter 0.1.0 and ADR-0002 source-of-truth requirements.
+- Upstream lcajigasm/loop-engineering commit ae2d610985064bb30c5013261988c813013c09e3.
+- Upstream MIT license blob 84524f23b209fccb02a8f239165f0444bfd70f3f.
+- Upstream core COMMANDS.md blob 4de9e981ad89c04f28d94ea4ad5b97e1b513b578 and METHODOLOGY.md blob c7094ca40c2257d653c4d48f6b87c40cb82b209b.
+- Supply-chain review noting that upstream install.sh writes agent adapters and its headless loop runner can evaluate VERIFY commands; these behaviors are not accepted unchanged for ForgeLLM.
+outputs:
+- Accepted ADR-0005 defining bounded Loop Engineering authority and safety invariants.
+- Pinned vendored static methodology subset with provenance, license, and exact blob hashes.
+- ForgeLLM loop declaration and receipt format with GOAL, SCOPE, VERIFY, BUDGET, STOP, and RECEIPT fields.
+- Machine-enforced validation that loop declarations cannot widen task-packet scope, verifier, or privilege.
+- Thin Claude/Codex ForgeLLM bridge skills that defer authorization and truth to Git task packets and ADRs.
+- Repository gate and tests demonstrating bounded execution policy and shadow-state rejection.
+allowed_paths:
+- docs/architecture/ADR-0005-bounded-loop-engineering.md
+- docs/superpowers/plans/2026-08-19-bounded-loop-engineering.md
+- docs/quality/P0-T10-LOOP-ENGINEERING.md
+- artifacts/governance/loop-engineering/
+- third_party/loop-engineering/
+- src/forgellm_governance/loop_engineering.py
+- scripts/validate_loop_engineering.py
+- tests/test_loop_engineering.py
+- .agents/skills/forgellm-loop-engineering/
+- .claude/skills/forgellm-loop-engineering/
+- AGENTS.md
+- CLAUDE.md
+- Makefile
+- tasks/open/P0-T10-bounded-loop-engineering.yaml
+- tasks/closed/P0-T10-bounded-loop-engineering.yaml
+- docs/roadmap/PHASE0_TASKS.md
+- docs/state/CURRENT_STATE.md
+- docs/state/HANDOFF.md
+- docs/state/RISKS.md
+forbidden_actions:
+- Push directly to main or bypass normal pull-request review and exact-head gates.
+- Run upstream install.sh against ForgeLLM, a user home directory, or a global agent-skill directory.
+- Create or treat docs/GOALS.md, docs/STATUS.md, docs/PROJECT_BRIEF.md, or upstream loop ADR numbering as ForgeLLM authority.
+- Execute or vendor an unmodified headless runner that uses eval or otherwise interprets an untrusted VERIFY string through a shell.
+- Install or enable Claude Code or Codex Stop hooks during P0-T10.
+- Run an unbounded loop, daemon, scheduled watcher, or retry process without declared BUDGET and STOP conditions.
+- Allow a loop declaration to widen allowed_paths, verification commands, owner authorization, or external privileges from its task packet.
+- Permit a loop to create, read, print, transmit, rotate, or mutate secrets, tokens, credentials, account settings, billing, Sonar administration, GitHub administration, Tailscale state, or privileged host configuration.
+- Execute vendored third-party scripts merely because they are present; vendored content is evidence/reference until separately allowed by the bridge.
+- Fetch a floating upstream branch at execution time; all adopted upstream content must bind to exact commit and blob hashes.
+- Modify P0-T09 Sonar implementation files or claim that Loop Engineering completes or supersedes P0-T09.
+acceptance_criteria:
+- ADR-0005 is accepted after independent architecture/security review and states that ForgeLLM task packets and accepted ADRs outrank all loop artifacts.
+- Vendored Loop Engineering content is a reviewed static subset from exact upstream commit ae2d610985064bb30c5013261988c813013c09e3 with MIT license and recorded Git blob hashes.
+- The integration does not run upstream install.sh, does not install a Stop hook, and does not include an executable eval-based loop runner.
+- A machine-readable ForgeLLM loop declaration requires exactly the six semantic fields GOAL, SCOPE, VERIFY, BUDGET, STOP, and RECEIPT plus provenance needed to bind it to one task packet and Git base revision.
+- Validation rejects a declaration whose SCOPE exceeds task-packet allowed_paths or whose VERIFY is not an explicitly authorized verification command.
+- Validation rejects missing or non-positive iteration budgets, missing identical-failure stop limits, and declarations that request privileged or secret-bearing operation.
+- Receipts bind task id, plan, base/final commit, iteration count, final verifier output or evidence reference, changed paths, scope result, and stop reason.
+- ForgeLLM bridge skills instruct Claude/Codex to reconstruct state from Git, use one isolated writer branch/worktree, separate writer and verifier for risky work, and never treat upstream generated state as canonical.
+- make ci includes the P0-T10 task-packet and Loop Engineering validation gates without weakening any existing Phase 0 gate.
+- Focused Loop Engineering tests and the complete ForgeLLM suite pass on the exact final pull-request head.
+- CodeQL, GitGuardian, Sonar, and Phase 0 complete successfully on the exact final pull-request head; Dependency Review is reported by its actual terminal conclusion.
+- Independent final review records ACCEPT with no unresolved BLOCKER or MAJOR finding before merge.
+verification_commands:
+- python scripts/validate_task_packet.py tasks/open/P0-T10-bounded-loop-engineering.yaml --root .
+- python scripts/validate_loop_engineering.py --root .
+- python -m pytest -q tests/test_loop_engineering.py
+- make ci
+- git diff --check
+- git status --short
+evidence_requirements:
+- Record owner approval, issue #36, canonical base, branch, implementation head, merge commit, and ADR status.
+- Record upstream repository, exact commit, MIT license blob, every vendored source path, upstream blob SHA, and local content hash.
+- Preserve the supply-chain negative result for the upstream eval-based runner and the decision not to install upstream Stop hooks.
+- Preserve RED then GREEN evidence for scope widening, verifier widening, unbounded budget, privileged operation, shadow-state, provenance, and receipt validation.
+- Record exact commands and raw/linked outputs for focused tests and make ci.
+- Record Phase 0, CodeQL, GitGuardian, Dependency Review, and Sonar exact-head identifiers and conclusions.
+- Record independent architecture/security reviewer identity or model, review input SHA, findings, remediations, and final disposition.
+- On closeout, record that P0-T09 and hardware/backend tasks were not modified or implicitly authorized by P0-T10.
+dependencies: []
+owner_role: Project owner and chief architect delegate
+reviewer_role: Independent architecture and security reviewer
+risk_ids:
+- R-006
+- R-007
+- R-014
+- R-015
