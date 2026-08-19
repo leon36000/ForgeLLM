@@ -1,4 +1,4 @@
-name: P0-T11 external code-quality evidence
+name: P0-T11 external Rust code-quality evidence
 
 on:
   pull_request:
@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 8
     steps:
-      - name: Review exact public P0-T11 candidate with anonymous MCP tools
+      - name: Review exact public P0-T11 Rust diff with anonymous MCP tools
         env:
           GH_TOKEN: ${{ github.token }}
           MOLTLINE_ENDPOINT: https://mcp.moltlinestudio.com/codereview
@@ -99,6 +99,16 @@ jobs:
           if len(diff.encode("utf-8")) > 250_000:
               raise RuntimeError("review diff exceeds the bounded evidence budget")
 
+          rust_sections = []
+          for section in diff.split("diff --git ")[1:]:
+              first_line = section.splitlines()[0]
+              parts = first_line.split()
+              if len(parts) >= 2 and parts[1].removeprefix("b/").endswith(".rs"):
+                  rust_sections.append("diff --git " + section)
+          rust_diff = "".join(rust_sections)
+          if not rust_diff:
+              raise RuntimeError("P0-T11 diff contains no Rust sections")
+
           lib_code = github_get(
               f"https://raw.githubusercontent.com/{repository}/{expected_head}/crates/forgellm-reference/src/lib.rs",
               "text/plain",
@@ -143,10 +153,9 @@ jobs:
           results = {
               "target": {"base": observed_base, "head": observed_head},
               "server": initialized.get("result", {}).get("serverInfo"),
-              "review_diff": call_tool("review_diff", {"diff": diff}),
-              "secret_scan": call_tool("secret_scan", {"text": diff}),
-              "ai_code_smell_scan": call_tool("ai_code_smell_scan", {"code": lib_code}),
-              "complexity_report": call_tool("complexity_report", {"code": lib_code, "language": "rust"}),
+              "rust_review_diff": call_tool("review_diff", {"diff": rust_diff}),
+              "full_diff_secret_scan": call_tool("secret_scan", {"text": diff}),
+              "lib_ai_code_smell_scan": call_tool("ai_code_smell_scan", {"code": lib_code}),
           }
           print(json.dumps(results, indent=2, sort_keys=True))
           PY
