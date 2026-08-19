@@ -353,6 +353,35 @@ def _validate_receipt_scope(receipt: Mapping[str, Any], declaration: Mapping[str
     return issues
 
 
+def _validate_receipt_binding(receipt: Mapping[str, Any], declaration: Mapping[str, Any]) -> list[str]:
+    issues: list[str] = []
+    if receipt.get("schema_version") != "1.0":
+        issues.append("receipt schema_version must be exactly '1.0'")
+    if receipt.get("project") != declaration.get("project") or receipt.get("project") != "ForgeLLM":
+        issues.append("receipt project must match ForgeLLM loop declaration")
+    if receipt.get("task_id") != declaration.get("task_id"):
+        issues.append("receipt task_id must match loop declaration task_id")
+    return issues
+
+
+def _validate_receipt_evidence(receipt: Mapping[str, Any], declaration: Mapping[str, Any]) -> list[str]:
+    issues: list[str] = []
+    if receipt.get("verify_commands") != declaration.get("VERIFY"):
+        issues.append("receipt verify_commands must exactly equal declared VERIFY")
+    evidence = receipt.get("verify_evidence")
+    if not _is_sequence(evidence) or not evidence or not all(isinstance(item, str) and item for item in evidence):
+        issues.append("receipt verify_evidence must be a non-empty array of evidence strings")
+    for field, message in (
+        ("reviewer", "receipt reviewer must identify the independent verifier"),
+        ("plan", "receipt plan must identify the controlling plan"),
+        ("stop_reason", "receipt stop_reason must be non-empty"),
+    ):
+        value = receipt.get(field)
+        if not isinstance(value, str) or not value.strip():
+            issues.append(message)
+    return issues
+
+
 def validate_loop_receipt(receipt: Mapping[str, Any], declaration: Mapping[str, Any]) -> list[str]:
     """Validate reproducible loop evidence without granting the receipt any authority."""
 
@@ -362,25 +391,9 @@ def validate_loop_receipt(receipt: Mapping[str, Any], declaration: Mapping[str, 
         return ["loop declaration must be a mapping before validating its receipt"]
 
     issues = _receipt_keys(receipt)
-    if receipt.get("schema_version") != "1.0":
-        issues.append("receipt schema_version must be exactly '1.0'")
-    if receipt.get("project") != declaration.get("project") or receipt.get("project") != "ForgeLLM":
-        issues.append("receipt project must match ForgeLLM loop declaration")
-    if receipt.get("task_id") != declaration.get("task_id"):
-        issues.append("receipt task_id must match loop declaration task_id")
+    issues.extend(_validate_receipt_binding(receipt, declaration))
     issues.extend(_validate_receipt_commits(receipt, declaration))
     issues.extend(_validate_receipt_counts(receipt, declaration))
     issues.extend(_validate_receipt_scope(receipt, declaration))
-
-    if receipt.get("verify_commands") != declaration.get("VERIFY"):
-        issues.append("receipt verify_commands must exactly equal declared VERIFY")
-    evidence = receipt.get("verify_evidence")
-    if not _is_sequence(evidence) or not evidence or not all(isinstance(item, str) and item for item in evidence):
-        issues.append("receipt verify_evidence must be a non-empty array of evidence strings")
-    if not isinstance(receipt.get("reviewer"), str) or not receipt["reviewer"].strip():
-        issues.append("receipt reviewer must identify the independent verifier")
-    if not isinstance(receipt.get("plan"), str) or not receipt["plan"].strip():
-        issues.append("receipt plan must identify the controlling plan")
-    if not isinstance(receipt.get("stop_reason"), str) or not receipt["stop_reason"].strip():
-        issues.append("receipt stop_reason must be non-empty")
+    issues.extend(_validate_receipt_evidence(receipt, declaration))
     return issues
