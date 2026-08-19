@@ -20,9 +20,18 @@ SPECULATIVE_FORMAT_FILES := \
 	tests/test_speculative_trace.py \
 	tests/test_speculative_adversarial.py
 
-.PHONY: validate test lint verify verify-speculative ci mobile-hashes simulate-cache-draft inventory snapshot clean
+LOOP_FORMAT_FILES := \
+	src/forgellm_governance/loop_engineering.py \
+	scripts/validate_loop_engineering.py \
+	tests/test_loop_engineering.py
 
-validate:
+.PHONY: validate validate-loop test lint verify verify-speculative ci mobile-hashes simulate-cache-draft inventory snapshot clean
+
+validate-loop:
+	$(PYTHON) scripts/validate_task_packet.py tasks/open/P0-T10-bounded-loop-engineering.yaml --root .
+	$(PYTHON) scripts/validate_loop_engineering.py --root .
+
+validate: validate-loop
 	$(PYTHON) scripts/validate_project_state.py --root .
 	$(PYTHON) scripts/validate_research_catalog.py --root .
 	$(PYTHON) scripts/validate_benchmark.py examples/benchmarks/valid-example.json --root .
@@ -44,7 +53,7 @@ test:
 
 lint:
 	$(PYTHON) -m ruff check src scripts tests
-	$(PYTHON) -m ruff format --check $(SPECULATIVE_FORMAT_FILES)
+	$(PYTHON) -m ruff format --check $(SPECULATIVE_FORMAT_FILES) $(LOOP_FORMAT_FILES)
 
 verify: validate test
 
