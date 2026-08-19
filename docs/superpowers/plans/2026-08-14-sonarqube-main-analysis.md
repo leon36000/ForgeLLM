@@ -1,10 +1,10 @@
 # SonarQube Cloud Main-Analysis Recovery Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` or `superpowers:executing-plans` after owner authorization. Do not change Sonar or GitHub configuration during the read-only diagnosis tasks.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` or `superpowers:executing-plans` after owner authorization. Do not change Sonar or GitHub configuration during the read-only diagnosis tasks. This plan preserves historical checkpoints, but accepted ADR-0004 supersedes the earlier proposed state for operative planning and selects `ci_based_only`.
 
 **Goal:** Establish one reproducible SonarQube Cloud analysis method for ForgeLLM that reports a successful pull-request quality gate and a completed successful `main` analysis without suppressing findings.
 
-**Architecture:** Separate evidence collection, method selection, implementation, and closeout. The first stage is read-only and must classify the failure using authenticated Sonar project evidence. A decision gate then selects `automatic_only` or `ci_based_only`; the two implementations are mutually exclusive. Git stores the accepted method and sanitized proof, while Sonar remains an external evidence system.
+**Architecture:** Separate completed evidence collection and method selection from implementation and closeout. Accepted ADR-0004 selects `ci_based_only`; Task 4A is rejected and inactive unless a later accepted ADR supersedes it. Task 4B first prepares a default-off protected-ref scanner path, then optionally adds a separately reviewed pull-request trusted-data bridge. Git stores the accepted method and sanitized proof, while Sonar remains an external evidence system.
 
 **Tech stack:** GitHub REST/check APIs, SonarQube Cloud project UI/API, optional GitHub Actions and Sonar scanner only if CI-based analysis is selected, existing ForgeLLM Python validation tooling. No inference or hardware tooling.
 
@@ -18,6 +18,12 @@
 - Pin any new third-party action to an immutable commit SHA.
 - Treat absent, skipped, cancelled, or annotation-free checks as inconclusive rather than success.
 - Record exact check, workflow, analysis-task, project-binding, and configuration identifiers.
+- A token-bearing process never executes contributor-controlled commands, code, dependencies, build scripts, package-manager hooks, proc macros, tests, or binaries.
+- Never use `pull_request_target`; disable automatic Clippy in the token-bearing scanner and import only bounded, validated reports produced without privileged credentials through trusted fixed paths.
+- Inject `SONAR_TOKEN` only into the final approved scanner step. Workflow/job/container/service environments, same-repository or fork `pull_request` secret delivery, reusable-workflow forwarding, `secrets: inherit`, token propagation through outputs/state, and every earlier/later step are forbidden. Checkout, source/report acquisition, extraction, normalization and validation remain secretless, and no token-bearing post-processing is permitted.
+- The eventual scanner job never checks out contributor-originated source and never executes repository-local actions/scripts or contributor-controlled action metadata. Source/reports enter only as validated data through a separately reviewed secretless transfer boundary. The final scanner step uses only an immutable reviewed external scanner action/invocation whose complete pre/main/post behavior is reviewed.
+- `workflow_run` is forbidden for the current Sonar implementation. Any future PR trusted-data bridge that needs a privileged follow-up trigger requires a separate reviewed design update before that trigger may be introduced.
+- Record immutable action SHA separately from scanner binary version and GPG/signature verification. The exact scanner archive digest remains an open limitation unless independently proven.
 
 ---
 
@@ -64,6 +70,8 @@
 
 ### Task 3: Write the mutually exclusive analysis-method decision
 
+**Status:** historical chronology completed. The earlier `proposed` checkpoint is retained; accepted ADR-0004 dated 2026-08-18 supersedes it for operative planning and selects `ci_based_only`.
+
 **Files:**
 - Create: `docs/adr/ADR-0004-sonarqube-analysis-method.md`
 - Modify: `tasks/open/P0-T09-sonarqube-main-analysis.yaml`
@@ -78,7 +86,7 @@
 
 ### Task 4A: Repair automatic analysis — conditional path
 
-Execute only when ADR-0004 selects `automatic_only`.
+**Status:** rejected and inactive. Do not execute while accepted ADR-0004 selects `ci_based_only`. Retain this section as historical alternative analysis; it becomes operative only if a later accepted ADR explicitly supersedes ADR-0004.
 
 **Possible files:**
 - Create/Modify: `.sonarcloud.properties`
@@ -96,7 +104,7 @@ Execute only when ADR-0004 selects `automatic_only`.
 
 ### Task 4B: Migrate to CI-based analysis — conditional path
 
-Execute only when ADR-0004 selects `ci_based_only`.
+**Status:** operative under accepted ADR-0004. Preparation does not authorize token provisioning, Automatic Analysis mutation, scanner submission, or activation.
 
 **Possible files:**
 - Create: `.github/workflows/sonar.yml`
@@ -105,28 +113,62 @@ Execute only when ADR-0004 selects `ci_based_only`.
 - Modify: `docs/quality/P0-T09-SONAR-BASELINE.md`
 - Modify: `artifacts/governance/P0-T09-sonar-baseline.json`
 
-- [ ] Disable automatic analysis in the Sonar project before the first CI scanner submission.
-- [ ] Create a least-privilege scoped Sonar token and store it only as `SONAR_TOKEN` in GitHub Actions secrets.
-- [ ] Pin scanner/action and checkout dependencies to immutable commit SHAs.
-- [ ] Use read-only workflow permissions unless the official scanner requirement proves otherwise.
-- [ ] Configure pull-request and protected `main` triggers.
-- [ ] Fetch sufficient Git history for Sonar attribution.
-- [ ] Expose project key/organization only through public configuration; never print the token.
-- [ ] Add secret-absence behavior that fails clearly without leaking values.
-- [ ] Validate workflow syntax and repository automation policy.
-- [ ] Run a controlled PR and then `main` analysis.
-- [ ] Roll back and re-enable the previous method only through a reviewed decision if CI analysis fails.
+#### Task 4B.0: Prove the semantic guard before scanner configuration
+
+- [ ] Write unsafe fixtures and demonstrate RED for overlap, activation without disabled readback, direct same-repository/fork `pull_request` secret delivery, `pull_request_target`, `workflow_run`, workflow/job/container/service secret scope, reusable workflows with explicit secret forwarding or `secrets: inherit`, token propagation through outputs/state, reusable/composite/local actions receiving the token, repository-local scripts/actions in the scanner step, contributor-source checkout in the eventual scanner job, scanner/action pre/post hooks or any token-bearing post execution, token-bearing contributor-code execution, automatic Clippy, untrusted configuration/report paths, unbounded bridge inputs, and mutable/unverified scanner provenance.
+- [ ] Implement the smallest semantic governance validator and demonstrate GREEN on safe fixtures while every unsafe fixture remains rejected.
+- [ ] Complete this RED-to-GREEN proof before adding scanner workflow or properties configuration; syntax and grep checks alone do not satisfy the gate.
+
+#### Task 4B.1: Prepare the protected-ref scanner path, inactive by default
+
+- [ ] Prepare a protected trusted-ref token-bearing scanner path that is default-off and mechanically incapable of submission until activation.
+- [ ] Source workflow, connection/project configuration, scanner source/version, token handling, and report paths only from trusted configuration that contributor content cannot override.
+- [ ] Use least-privilege permissions. Any contributor-source checkout and source/report preparation occur only in a separate secretless producer boundary; the eventual scanner job never checks out contributor-originated source. Where checkout is used in a producer, use immutable action pins, non-persistent credentials and only sufficient attribution history.
+- [ ] In the eventual scanner job, prohibit repository-local actions/scripts, reusable workflows, `secrets: inherit`, containers/services that receive the token, and any other contributor-controlled action metadata or executable path. The final scanner step must use only the reviewed immutable external scanner action/invocation, with its complete pre/main/post behavior reviewed.
+- [ ] Disable automatic Clippy and duplicate ingestion. The token-bearing process executes no contributor-controlled commands, code, dependencies, build scripts, package-manager hooks, proc macros, tests, or binaries.
+- [ ] Pin actions to immutable full commit SHAs. Separately pin the scanner binary version and verify its published GPG/signature chain. Do not claim an exact archive digest unless independently proven; carry it as an explicit open limitation.
+- [ ] Bind `SONAR_TOKEN` only on the final approved scanner step. Prohibit workflow/job/container/service secret environments, direct PR secret delivery, reusable-workflow forwarding, `secrets: inherit`, outputs/state propagation, and all other step scopes; ensure source/report acquisition/extraction/normalization/validation complete before token injection; prohibit token-bearing post-processing and unreviewed action pre/post hooks.
+- [ ] Fail clearly on secret absence without printing or probing the value.
+
+#### Task 4B.2: Review token identity and lifecycle before provisioning
+
+- [ ] Review identity, issuer/owner, minimum scope, storage boundary, rotation, expiry, revocation, audit trail, and incident response.
+- [ ] Reject an owner/admin personal token chosen merely for convenience; prefer a dedicated least-privilege identity where supported.
+- [ ] Only after review, store the value as `SONAR_TOKEN`; never record the value or private payload.
+
+#### Task 4B.3: Separately design and review any PR trusted-data bridge
+
+**Status:** blocked for the current implementation increment. `workflow_run` and `pull_request_target` are forbidden for Sonar. Task 4B.0/4B.1 may proceed for a protected trusted ref, but P0-T09 pull-request Sonar completion remains blocked until a separate reviewed bridge design is accepted.
+
+- [ ] Treat the bridge as a separate implementation/review unit. Ordinary fork `pull_request` execution remains secretless and no privileged follow-up trigger is authorized by this plan revision.
+- [ ] Run contributor code and Cargo/Clippy/coverage production only without privileged credentials.
+- [ ] Before any privileged artifact consumer is authorized, specify and test an immutable binding over repository identity, trusted producer workflow identity and immutable workflow SHA, event type, run ID and attempt, PR number, PR head SHA, artifact ID/name, and expected producer commit.
+- [ ] Require an independently recorded artifact digest before consumption; validate the binding and digest without `SONAR_TOKEN` before any extraction or scanner step.
+- [ ] Define extraction into a new empty isolated directory and reject before extraction: duplicate/colliding names, absolute or escaping paths, symlinks, hardlinks, device/special files, excessive entry count, compression bombs, and per-file/aggregate compressed or expanded sizes above explicit limits.
+- [ ] Allowlist exact artifact file names, media/types, encodings and schemas; reject unexpected files, executable or active content, configuration overrides, and any source capable of altering host, organization, project key, token handling, scanner binary/version, or trusted report paths.
+- [ ] Any future consumer must acquire, validate, extract and normalize artifacts entirely without `SONAR_TOKEN`; the token is injected only into the final approved scanner step after all validation succeeds, with no token-bearing post-processing.
+- [ ] If the complete bridge protocol is not independently accepted, defer Sonar proof to a protected trusted ref. An absent/skipped fork Sonar check is not success, and P0-T09 must remain open rather than weakening the trust boundary.
+
+#### Task 4B.4: Activate with direct no-overlap evidence
+
+- [ ] Independently accept the validator, prepared-inactive path, trusted configuration, token lifecycle, provenance, and any bridge.
+- [ ] Record Automatic Analysis enabled readback, then the disable action, then disabled readback, in that order.
+- [ ] Only after disabled readback, enable CI and permit the first submission; never infer state from the mutation request.
+- [ ] Validate exact-head PR/trusted-ref and protected-`main` analyses while preserving other gates.
+- [ ] On initial failure before material Rust analysis, stop submissions, prove CI inactive, and use only reviewed ADR-0004 rollback. After material Rust analysis, repair CI or adopt a later ADR.
 
 ### Task 5: Add governance regression checks
 
 **Files:**
 - Modify: `src/forgellm_governance/validation.py`
-- Modify/Create: `tests/test_validation.py`
-- Modify: `Makefile`
+- Create: `tests/test_sonar_validation.py`
+- Modify: `tests/test_validation.py` only if an existing general-validator regression requires it
+- Modify: `Makefile` only if the dedicated Sonar test module is not already included by the existing test gate
 
 - [ ] Add a failing test that detects simultaneous automatic-analysis configuration assumptions and a committed CI scanner configuration when mechanically observable.
 - [ ] Add a test requiring pinned third-party actions in a Sonar workflow.
 - [ ] Add a test preventing committed token values or suspicious Sonar credential names outside GitHub secret references.
+- [ ] Add semantic tests for the Task 4B trust split, default-off state, ordered activation evidence, automatic-Clippy disablement, trusted fixed paths, bounded bridge data, and distinct action-SHA/scanner-binary provenance.
 - [ ] Add task-packet validation to `make validate`.
 - [ ] Preserve every existing repository gate.
 - [ ] Commit: `test(quality): guard Sonar analysis method`.
@@ -141,7 +183,7 @@ Execute only when ADR-0004 selects `ci_based_only`.
 - [ ] Require CodeQL success.
 - [ ] Require GitGuardian success.
 - [ ] Characterize Dependency Review honestly.
-- [ ] Require Sonar PR check `success`, with issue/hotspot counts recorded.
+- [ ] Require Sonar PR check `success`, with issue/hotspot counts recorded, only after the separate trusted-data bridge design and implementation are independently accepted. Until then this step is blocked and must not be satisfied by `workflow_run`, `pull_request_target`, a direct secret-bearing contributor workflow, or an absent/skipped check.
 - [ ] Request a fresh configuration/security review.
 - [ ] Reject any hidden issue suppression, unpinned action, excessive permission, or mixed analysis method.
 - [ ] Commit review evidence only after exact-head checks.
@@ -166,8 +208,11 @@ Execute only when ADR-0004 selects `ci_based_only`.
 
 ```bash
 python scripts/validate_task_packet.py tasks/open/P0-T09-sonarqube-main-analysis.yaml --root .
+python -c "import yaml; yaml.safe_load(open('tasks/open/P0-T09-sonarqube-main-analysis.yaml', encoding='utf-8'))"
+# Before scanner configuration: prove the semantic validator RED on unsafe fixtures, then GREEN on safe fixtures.
 make ci
-git grep -n -E 'SONAR_TOKEN|sonar\.projectKey|sonarcloud|sonarqube' -- . ':!docs/quality/*' ':!tasks/*'
+git grep -n -E 'pull_request_target|SONAR_TOKEN|sonar\.projectKey|sonar\.scm\.revision|sonarcloud|sonarqube|sonar\.rust\.clippy' -- . ':!docs/quality/*' ':!tasks/*'
+git diff -- tasks/open/P0-T09-sonarqube-main-analysis.yaml docs/superpowers/plans/2026-08-14-sonarqube-main-analysis.md
 git diff --check
 git status --short
 ```
@@ -188,3 +233,5 @@ The final report records:
 8. quality-gate counts and remaining baseline debt;
 9. rollback evidence;
 10. explicit non-claims and next task.
+
+Until implementation evidence exists, state explicitly that no scanner configuration, token provisioning, Automatic Analysis disablement, trusted-data bridge, CI activation, or scanner submission exists. List the exact scanner archive digest as unresolved unless independently proven; do not conflate it with the action SHA or scanner version/GPG verification.

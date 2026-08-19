@@ -7,7 +7,7 @@ charter_goals:
 - Preserve canonical project state in version control.
 - Prevent unverified external integrations from becoming a source of truth.
 - Make quality and security gates reproducible and directly observable.
-goal: Diagnose the SonarQube Cloud automatic main-branch analysis failure, select exactly one supported analysis method, and establish reproducible successful pull-request and main checks without suppressing findings.
+goal: Implement the accepted ADR-0004 ci_based_only method through a reviewed, non-overlapping migration and establish reproducible successful pull-request and protected-main checks without suppressing findings or executing contributor-controlled code in a token-bearing context.
 non_goals:
 - Modify speculative-decoding semantics or tests to satisfy a scanner.
 - Run model inference, hardware probes, benchmarks, runtime, ABI, backend, or kernel work.
@@ -36,17 +36,17 @@ inputs:
 - Owner-authenticated before/after readback confirms `leon36000_ForgeLLM` changed only from Private to Public; project key, GitHub binding and Automatic Analysis remained unchanged. Independent anonymous Sonar Web API reads now return HTTP 200 and confirm visibility public, GitHub binding `leon36000/ForgeLLM`, Automatic Analysis enabled, latest completed main `ncloc=1658`, and Quality Gate `OK`.
 - "Post-remediation Billing & usage readback: Free plan, 50,000 private-LOC entitlement, 48,248 private LOC consumed, approximately 1.8k remaining. The organization is below the private-LOC limit after the visibility correction."
 - Public GitHub main remains `484fec34007fd89f554c9c03bffa9a5275676602`; Sonar's latest completed main analysis remains stale at revision `d5cd25bd9d6fc3f9cded27781c2051939dcdde85`, so a controlled post-remediation PR/main cycle is still required.
-- "Final administrative readback records binding `leon36000/ForgeLLM`, New Code `previous_version`, default/no custom scope or issue-ignore settings, Automatic Analysis enabled with SonarQube Cloud/Autoscan as the observed method, no CI method selected, and default `Sonar way` Quality Gate. No canonical or selected CI scanner is observed. The historical failed-task-to-revision field remains strong correlation rather than a shared-ID proof. No final analysis method has been selected."
+- "Final administrative readback records binding `leon36000/ForgeLLM`, New Code `previous_version`, default/no custom scope or issue-ignore settings, Automatic Analysis enabled with SonarQube Cloud/Autoscan as the observed method, no CI method selected, and default `Sonar way` Quality Gate. No canonical CI scanner was observed. The historical failed-task-to-revision field remains strong correlation rather than a shared-ID proof. This is a historical pre-decision checkpoint: its statement that no final method had been selected was true then, and the later accepted ADR-0004 state supersedes it for operative planning."
 - "Post-remediation pull request #32 exact head 4c6b9be358c68aaae7f440d78b1a6b5eb25d3e02 passed Sonar Quality Gate, Phase 0 run 32093231786, CodeQL run 32093231780, and GitGuardian check-run 95579459513; Dependency Review run 32093231806 / job 95579461797 was terminal skipped and is not success."
 - "Post-merge canonical main 86f32319847a011fb4d48c98f0c467282fcfbe49 supersedes earlier current-main snapshots for Task 3; Sonar main check 95580373383, Phase 0 check 95580302118, and analyze-python check 95580302432 succeeded, and anonymous Sonar readback reports exact revision 86f32319847a011fb4d48c98f0c467282fcfbe49, Quality Gate OK, public visibility, and ncloc 6939."
 - "Current official SonarQube Cloud documentation reviewed 2026-08-18 states Automatic Analysis and CI analysis are mutually exclusive, Automatic Analysis is not eligible for Rust and lacks logs, coverage import, and external-rule-report import, while CI/SonarScanner supports Rust with Cargo/Clippy and coverage/report import; CI requires SONAR_TOKEN and does not bypass LOC entitlement."
-- "On 2026-08-18 the owner delegated operational and project decisions for continued ForgeLLM execution to the chief architect under the existing P0-T09 authorization; the chief architect selected ci_based_only for ADR-0004. This records delegated decision authority and does not claim that the owner personally chose the method. ADR status remains proposed pending independent review."
+- "On 2026-08-18 the owner delegated operational and project decisions for continued ForgeLLM execution to the chief architect under the existing P0-T09 authorization; the chief architect selected ci_based_only for ADR-0004. This historical decision checkpoint records delegated decision authority and does not claim that the owner personally chose the method. Its proposed status was true pending independent review; the later accepted ADR-0004 state supersedes it for operative planning."
 - "For ci_based_only, fork-originated or otherwise untrusted code remains untrusted after ref promotion. No token-bearing job may execute contributor-controlled code. Rust Cargo/Clippy/coverage production must be secretless, and the token-bearing scanner must use trusted configuration with automatic Clippy disabled and import validated reports as data; otherwise CI activation is blocked."
 - "ADR-0004 was accepted on 2026-08-18 after the revised security design received Terra-Pro ACCEPT and the exact two-file pull-request diff received Luna-Pro ACCEPT_FINAL_DIFF. This accepts ci_based_only for Task 4B design only; no CI scanner activation, SONAR_TOKEN provisioning, Automatic Analysis change, or Task 4 implementation has occurred, and final exact-head repository/security gates remain required before merge and implementation transition."
 outputs:
 - Sanitized machine-readable baseline of pull-request and main analysis evidence.
 - Read-only diagnosis and explicit failure classification.
-- "ADR selecting exactly one method: automatic_only or ci_based_only."
+- Accepted ADR-0004 selecting exactly ci_based_only; automatic_only is rejected and inactive unless a later accepted ADR supersedes ADR-0004.
 - Minimal reviewed configuration for the selected method.
 - Regression checks for pinned actions, secret hygiene, and mutually exclusive method configuration where mechanically observable.
 - Successful Sonar pull-request and main analysis evidence on reviewed commits.
@@ -63,6 +63,7 @@ allowed_paths:
 - docs/reviews/P0-T09-SONAR-MAIN-ANALYSIS-REVIEW.md
 - src/forgellm_governance/validation.py
 - tests/test_validation.py
+- tests/test_sonar_validation.py
 - tasks/open/P0-T09-sonarqube-main-analysis.yaml
 - tasks/closed/P0-T09-sonarqube-main-analysis.yaml
 - docs/state/CURRENT_STATE.md
@@ -71,12 +72,15 @@ allowed_paths:
 - docs/roadmap/PHASE0_TASKS.md
 - Makefile
 forbidden_actions:
-- Change any Sonar or GitHub analysis setting before the remaining read-only evidence and a reviewed method-selection ADR.
+- Change any Sonar or GitHub analysis setting before the semantic RED-to-GREEN governance validator, trusted configuration, token identity/lifecycle review, prepared-inactive scanner review, and explicit activation gate required by accepted ADR-0004.
 - Switch to CI-based analysis as a workaround for the LOC subscription limit; the service-level entitlement applies regardless of scanner execution location.
 - Add source exclusions merely to reduce subscription LOC or obtain a green check; no justified generated/vendor/build production source has been identified.
 - Delete a Sonar project, change another project visibility, change ForgeLLM visibility again, migrate subscription plan, or increase LOC entitlement without explicit owner approval appropriate to the destructive, confidentiality, or financial consequence.
 - Run automatic analysis and a CI scanner against the same Sonar project concurrently.
 - Print, log, commit, or transmit SONAR_TOKEN outside the approved GitHub secret boundary.
+- Expose SONAR_TOKEN at workflow/job/container/service scope; deliver it to same-repository or fork pull_request execution; forward it through reusable workflows, explicit secret mappings or secrets-inherit semantics; propagate it through outputs/state; expose it to checkout/source/report acquisition/extraction/normalization/validation; expose it to reusable/composite/local actions or repository-local scripts; expose it to any non-scanner step, action pre/post hook not covered by the reviewed scanner action, or token-bearing post-processing. The current implementation permits only final approved scanner-step injection.
+- Check out contributor-originated source in the eventual scanner job, execute repository-local/contributor-controlled code there, or use repository-local/composite/reusable action metadata in the final token-bearing scanner step. Source/reports must enter only as validated data through a separately reviewed secretless transfer boundary, and the final scanner action/invocation including pre/main/post behavior must be immutable-pinned and reviewed.
+- Use workflow_run or pull_request_target for Sonar in the current implementation. Any future privileged PR bridge trigger requires a separate reviewed design update before it is authorized.
 - Use an unpinned third-party GitHub Action.
 - Grant write permissions when read-only permissions satisfy the documented scanner requirement.
 - Treat an absent, skipped, cancelled, or annotation-free Sonar check as success.
@@ -87,9 +91,14 @@ acceptance_criteria:
 - Authenticated/anonymously reproducible readback records the Sonar project binding, visibility before/after, analysis method, observed last method, failed main task status, quality gate, new-code definition, relevant scope/issue-ignore settings, current plan/LOC entitlement, organization LOC consumption, and ForgeLLM LOC/visibility sufficient to verify the selected subscription/usage remedy.
 - The failure is classified as configuration, binding or permission, source detection, platform limitation, transient service failure, or unknown due to unavailable evidence; the current observed class is platform_limitation / subscription_loc_limit_exceeded with internal branch task status FAILED.
 - "The diagnosed LOC blocker is demonstrably resolved by an evidence-supported owner-approved remediation with before/after state recorded; post-remediation organization private LOC is below entitlement, maintained code is not hidden, and no restricted asset is exposed."
-- A reviewed ADR selects exactly one supported analysis method and documents rollback, secret surface, and the rejected alternative.
-- The repository cannot mechanically contain conflicting automatic-analysis and CI-scanner configuration under the selected method.
-- Any CI scanner action is pinned to an immutable commit and uses least-privilege workflow permissions.
+- Accepted ADR-0004 is the operative decision selecting exactly ci_based_only; the earlier proposed checkpoint remains historical, and Task 4A automatic_only is rejected/inactive unless a later accepted ADR supersedes ADR-0004.
+- Before scanner workflow or properties configuration is added, an executable semantic governance test/validator is demonstrated RED against unsafe fixtures and GREEN against safe fixtures. It rejects method overlap; activation before disabled Automatic Analysis readback; same-repository/fork pull_request secret delivery; pull_request_target; workflow_run; workflow/job/container/service secret scope; reusable-workflow secret forwarding and secrets-inherit semantics; token propagation through outputs/state; reusable/composite/local actions receiving the token; repository-local scripts/actions in the final scanner step; contributor-source checkout in the eventual scanner job; unreviewed scanner/action pre/post hooks or token-bearing post execution; token-bearing contributor-code execution; automatic Clippy in the token-bearing scanner; untrusted scanner configuration/report paths; unbounded bridge data; and mutable or unverified scanner supply-chain inputs.
+- Task 4B first prepares a default-off, inactive token-bearing scanner path limited to protected trusted refs. Contributor-source checkout and source/report preparation occur in a separate secretless boundary; the eventual scanner job never checks out contributor-originated source or executes repository-local/contributor-controlled code. It uses trusted workflow and connection/project configuration, cannot submit while inactive, disables automatic Clippy, and the final scanner step uses only an immutable reviewed external scanner action/invocation whose complete pre/main/post behavior is reviewed.
+- Any pull-request trusted-data bridge is a separate implementation and review unit and is blocked until a separate design is accepted. The current implementation forbids workflow_run and pull_request_target. A future bridge must immutably bind repository, trusted producer workflow and immutable workflow SHA, event, run ID/attempt, PR number/head SHA, artifact ID/name and producer commit; verify an independently recorded digest before consumption; extract secretlessly into an empty isolated directory; reject duplicate names, absolute/escaping paths, symlinks, hardlinks, special files, compression bombs and explicit count/size-limit violations; allowlist exact files/types/encodings/schemas; and inject SONAR_TOKEN only into the final scanner step. Until that proof exists, defer Sonar to a protected trusted ref and keep P0-T09 open rather than treating an absent/skipped PR check as success.
+- Token identity, issuer/owner, minimum scope, storage boundary, rotation, revocation, expiry, auditability, and incident response receive explicit security review before provisioning or activation; no token value or private administrative payload is recorded. SONAR_TOKEN is injected only into the final approved scanner step after all source/report acquisition/extraction/normalization/validation completes secretlessly. Workflow/job/container/service scope, direct PR secret delivery, reusable-workflow forwarding or secrets-inherit semantics, outputs/state propagation, non-scanner steps, repository-local/composite/reusable actions, unreviewed action hooks and token-bearing post-processing are forbidden.
+- Scanner supply-chain evidence distinguishes immutable GitHub Action commit SHA pins from the scanner binary version and its GPG/signature verification. The exact scanner archive digest remains an explicit open limitation unless independently proven and recorded; it is never implied by an action SHA or version string.
+- "The no-overlap activation sequence is evidenced in order: Automatic Analysis enabled readback, disable action, Automatic Analysis disabled readback, and only then CI scanner activation/first submission. A prepared workflow remains default-off and incapable of submission until that sequence completes."
+- Any CI scanner action is pinned to an immutable full commit SHA and uses least-privilege workflow permissions; the scanner binary version and GPG/signature verification are separately pinned and recorded.
 - No credential or private administrative payload is committed, and secret scanning remains green.
 - Phase 0, CodeQL, GitGuardian, and the selected Sonar pull-request analysis succeed on the exact final head.
 - The resulting protected main commit has a completed Sonar check with conclusion success, not cancelled, skipped, absent, or inferred.
@@ -98,8 +107,11 @@ acceptance_criteria:
 - The closeout evidence states all remaining baseline debt and does not claim repository-wide zero issues unless directly proven.
 verification_commands:
 - python scripts/validate_task_packet.py tasks/open/P0-T09-sonarqube-main-analysis.yaml --root .
+- python -c "import yaml; yaml.safe_load(open('tasks/open/P0-T09-sonarqube-main-analysis.yaml', encoding='utf-8'))"
+- Run the semantic Sonar governance validator test RED against unsafe fixtures before scanner configuration, then GREEN against safe fixtures and the prepared inactive configuration.
 - make ci
-- git grep -n -E 'SONAR_TOKEN|sonar\.projectKey|sonarcloud|sonarqube' -- . ':!docs/quality/*' ':!tasks/*'
+- git grep -n -E 'pull_request_target|SONAR_TOKEN|sonar\.projectKey|sonar\.scm\.revision|sonarcloud|sonarqube|sonar\.rust\.clippy' -- . ':!docs/quality/*' ':!tasks/*'
+- git diff -- tasks/open/P0-T09-sonarqube-main-analysis.yaml docs/superpowers/plans/2026-08-14-sonarqube-main-analysis.md
 - git diff --check
 - git status --short
 evidence_requirements:
@@ -107,7 +119,9 @@ evidence_requirements:
 - Preserve exact GitHub check and workflow identifiers for the failing baseline, final pull request, and final main commit, and distinguish GitHub check-run conclusions from internal Sonar background-task status.
 - Preserve sanitized Sonar binding, visibility before/after, method, task, quality-gate, new-code, scope/issue-ignore, Billing & usage, exact LOC entitlement/consumption, and ForgeLLM LOC/visibility readback or hashes of non-public administrative evidence.
 - Record every configuration change before and after, including Sonar UI changes not represented in Git.
-- Record scanner action SHA, workflow permissions, secret name, and token scope when CI-based analysis is selected without exposing the token value.
+- Record the immutable scanner action SHA separately from scanner binary version and GPG/signature verification, plus the reviewed scanner action/invocation pre/main/post behavior, effective caller/callee workflow permissions and secret mappings, absence of workflow/job/container/service and secrets-inherit propagation, secret name, and reviewed token identity/lifecycle without exposing the token value; record the exact archive digest only if proven, otherwise preserve it as an explicit open limitation.
+- Record the ordered Automatic Analysis enabled readback, disable action, disabled readback, and subsequent CI activation/first-submission evidence so non-overlap is directly auditable.
+- Record the prepared-inactive protected-ref scanner path and any separately reviewed trusted-data PR bridge as distinct trust boundaries. For any future bridge, record immutable producer/run/PR/artifact binding, digest, exact schemas/types/encodings, count and size limits, isolated extraction rules, fixed paths, provenance, rejection behavior, and proof that acquisition/validation/extraction are secretless before final scanner-step token injection.
 - Record every Sonar finding and its fix or reviewed disposition; suppression is not an implicit disposition.
 - Record complete Phase 0, CodeQL, GitGuardian, Dependency Review, and Sonar outcomes.
 - Record the delegated method-selection authorization, ADR-0004 review disposition, and exact selected method before implementation.
