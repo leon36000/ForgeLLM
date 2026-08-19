@@ -37,5 +37,9 @@ fn softmax_extreme_shift_remains_finite_and_bounded() {
     assert_close(probabilities[0], 0.5);
     assert_close(probabilities[1], 0.5);
     assert_eq!(probabilities[2], 0.0);
-    assert!(probabilities.iter().all(|probability| probability.is_finite()));
+    assert!(
+        probabilities
+            .iter()
+            .all(|probability| probability.is_finite())
+    );
 }
