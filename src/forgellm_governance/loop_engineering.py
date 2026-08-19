@@ -53,7 +53,39 @@ _GH_READ_ONLY_COMMANDS = {
     ("workflow", "view"),
 }
 _FORBIDDEN_LONG_RUNNING_FLAGS = {"--follow", "--watch"}
+_EXECUTION_WRAPPERS = {
+    ".",
+    "command",
+    "env",
+    "eval",
+    "exec",
+    "find",
+    "nice",
+    "parallel",
+    "setsid",
+    "source",
+    "stdbuf",
+    "timeout",
+    "xargs",
+}
+_FILE_MUTATION_TOOLS = {
+    "chmod",
+    "chown",
+    "chgrp",
+    "cp",
+    "dd",
+    "install",
+    "ln",
+    "mv",
+    "rm",
+    "rmdir",
+    "tee",
+    "touch",
+    "truncate",
+    "unlink",
+}
 _HTTP_MUTATION_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+_HTTP_READ_ONLY_METHODS = {"GET", "HEAD", "OPTIONS"}
 _CURL_LONG_MUTATION_FLAGS = {
     "--data",
     "--data-ascii",
@@ -63,6 +95,7 @@ _CURL_LONG_MUTATION_FLAGS = {
     "--form",
     "--upload-file",
 }
+_CURL_CONFIG_FLAGS = {"-K", "--config"}
 
 
 def _shell_lex(command: str) -> list[str]:
@@ -82,74 +115,154 @@ def _shell_composition_issue(command: str) -> str | None:
     return None
 
 
+def _parameter_expansion_issue(command: str) -> str | None:
+    quote: str | None = None
+    escaped = False
+    for character in command:
+        if escaped:
+            escaped = False
+            continue
+        if character == "\\" and quote != "'":
+            escaped = True
+            continue
+        if quote is None and character in {"'", '"'}:
+            quote = character
+            continue
+        if quote == character:
+            quote = None
+            continue
+        if character == "$" and quote != "'":
+            return "VERIFY command uses shell parameter expansion and must stop_and_escalate"
+    return None
+
+
+def _executable_name(token: str) -> str:
+    return Path(token).name or token
+
+
 def _environment_wrapper_issue(tokens: Sequence[str]) -> str | None:
-    executable = Path(tokens[0]).name
+    executable = _executable_name(tokens[0])
     if executable == "env" or _ENV_ASSIGNMENT.fullmatch(tokens[0]) is not None:
         return "VERIFY command uses environment indirection and must stop_and_escalate"
     return None
 
 
+def _dispatch_wrapper_issue(tokens: Sequence[str]) -> str | None:
+    executable = _executable_name(tokens[0])
+    if executable in _EXECUTION_WRAPPERS:
+        return f"VERIFY command uses execution wrapper {executable!r} and must stop_and_escalate"
+    return None
+
+
+def _file_mutation_issue(tokens: Sequence[str]) -> str | None:
+    executable = _executable_name(tokens[0])
+    if executable in _FILE_MUTATION_TOOLS:
+        return f"VERIFY command uses file mutation tool {executable!r} and must stop_and_escalate"
+    return None
+
+
+def _git_external_flag(token: str) -> bool:
+    return (
+        token in {"--ext-diff", "--textconv", "-O"}
+        or token.startswith("--open-files-in-pager")
+        or token.startswith("-O")
+    )
+
+
 def _git_command_issue(tokens: Sequence[str]) -> str | None:
-    if Path(tokens[0]).name != "git":
+    if _executable_name(tokens[0]) != "git":
         return None
     if len(tokens) < 2 or tokens[1] not in _GIT_READ_ONLY_SUBCOMMANDS:
         return "VERIFY command uses a non-read-only or globally configured Git form and must stop_and_escalate"
-    if any(token in _GIT_EXTERNAL_EXECUTION_FLAGS for token in tokens[2:]):
+    if any(_git_external_flag(token) for token in tokens[2:]):
         return "VERIFY command permits Git to execute an external helper and must stop_and_escalate"
     return None
 
 
+def _gh_forbidden_mode(token: str) -> bool:
+    return token in {"--follow", "--watch", "--web", "-w"} or token.startswith(
+        ("--follow=", "--watch=", "--web=")
+    )
+
+
 def _gh_command_issue(tokens: Sequence[str]) -> str | None:
-    if Path(tokens[0]).name != "gh":
+    if _executable_name(tokens[0]) != "gh":
         return None
     if len(tokens) == 2 and tokens[1] == "status":
         return None
     if len(tokens) < 3 or (tokens[1], tokens[2]) not in _GH_READ_ONLY_COMMANDS:
         return "VERIFY command uses a non-read-only GitHub CLI form and must stop_and_escalate"
-    if any(token in _FORBIDDEN_LONG_RUNNING_FLAGS or token == "--web" for token in tokens[3:]):
+    if any(_gh_forbidden_mode(token) for token in tokens[3:]):
         return "VERIFY command uses an interactive or unbounded GitHub CLI mode and must stop_and_escalate"
     return None
 
 
+def _make_command_issue(tokens: Sequence[str]) -> str | None:
+    if _executable_name(tokens[0]) != "make":
+        return None
+    if any(token.startswith("-") or "=" in token for token in tokens[1:]):
+        return "VERIFY command changes Make configuration or evaluation and must stop_and_escalate"
+    return None
+
+
+def _curl_short_option_issue(token: str, next_token: str | None) -> str | None:
+    if not token.startswith("-") or token.startswith("--") or token == "-":
+        return None
+    cluster = token[1:]
+    if any(flag in cluster for flag in "dFTK"):
+        return "VERIFY command performs or configures an HTTP mutation and must stop_and_escalate"
+    if "X" not in cluster:
+        return None
+    method = cluster.split("X", 1)[1] or (next_token or "")
+    if method.upper() not in _HTTP_READ_ONLY_METHODS:
+        return "VERIFY command performs an HTTP mutation and must stop_and_escalate"
+    return None
+
+
 def _curl_mutation_issue(tokens: Sequence[str]) -> str | None:
-    if Path(tokens[0]).name != "curl":
+    if _executable_name(tokens[0]) != "curl":
         return None
     for index, token in enumerate(tokens[1:], start=1):
+        next_token = tokens[index + 1] if index + 1 < len(tokens) else None
         if token in _legacy._CURL_MUTATION_FLAGS:
             return "VERIFY command performs an HTTP mutation and must stop_and_escalate"
+        if token in _CURL_CONFIG_FLAGS or token.startswith(("-K", "--config=")):
+            return "VERIFY command loads external curl configuration and must stop_and_escalate"
         if any(token.startswith(flag + "=") for flag in _CURL_LONG_MUTATION_FLAGS):
             return "VERIFY command performs an HTTP mutation and must stop_and_escalate"
-        if len(token) > 2 and token[:2] in {"-d", "-F", "-T"}:
-            return "VERIFY command performs an HTTP mutation and must stop_and_escalate"
-        if token.startswith("-X") and len(token) > 2 and token[2:].upper() in _HTTP_MUTATION_METHODS:
-            return "VERIFY command performs an HTTP mutation and must stop_and_escalate"
-        if (
-            token in {"-X", "--request"}
-            and index + 1 < len(tokens)
-            and tokens[index + 1].upper() in _HTTP_MUTATION_METHODS
-        ):
-            return "VERIFY command performs an HTTP mutation and must stop_and_escalate"
-        if token.startswith("--request=") and token.split("=", 1)[1].upper() in _HTTP_MUTATION_METHODS:
-            return "VERIFY command performs an HTTP mutation and must stop_and_escalate"
+        short_issue = _curl_short_option_issue(token, next_token)
+        if short_issue is not None:
+            return short_issue
+        if token in {"-X", "--request"} and next_token is not None:
+            if next_token.upper() not in _HTTP_READ_ONLY_METHODS:
+                return "VERIFY command performs an HTTP mutation and must stop_and_escalate"
+        if token.startswith("--request="):
+            method = token.split("=", 1)[1].upper()
+            if method not in _HTTP_READ_ONLY_METHODS:
+                return "VERIFY command performs an HTTP mutation and must stop_and_escalate"
     return None
 
 
 def _wget_mutation_issue(tokens: Sequence[str]) -> str | None:
-    if Path(tokens[0]).name != "wget":
+    if _executable_name(tokens[0]) != "wget":
         return None
     for index, token in enumerate(tokens[1:], start=1):
         lowered = token.lower()
-        if lowered.startswith(("--post-data", "--post-file")):
-            return "VERIFY command performs an HTTP mutation and must stop_and_escalate"
-        if token == "--method" and index + 1 < len(tokens) and tokens[index + 1].upper() in _HTTP_MUTATION_METHODS:
-            return "VERIFY command performs an HTTP mutation and must stop_and_escalate"
-        if lowered.startswith("--method=") and lowered.split("=", 1)[1].upper() in _HTTP_MUTATION_METHODS:
-            return "VERIFY command performs an HTTP mutation and must stop_and_escalate"
+        next_token = tokens[index + 1] if index + 1 < len(tokens) else None
+        if lowered.startswith(("--post-data", "--post-file", "--config=")) or token == "--config":
+            return "VERIFY command performs or configures an HTTP mutation and must stop_and_escalate"
+        if token == "--method" and next_token is not None:
+            if next_token.upper() not in _HTTP_READ_ONLY_METHODS:
+                return "VERIFY command performs an HTTP mutation and must stop_and_escalate"
+        if lowered.startswith("--method="):
+            method = lowered.split("=", 1)[1].upper()
+            if method not in _HTTP_READ_ONLY_METHODS:
+                return "VERIFY command performs an HTTP mutation and must stop_and_escalate"
     return None
 
 
 def _privileged_tool_issue(tokens: Sequence[str]) -> str | None:
-    executable = Path(tokens[0]).name
+    executable = _executable_name(tokens[0])
     if executable in {"kubectl", "terraform"}:
         return f"VERIFY command uses privileged external tool {executable!r} and must stop_and_escalate"
     return None
@@ -158,9 +271,10 @@ def _privileged_tool_issue(tokens: Sequence[str]) -> str | None:
 def _hardened_verify_issue(command: Any) -> str | None:
     if not isinstance(command, str) or not command.strip():
         return None
-    composition_issue = _shell_composition_issue(command)
-    if composition_issue is not None:
-        return composition_issue
+    for raw_check in (_shell_composition_issue, _parameter_expansion_issue):
+        issue = raw_check(command)
+        if issue is not None:
+            return issue
     try:
         tokens = shlex.split(command, posix=True)
     except ValueError as exc:
@@ -169,8 +283,11 @@ def _hardened_verify_issue(command: Any) -> str | None:
         return "VERIFY command must be non-empty after parsing"
     for check in (
         _environment_wrapper_issue,
+        _dispatch_wrapper_issue,
+        _file_mutation_issue,
         _git_command_issue,
         _gh_command_issue,
+        _make_command_issue,
         _curl_mutation_issue,
         _wget_mutation_issue,
         _privileged_tool_issue,
