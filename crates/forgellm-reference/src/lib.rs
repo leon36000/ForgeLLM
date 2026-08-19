@@ -114,7 +114,10 @@ impl Display for ReferenceError {
                 "{operation} dimension mismatch: left={left}, right={right}"
             ),
             Self::ShapeMismatch { operation } => {
-                write!(formatter, "{operation} requires tensors with identical shapes")
+                write!(
+                    formatter,
+                    "{operation} requires tensors with identical shapes"
+                )
             }
             Self::IndexOutOfBounds {
                 operation,
