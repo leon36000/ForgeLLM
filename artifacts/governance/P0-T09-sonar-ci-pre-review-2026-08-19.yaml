@@ -1,0 +1,110 @@
+schema_version: '1.0'
+project: ForgeLLM
+task_id: P0-T09
+artifact_type: security_configuration_pre_review
+status: pending_remediation
+date: '2026-08-19'
+reviewed_base:
+  branch: p0-t09-sonar-ci-prep
+  commit: 20a83bdf63026ef2123fbd1512c8b30f981a40f2
+review_scope:
+  - .github/workflows/sonar.yml
+  - src/forgellm_governance/validation.py
+  - tests/test_validation.py
+  - docs/superpowers/plans/2026-08-14-sonarqube-main-analysis.md
+authority:
+  task_packet: tasks/open/P0-T09-sonarqube-main-analysis.yaml
+  accepted_adr: docs/architecture/ADR-0004-sonarqube-analysis-method.md
+  selected_method: ci_based_only
+observed_safe_properties:
+  - The secret-bearing workflow has no pull_request, pull_request_target, or workflow_run trigger.
+  - GitHub permissions are exactly contents: read.
+  - Checkout and scanner actions are pinned to immutable commits.
+  - Trusted project settings are created before checkout outside the pull-request tree.
+  - No project build, package, test, Cargo, Clippy, or coverage command runs in the token-bearing jobs.
+  - The activation kill switch remains false or absent and Automatic Analysis remains the sole submitting method.
+findings:
+  - id: P0-T09-PR35-B01
+    severity: BLOCKER
+    title: Manual head_ref can inject additional SonarScanner properties
+    observation: >-
+      workflow_dispatch input head_ref is interpolated directly into the scanner action args string.
+      The pinned action parses the complete args string with string-argv and forwards each token to
+      SonarScanner. A value containing whitespace followed by -Dsonar.* creates additional scanner
+      command-line properties inside the job carrying SONAR_TOKEN.
+    impact: >-
+      Scanner command-line properties outrank the trusted project settings file, so operator-supplied
+      metadata can widen or redirect analysis configuration despite the trusted-settings boundary.
+    required_remediation:
+      - Resolve pull-request metadata in a secretless controller job from GitHub's live API.
+      - Require an open pull request, base main, expected repository, exact current head SHA, and matching head ref.
+      - Pass only validated controller outputs to the scanner job.
+      - Do not interpolate raw workflow_dispatch string inputs into scanner args.
+      - Add a RED test proving that whitespace plus an extra -D property cannot reach the scanner.
+  - id: P0-T09-PR35-M01
+    severity: MAJOR
+    title: Main and pull-request scans share one cancelling concurrency group
+    observation: >-
+      The workflow-level group sonar-${{ github.workflow }}-${{ github.ref }} evaluates to the same
+      refs/heads/main group for a push to main and a workflow_dispatch launched from main, while
+      cancel-in-progress is true.
+    impact: >-
+      A pull-request dispatch can cancel exact-main evidence, a main push can cancel pull-request
+      evidence, and independently dispatched pull requests can cancel one another.
+    required_remediation:
+      - Move concurrency to jobs or use an event-aware group.
+      - Reserve a stable non-cancelling main group distinct from per-pull-request groups.
+      - Add a RED structural test proving the groups are disjoint.
+  - id: P0-T09-PR35-M02
+    severity: MAJOR
+    title: Pull-request metadata is not bound to live GitHub state in the workflow
+    observation: >-
+      Required typed inputs prove only their YAML types. The workflow does not prove that pr_number,
+      head_sha, and head_ref identify the same currently open pull request with base main immediately
+      before credentialed analysis.
+    impact: >-
+      A stale or inconsistent dispatch can scan one commit while publishing analysis metadata for a
+      different pull request, invalidating exact-head evidence.
+    required_remediation:
+      - Implement a secretless GitHub metadata validation job before the credentialed scanner.
+      - Fail closed on closed PRs, forks or repositories outside the accepted boundary, non-main base,
+        stale SHA, mismatched ref, and missing API evidence.
+      - Bind checkout and Sonar pull-request arguments only to validated outputs.
+  - id: P0-T09-PR35-M03
+    severity: MAJOR
+    title: Repository validator does not enforce an exact credentialed workflow surface
+    observation: >-
+      Required scanner arguments are checked by substring; only the first checkout and scanner are
+      validated; extra jobs, extra uses actions, duplicate checkout or scanner actions, and additional
+      scanner properties are not rejected. Extra run steps are restricted, but extra uses steps are not.
+    impact: >-
+      A future credentialed workflow drift can pass make ci while expanding actions or scanner
+      configuration beyond the reviewed boundary.
+    required_remediation:
+      - Require the exact job set and exact ordered step shapes.
+      - Require exactly one trusted settings initializer, token preflight, checkout, and scanner per job.
+      - Reject every additional uses or run step in credentialed jobs.
+      - Tokenize scanner arguments and require exact equality with the reviewed argument set.
+      - Validate the concurrency invariant.
+verification_plan:
+  red:
+    - python -m pytest -q tests/test_validation.py
+    - make ci
+  green:
+    - python -m pytest -q tests/test_validation.py
+    - make ci
+    - git diff --check
+    - git status --short
+  external_exact_head:
+    - Phase 0
+    - CodeQL
+    - GitGuardian
+    - Sonar Automatic while CI activation remains disabled
+    - Dependency Review reported by its actual conclusion
+non_claims:
+  - This artifact is not an independent final ACCEPT.
+  - No SONAR_TOKEN was created, read, changed, or exposed.
+  - No SonarQube Cloud or GitHub administrative setting was changed.
+  - Automatic Analysis was not disabled and CI-based analysis was not activated.
+  - No scanner execution was dispatched from this review branch.
+  - No finding was suppressed, accepted, or hidden.
