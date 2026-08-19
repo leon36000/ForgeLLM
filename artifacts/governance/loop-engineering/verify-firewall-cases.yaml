@@ -38,3 +38,21 @@ rejected:
   - kubectl apply -f deployment.yaml
   - systemctl restart docker
   - echo $(gh secret list)
+  - make ci && git push origin main
+  - make ci; gh pr merge 37
+  - make ci > /tmp/forgellm-ci.log
+  - env git push origin main
+  - command git push origin main
+  - timeout 30 git push origin main
+  - git restore --source=HEAD~1 src/forgellm_governance/loop_engineering.py
+  - git branch -D review-head
+  - git add .
+  - git rm -r artifacts/governance
+  - git stash push -m hidden-mutation
+  - git worktree add /tmp/forgellm-review main
+  - git config user.email attacker@example.invalid
+  - gh pr merge 37
+  - gh workflow run phase0.yml
+  - gh issue close 36
+  - gh release create unsafe-release
+  - kubectl get secret sonar-token

@@ -1,19 +1,13 @@
 schema_version: '1.0'
 project: ForgeLLM
 task_id: P0-T10
-base_commit: 6a7bf616b972bab00649962fe4eaed84a5020dbf
-GOAL: Eliminate remaining authority and evidence escalation paths in bounded Loop Engineering and produce an exact-head independent-review candidate.
+base_commit: 9220cd97e9bda22fc8df3c0805358c7409f93be5
+GOAL: Close the remaining verifier-command authority bypasses and make committed receipt evidence fail closed without widening P0-T10 authority.
 SCOPE:
   - src/forgellm_governance/loop_engineering.py
   - scripts/validate_loop_engineering.py
   - tests/test_loop_engineering.py
-  - third_party/loop-engineering/PROVENANCE.yaml
   - artifacts/governance/loop-engineering/
-  - .agents/skills/forgellm-loop-engineering/
-  - .claude/skills/forgellm-loop-engineering/
-  - AGENTS.md
-  - CLAUDE.md
-  - Makefile
   - docs/quality/P0-T10-LOOP-ENGINEERING.md
   - tasks/open/P0-T10-bounded-loop-engineering.yaml
   - docs/architecture/ADR-0005-bounded-loop-engineering.md
@@ -31,4 +25,4 @@ STOP:
   on_budget_exhausted: true
   on_identical_failure_limit: true
   privileged_operation: stop_and_escalate
-RECEIPT: artifacts/governance/loop-engineering/receipts/P0-T10-run-02.yaml
+RECEIPT: artifacts/governance/loop-engineering/receipts/P0-T10-run-03.yaml
