@@ -29,6 +29,40 @@ _SECRET_PATTERNS = {
     "private key": re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
 }
 _TEXT_SUFFIXES = {".md", ".txt", ".yaml", ".yml", ".json", ".toml", ".py", ".sh"}
+_SONAR_WORKFLOW_PATH = ".github/workflows/sonar.yml"
+_SONAR_PROPERTIES_PATH = "sonar-project.properties"
+_SONAR_AUTOMATIC_PROPERTIES_PATH = ".sonarcloud.properties"
+_SONAR_ADR_PATH = "docs/architecture/ADR-0004-sonarqube-analysis-method.md"
+_SONAR_SCANNER_ACTION = "SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f"
+_SONAR_CHECKOUT_PREFIX = "actions/checkout@"
+_SONAR_TOKEN_NAME = "SONAR_TOKEN"
+_SONAR_TOKEN_REFERENCE = "${{ secrets.SONAR_TOKEN }}"
+_SONAR_SCANNER_VERSION = "8.1.0.6389"
+_SONAR_EXPECTED_PROPERTIES = {
+    "sonar.projectKey": "leon36000_ForgeLLM",
+    "sonar.sourceEncoding": "UTF-8",
+    "sonar.sources": ".sonar-input/source",
+    "sonar.rust.clippy.enable": "false",
+    "sonar.rust.clippyReport.reportPaths": ".sonar-input/reports/clippy.json",
+}
+_SONAR_EXPECTED_ARGS = " ".join(
+    (
+        "-Dsonar.host.url=https://sonarcloud.io",
+        "-Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}",
+        "-Dsonar.projectKey=leon36000_ForgeLLM",
+        "-Dsonar.sources=.sonar-input/source",
+        "-Dsonar.rust.clippy.enable=false",
+        "-Dsonar.rust.clippyReport.reportPaths=.sonar-input/reports/clippy.json",
+        "-Dsonar.qualitygate.wait=true",
+        "-Dsonar.qualitygate.timeout=300",
+    )
+)
+_SONAR_CONTRIBUTOR_COMMAND = re.compile(
+    r"(?:^|[;&|]\s*|\s)(?:\./|cargo(?:\s|$)|make(?:\s|$)|cmake(?:\s|$)|ninja(?:\s|$)|"
+    r"pytest(?:\s|$)|python(?:3)?\s+(?:-m\s+)?(?:pytest|build|pip)|npm(?:\s|$)|pnpm(?:\s|$)|"
+    r"yarn(?:\s|$)|git\s+(?:clone|checkout|switch)|bash\s+(?:\./)?(?:scripts?/|\.github/)|"
+    r"sh\s+(?:\./)?(?:scripts?/|\.github/))"
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -350,11 +384,639 @@ def validate_research_catalogs(root: Path | str) -> list[ValidationIssue]:
     return issues
 
 
+def _sonar_mapping(value: Any) -> Mapping[str, Any]:
+    return value if isinstance(value, Mapping) else {}
+
+
+def _sonar_sequence(value: Any) -> list[Any]:
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return list(value)
+    return []
+
+
+def _sonar_truthy(value: Any) -> bool:
+    return value is True or (isinstance(value, str) and value.lower() == "true")
+
+
+def _sonar_contains_token(value: Any) -> bool:
+    if isinstance(value, Mapping):
+        return any(
+            _SONAR_TOKEN_NAME in str(key) or _sonar_contains_token(item)
+            for key, item in value.items()
+        )
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return any(_sonar_contains_token(item) for item in value)
+    return isinstance(value, str) and _SONAR_TOKEN_NAME in value
+
+
+def _sonar_add_issue(
+    issues: list[ValidationIssue],
+    path: Path | str,
+    code: str,
+    message: str,
+) -> None:
+    issue = ValidationIssue(str(path), f"[{code}] {message}")
+    if issue not in issues:
+        issues.append(issue)
+
+
+def _sonar_method_is_accepted(root: Path) -> bool:
+    adr_path = root / _SONAR_ADR_PATH
+    try:
+        text = adr_path.read_text(encoding="utf-8")
+    except (FileNotFoundError, UnicodeDecodeError):
+        return False
+    status_accepted = re.search(r"(?mi)^\s*-\s+\*\*Status:\*\*\s+accepted\s*$", text) is not None
+    decision = re.search(r"(?ms)^\s*##\s+Decision\s*$\n(?P<body>.*?)(?=^\s*##\s+|\Z)", text)
+    return (
+        status_accepted
+        and decision is not None
+        and re.search(r"Select exactly[^\n]*`ci_based_only`", decision.group("body")) is not None
+    )
+
+
+def _sonar_load_workflow(path: Path, issues: list[ValidationIssue]) -> Mapping[str, Any]:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        _sonar_add_issue(
+            issues,
+            path,
+            "SONAR_CONFIG_PAIR",
+            "Sonar workflow and properties must be prepared together",
+        )
+        return {}
+    except UnicodeDecodeError as exc:
+        _sonar_add_issue(issues, path, "SONAR_WORKFLOW_YAML", f"workflow must be UTF-8: {exc}")
+        return {}
+    try:
+        document = yaml.load(text, Loader=yaml.BaseLoader)
+    except yaml.YAMLError as exc:
+        _sonar_add_issue(issues, path, "SONAR_WORKFLOW_YAML", f"invalid workflow YAML: {exc}")
+        return {}
+    if not isinstance(document, Mapping):
+        _sonar_add_issue(issues, path, "SONAR_WORKFLOW_YAML", "workflow root must be an object")
+        return {}
+    return document
+
+
+def _sonar_load_properties(path: Path, issues: list[ValidationIssue]) -> Mapping[str, str]:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        _sonar_add_issue(
+            issues,
+            path,
+            "SONAR_CONFIG_PAIR",
+            "Sonar workflow and properties must be prepared together",
+        )
+        return {}
+    except UnicodeDecodeError as exc:
+        _sonar_add_issue(issues, path, "SONAR_TRUSTED_CONFIG", f"properties must be UTF-8: {exc}")
+        return {}
+
+    properties: dict[str, str] = {}
+    invalid = False
+    for line_number, raw_line in enumerate(text.splitlines(), start=1):
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            invalid = True
+            _sonar_add_issue(
+                issues,
+                f"{path}:{line_number}",
+                "SONAR_TRUSTED_CONFIG",
+                "property lines must be deterministic key=value assignments",
+            )
+            continue
+        key, value = (part.strip() for part in line.split("=", maxsplit=1))
+        if key in properties:
+            invalid = True
+            _sonar_add_issue(
+                issues,
+                f"{path}:{line_number}",
+                "SONAR_TRUSTED_CONFIG",
+                f"duplicate property key: {key}",
+            )
+            continue
+        properties[key] = value
+
+    if properties.get("sonar.rust.clippy.enable") != "false":
+        _sonar_add_issue(
+            issues,
+            path,
+            "SONAR_CLIPPY",
+            "automatic Clippy must be disabled in the token-bearing scanner",
+        )
+    if invalid or properties != _SONAR_EXPECTED_PROPERTIES:
+        _sonar_add_issue(
+            issues,
+            path,
+            "SONAR_TRUSTED_CONFIG",
+            "Sonar properties must contain only the reviewed fixed source, report, project, encoding, and Clippy settings",
+        )
+    return properties
+
+
+def _sonar_local_action_metadata(root: Path, uses: str) -> Mapping[str, Any]:
+    action_root = root / uses.removeprefix("./")
+    for name in ("action.yml", "action.yaml"):
+        path = action_root / name
+        if not path.is_file():
+            continue
+        try:
+            document = yaml.load(path.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+        except (UnicodeDecodeError, yaml.YAMLError):
+            return {}
+        return _sonar_mapping(document)
+    return {}
+
+
+def _sonar_validate_events(
+    workflow_path: Path,
+    workflow: Mapping[str, Any],
+    issues: list[ValidationIssue],
+) -> None:
+    events = _sonar_mapping(workflow.get("on"))
+    allowed = {"push", "workflow_dispatch"}
+    forbidden = {"pull_request", "pull_request_target", "workflow_run"}
+    if forbidden.intersection(events) or set(events) - allowed:
+        _sonar_add_issue(
+            issues,
+            workflow_path,
+            "SONAR_FORBIDDEN_EVENT",
+            "pull-request, workflow-run, and other unreviewed privileged scanner events are forbidden",
+        )
+    if set(events) != allowed:
+        _sonar_add_issue(
+            issues,
+            workflow_path,
+            "SONAR_ACTIVATION_GATE",
+            "prepared scanner workflow events must be exactly push on main and trusted manual dispatch",
+        )
+
+    push = _sonar_mapping(events.get("push"))
+    if push.get("branches") != ["main"]:
+        _sonar_add_issue(
+            issues,
+            workflow_path,
+            "SONAR_ACTIVATION_GATE",
+            "push activation must target only the protected main branch",
+        )
+
+    dispatch = _sonar_mapping(events.get("workflow_dispatch"))
+    if dispatch.get("inputs") not in (None, {}):
+        _sonar_add_issue(
+            issues,
+            workflow_path,
+            "SONAR_BRIDGE_BOUNDS",
+            "Task 4B.0 forbids contributor-controlled dispatch inputs before the bridge design is accepted",
+        )
+
+    permissions = _sonar_mapping(workflow.get("permissions"))
+    if dict(permissions) != {"contents": "read"}:
+        _sonar_add_issue(
+            issues,
+            workflow_path,
+            "SONAR_ACTIVATION_GATE",
+            "workflow permissions must be exactly contents: read",
+        )
+
+
+def _sonar_validate_job_scopes(
+    workflow_path: Path,
+    workflow: Mapping[str, Any],
+    jobs: Mapping[str, Any],
+    issues: list[ValidationIssue],
+) -> None:
+    if _sonar_contains_token(workflow.get("env")):
+        _sonar_add_issue(
+            issues,
+            workflow_path,
+            "SONAR_TOKEN_SCOPE",
+            "Sonar credentials are forbidden at workflow scope",
+        )
+
+    for job_name in sorted(jobs):
+        job = _sonar_mapping(jobs[job_name])
+        job_path = f"{workflow_path}#jobs.{job_name}"
+        secrets = job.get("secrets")
+        if "uses" in job and (secrets == "inherit" or _sonar_contains_token(secrets)):
+            _sonar_add_issue(
+                issues,
+                job_path,
+                "SONAR_REUSABLE_SECRET",
+                "reusable workflows must not receive inherited or explicit Sonar credentials",
+            )
+        if _sonar_contains_token(job.get("env")):
+            _sonar_add_issue(
+                issues,
+                job_path,
+                "SONAR_TOKEN_SCOPE",
+                "Sonar credentials are forbidden at job scope",
+            )
+        if _sonar_contains_token(_sonar_mapping(job.get("container")).get("env")):
+            _sonar_add_issue(
+                issues,
+                job_path,
+                "SONAR_TOKEN_SCOPE",
+                "Sonar credentials are forbidden at container scope",
+            )
+        services = _sonar_mapping(job.get("services"))
+        if any(_sonar_contains_token(_sonar_mapping(service).get("env")) for service in services.values()):
+            _sonar_add_issue(
+                issues,
+                job_path,
+                "SONAR_TOKEN_SCOPE",
+                "Sonar credentials are forbidden at service scope",
+            )
+        if _sonar_contains_token(job.get("outputs")):
+            _sonar_add_issue(
+                issues,
+                job_path,
+                "SONAR_TOKEN_PROPAGATION",
+                "Sonar credentials must not propagate through job outputs",
+            )
+        if _sonar_truthy(job.get("continue-on-error")):
+            _sonar_add_issue(
+                issues,
+                job_path,
+                "SONAR_RESULT_MASKING",
+                "scanner job failure must not be converted to success",
+            )
+        job_permissions = job.get("permissions")
+        if job_permissions is not None and dict(_sonar_mapping(job_permissions)) != {"contents": "read"}:
+            _sonar_add_issue(
+                issues,
+                job_path,
+                "SONAR_ACTIVATION_GATE",
+                "job permissions must not widen the workflow's contents: read grant",
+            )
+
+
+def _sonar_find_scanner_job(jobs: Mapping[str, Any]) -> tuple[str | None, Mapping[str, Any]]:
+    named = _sonar_mapping(jobs.get("scanner"))
+    if named:
+        return "scanner", named
+    for job_name in sorted(jobs):
+        job = _sonar_mapping(jobs[job_name])
+        for step in _sonar_sequence(job.get("steps")):
+            if not isinstance(step, Mapping):
+                continue
+            if str(step.get("uses", "")).startswith("SonarSource/sonarqube-scan-action@"):
+                return job_name, job
+            if _sonar_contains_token(step):
+                return job_name, job
+    return None, {}
+
+
+def _sonar_validate_scanner_job(
+    root: Path,
+    workflow_path: Path,
+    scanner_name: str | None,
+    scanner_job: Mapping[str, Any],
+    jobs: Mapping[str, Any],
+    issues: list[ValidationIssue],
+) -> None:
+    if scanner_name is None:
+        _sonar_add_issue(
+            issues,
+            workflow_path,
+            "SONAR_SCANNER_PROVENANCE",
+            "exactly one reviewed scanner job is required",
+        )
+        return
+
+    job_path = f"{workflow_path}#jobs.{scanner_name}"
+    condition = str(scanner_job.get("if", ""))
+    required_guards = (
+        "vars.FORGELLM_ENABLE_SONAR_CI == 'true'",
+        "vars.FORGELLM_AUTOMATIC_ANALYSIS_DISABLED == 'true'",
+        "github.ref == 'refs/heads/main'",
+    )
+    if any(marker not in condition for marker in required_guards):
+        _sonar_add_issue(
+            issues,
+            job_path,
+            "SONAR_ACTIVATION_GATE",
+            "scanner activation must be default-off, require the disabled-Automatic-Analysis gate, and target protected main",
+        )
+    if scanner_job.get("runs-on") != "ubuntu-24.04":
+        _sonar_add_issue(
+            issues,
+            job_path,
+            "SONAR_ACTIVATION_GATE",
+            "scanner job must run on ubuntu-24.04",
+        )
+    try:
+        timeout = int(str(scanner_job.get("timeout-minutes", "0")))
+    except ValueError:
+        timeout = 0
+    if not 1 <= timeout <= 20:
+        _sonar_add_issue(
+            issues,
+            job_path,
+            "SONAR_ACTIVATION_GATE",
+            "scanner job timeout must be bounded to at most 20 minutes",
+        )
+
+    needs_value = scanner_job.get("needs")
+    needs = [needs_value] if isinstance(needs_value, str) else [str(item) for item in _sonar_sequence(needs_value)]
+    if not needs or any(name not in jobs for name in needs):
+        _sonar_add_issue(
+            issues,
+            job_path,
+            "SONAR_PRODUCER_BOUNDARY",
+            "scanner must consume a separately reviewed secretless producer boundary",
+        )
+
+    raw_steps = scanner_job.get("steps")
+    all_steps = _sonar_sequence(raw_steps)
+    steps = [step for step in all_steps if isinstance(step, Mapping)]
+    if not isinstance(raw_steps, Sequence) or isinstance(raw_steps, (str, bytes, bytearray)) or len(steps) != len(all_steps):
+        _sonar_add_issue(
+            issues,
+            job_path,
+            "SONAR_SCANNER_PROVENANCE",
+            "scanner job steps must be a deterministic array of objects",
+        )
+
+    action_indexes = [
+        index
+        for index, step in enumerate(steps)
+        if str(step.get("uses", "")).startswith("SonarSource/sonarqube-scan-action@")
+    ]
+    token_indexes = [index for index, step in enumerate(steps) if _sonar_contains_token(step)]
+    if len(action_indexes) != 1:
+        _sonar_add_issue(
+            issues,
+            job_path,
+            "SONAR_SCANNER_PROVENANCE",
+            "exactly one reviewed scanner action is required",
+        )
+    if len(token_indexes) != 1:
+        _sonar_add_issue(
+            issues,
+            job_path,
+            "SONAR_TOKEN_SCOPE",
+            "exactly one final scanner step may reference the Sonar credential",
+        )
+
+    if len(action_indexes) == 1:
+        scanner_index = action_indexes[0]
+    elif token_indexes:
+        scanner_index = token_indexes[-1]
+    else:
+        return
+
+    scanner_step = steps[scanner_index]
+    scanner_path = f"{job_path}.steps[{scanner_index}]"
+    if scanner_index != len(steps) - 1:
+        _sonar_add_issue(
+            issues,
+            scanner_path,
+            "SONAR_SCANNER_FINAL_STEP",
+            "the token-bearing scanner action must be the final job step with no post-processing",
+        )
+
+    for index, step in enumerate(steps):
+        step_path = f"{job_path}.steps[{index}]"
+        uses = str(step.get("uses", ""))
+        run = str(step.get("run", ""))
+        if uses.startswith(_SONAR_CHECKOUT_PREFIX) or re.search(
+            r"\bgit\s+(?:clone|checkout|switch)\b|github\.event\.pull_request|github\.head_ref",
+            run,
+        ):
+            _sonar_add_issue(
+                issues,
+                step_path,
+                "SONAR_SCANNER_CHECKOUT",
+                "scanner job must not checkout contributor-originated source",
+            )
+        if uses.startswith("./"):
+            _sonar_add_issue(
+                issues,
+                step_path,
+                "SONAR_LOCAL_ACTION",
+                "repository-local or composite actions are forbidden in the scanner job",
+            )
+            metadata = _sonar_local_action_metadata(root, uses)
+            runs = _sonar_mapping(metadata.get("runs"))
+            if any(key in runs for key in ("pre", "pre-if", "post", "post-if")):
+                _sonar_add_issue(
+                    issues,
+                    step_path,
+                    "SONAR_SCANNER_HOOKS",
+                    "unreviewed scanner action pre/post hooks are forbidden",
+                )
+        if run and _SONAR_CONTRIBUTOR_COMMAND.search(run):
+            _sonar_add_issue(
+                issues,
+                step_path,
+                "SONAR_TOKEN_EXECUTION",
+                "scanner job must not execute repository or contributor-controlled code",
+            )
+        if _sonar_truthy(step.get("continue-on-error")) or "|| true" in run:
+            _sonar_add_issue(
+                issues,
+                step_path,
+                "SONAR_RESULT_MASKING",
+                "scanner failure must not be masked as success",
+            )
+        if _sonar_contains_token(step.get("outputs")):
+            _sonar_add_issue(
+                issues,
+                step_path,
+                "SONAR_TOKEN_PROPAGATION",
+                "Sonar credentials must not propagate through step outputs",
+            )
+        if _sonar_contains_token(step) and any(
+            marker in run for marker in ("GITHUB_OUTPUT", "GITHUB_STATE", "GITHUB_ENV")
+        ):
+            _sonar_add_issue(
+                issues,
+                step_path,
+                "SONAR_TOKEN_PROPAGATION",
+                "Sonar credentials must not propagate through GitHub output, state, or environment files",
+            )
+        if index != scanner_index and _sonar_contains_token(step):
+            _sonar_add_issue(
+                issues,
+                step_path,
+                "SONAR_TOKEN_SCOPE",
+                "only the final reviewed scanner action may reference the Sonar credential",
+            )
+
+    uses = str(scanner_step.get("uses", ""))
+    run = str(scanner_step.get("run", ""))
+    if run:
+        _sonar_add_issue(
+            issues,
+            scanner_path,
+            "SONAR_TOKEN_EXECUTION",
+            "token-bearing shell or contributor commands are forbidden",
+        )
+        if "./" in run or "scripts/" in run:
+            _sonar_add_issue(
+                issues,
+                scanner_path,
+                "SONAR_LOCAL_EXECUTION",
+                "repository-local scripts must not execute with the Sonar credential",
+            )
+    if uses.startswith("./"):
+        metadata = _sonar_local_action_metadata(root, uses)
+        runs = _sonar_mapping(metadata.get("runs"))
+        if any(key in runs for key in ("pre", "pre-if", "post", "post-if")):
+            _sonar_add_issue(
+                issues,
+                scanner_path,
+                "SONAR_SCANNER_HOOKS",
+                "unreviewed scanner action pre/post hooks are forbidden",
+            )
+
+    if uses != _SONAR_SCANNER_ACTION:
+        _sonar_add_issue(
+            issues,
+            scanner_path,
+            "SONAR_SCANNER_PROVENANCE",
+            "scanner action must be pinned to the reviewed immutable commit",
+        )
+    if scanner_step.get("if") is not None:
+        _sonar_add_issue(
+            issues,
+            scanner_path,
+            "SONAR_RESULT_MASKING",
+            "the final scanner action must not be conditionally skipped",
+        )
+
+    scanner_env = _sonar_mapping(scanner_step.get("env"))
+    if scanner_env.get(_SONAR_TOKEN_NAME) != _SONAR_TOKEN_REFERENCE or set(scanner_env) != {_SONAR_TOKEN_NAME}:
+        _sonar_add_issue(
+            issues,
+            scanner_path,
+            "SONAR_TOKEN_REFERENCE",
+            "scanner credential must be the exact GitHub secret expression and the only scanner environment entry",
+        )
+
+    scanner_with = _sonar_mapping(scanner_step.get("with"))
+    if (
+        scanner_with.get("projectBaseDir") != "."
+        or scanner_with.get("scannerVersion") != _SONAR_SCANNER_VERSION
+        or scanner_with.get("skipSignatureVerification") != "false"
+    ):
+        _sonar_add_issue(
+            issues,
+            scanner_path,
+            "SONAR_SCANNER_PROVENANCE",
+            "action commit, scanner binary version, project base, and signature verification must be pinned separately",
+        )
+
+    arguments = str(scanner_with.get("args", ""))
+    if "-Dsonar.rust.clippy.enable=false" not in arguments:
+        _sonar_add_issue(
+            issues,
+            scanner_path,
+            "SONAR_CLIPPY",
+            "automatic Clippy must remain disabled in scanner arguments",
+        )
+    if arguments != _SONAR_EXPECTED_ARGS:
+        _sonar_add_issue(
+            issues,
+            scanner_path,
+            "SONAR_TRUSTED_CONFIG",
+            "scanner host, organization, project, source, report paths, and quality-gate settings must be fixed and reviewed",
+        )
+
+
+def _sonar_validate_bridge_markers(
+    workflow_path: Path,
+    jobs: Mapping[str, Any],
+    issues: list[ValidationIssue],
+) -> None:
+    bridge_markers = (
+        "${{ inputs.",
+        "github.event.workflow_run",
+        "download-artifact",
+        "| tar",
+        "tar -",
+        "unzip ",
+    )
+    for job_name in sorted(jobs):
+        job = _sonar_mapping(jobs[job_name])
+        for index, step in enumerate(_sonar_sequence(job.get("steps"))):
+            if not isinstance(step, Mapping):
+                continue
+            text = str(step.get("run", ""))
+            if any(marker in text for marker in bridge_markers):
+                _sonar_add_issue(
+                    issues,
+                    f"{workflow_path}#jobs.{job_name}.steps[{index}]",
+                    "SONAR_BRIDGE_BOUNDS",
+                    "PR/artifact bridge input and extraction semantics require the separately blocked Task 4B.3 design",
+                )
+
+
+def validate_sonar_ci_configuration(root: Path | str) -> list[ValidationIssue]:
+    """Validate the prepared, inactive CI-based Sonar trust boundary selected by ADR-0004."""
+
+    root = Path(root).resolve()
+    workflow_path = root / _SONAR_WORKFLOW_PATH
+    properties_path = root / _SONAR_PROPERTIES_PATH
+    automatic_path = root / _SONAR_AUTOMATIC_PROPERTIES_PATH
+    workflow_exists = workflow_path.is_file()
+    properties_exists = properties_path.is_file()
+    automatic_exists = automatic_path.exists()
+
+    if not workflow_exists and not properties_exists and not automatic_exists:
+        return []
+
+    issues: list[ValidationIssue] = []
+    if workflow_exists != properties_exists:
+        _sonar_add_issue(
+            issues,
+            root,
+            "SONAR_CONFIG_PAIR",
+            "Sonar workflow and properties must be prepared together",
+        )
+    if automatic_exists:
+        _sonar_add_issue(
+            issues,
+            automatic_path,
+            "SONAR_METHOD_OVERLAP",
+            "Automatic Analysis configuration must not overlap the selected CI-only method",
+        )
+    if not _sonar_method_is_accepted(root):
+        _sonar_add_issue(
+            issues,
+            root / _SONAR_ADR_PATH,
+            "SONAR_METHOD_DECISION",
+            "Sonar CI configuration requires accepted ADR-0004 decision ci_based_only",
+        )
+
+    if not workflow_exists or not properties_exists:
+        return sorted(issues, key=lambda issue: (issue.path, issue.message))
+
+    _sonar_load_properties(properties_path, issues)
+    workflow = _sonar_load_workflow(workflow_path, issues)
+    if not workflow:
+        return sorted(issues, key=lambda issue: (issue.path, issue.message))
+
+    _sonar_validate_events(workflow_path, workflow, issues)
+    jobs = _sonar_mapping(workflow.get("jobs"))
+    _sonar_validate_job_scopes(workflow_path, workflow, jobs, issues)
+    scanner_name, scanner_job = _sonar_find_scanner_job(jobs)
+    _sonar_validate_scanner_job(root, workflow_path, scanner_name, scanner_job, jobs, issues)
+    _sonar_validate_bridge_markers(workflow_path, jobs, issues)
+    return sorted(issues, key=lambda issue: (issue.path, issue.message))
+
+
 def validate_repository_automation(root: Path | str) -> list[ValidationIssue]:
     """Validate repository automation syntax and high-value security invariants."""
 
     root = Path(root).resolve()
     issues: list[ValidationIssue] = []
+    issues.extend(validate_sonar_ci_configuration(root))
 
     # Validate JSON Schemas as schemas, not only as JSON documents.
     for schema_path in sorted((root / "schemas").glob("*.schema.json")):
