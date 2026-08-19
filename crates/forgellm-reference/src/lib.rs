@@ -267,10 +267,10 @@ pub fn softmax(values: &[f32]) -> Result<Vec<f32>, ReferenceError> {
     }
     require_finite(values, OPERATION)?;
 
-    let maximum = values.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+    let maximum = f64::from(values.iter().copied().fold(f32::NEG_INFINITY, f32::max));
     let exponentials: Vec<f64> = values
         .iter()
-        .map(|value| f64::from(*value - maximum).exp())
+        .map(|value| (f64::from(*value) - maximum).exp())
         .collect();
     let denominator: f64 = exponentials.iter().sum();
 
