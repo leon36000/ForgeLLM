@@ -233,12 +233,7 @@ fn rms_norm_rejects_non_finite_input_and_weight() {
 
 #[test]
 fn rms_norm_rejects_non_finite_result() {
-    let error = rms_norm(
-        &[1.0, 0.0],
-        &[f32::MAX, 1.0],
-        f32::MIN_POSITIVE,
-    )
-    .unwrap_err();
+    let error = rms_norm(&[1.0, 0.0], &[f32::MAX, 1.0], f32::MIN_POSITIVE).unwrap_err();
     assert_eq!(
         error,
         ReferenceError::NonFiniteResult {
