@@ -20,6 +20,8 @@
 - Record exact check, workflow, analysis-task, project-binding, and configuration identifiers.
 - A token-bearing process never executes contributor-controlled commands, code, dependencies, build scripts, package-manager hooks, proc macros, tests, or binaries.
 - Never use `pull_request_target`; disable automatic Clippy in the token-bearing scanner and import only bounded, validated reports produced without privileged credentials through trusted fixed paths.
+- Inject `SONAR_TOKEN` only into the final approved scanner step. Workflow-level and job-level token environments are forbidden; checkout, artifact acquisition/extraction, validation, and every other pre-scan step remain secretless, and no token-bearing post-processing step is permitted.
+- `workflow_run` is forbidden for the current Sonar implementation. Any future PR trusted-data bridge that needs a privileged follow-up trigger requires a separate reviewed design update before that trigger may be introduced.
 - Record immutable action SHA separately from scanner binary version and GPG/signature verification. The exact scanner archive digest remains an open limitation unless independently proven.
 
 ---
@@ -112,7 +114,7 @@
 
 #### Task 4B.0: Prove the semantic guard before scanner configuration
 
-- [ ] Write unsafe fixtures and demonstrate RED for overlap, activation without disabled readback, `pull_request_target`, token-bearing contributor-code execution, automatic Clippy, untrusted configuration/report paths, unbounded bridge inputs, and mutable/unverified scanner provenance.
+- [ ] Write unsafe fixtures and demonstrate RED for overlap, activation without disabled readback, `pull_request_target`, `workflow_run`, workflow/job/multi-step secret scope, token-bearing contributor-code execution, automatic Clippy, untrusted configuration/report paths, unbounded bridge inputs, and mutable/unverified scanner provenance.
 - [ ] Implement the smallest semantic governance validator and demonstrate GREEN on safe fixtures while every unsafe fixture remains rejected.
 - [ ] Complete this RED-to-GREEN proof before adding scanner workflow or properties configuration; syntax and grep checks alone do not satisfy the gate.
 
@@ -123,6 +125,7 @@
 - [ ] Use least-privilege permissions, non-persistent checkout credentials, and only sufficient attribution history.
 - [ ] Disable automatic Clippy and duplicate ingestion. The token-bearing process executes no contributor-controlled commands, code, dependencies, build scripts, package-manager hooks, proc macros, tests, or binaries.
 - [ ] Pin actions to immutable full commit SHAs. Separately pin the scanner binary version and verify its published GPG/signature chain. Do not claim an exact archive digest unless independently proven; carry it as an explicit open limitation.
+- [ ] Bind `SONAR_TOKEN` only on the final approved scanner step. Prohibit workflow/job-level secret environments, ensure checkout/download/extraction/validation complete before token injection, and prohibit token-bearing post-processing.
 - [ ] Fail clearly on secret absence without printing or probing the value.
 
 #### Task 4B.2: Review token identity and lifecycle before provisioning
@@ -131,13 +134,18 @@
 - [ ] Reject an owner/admin personal token chosen merely for convenience; prefer a dedicated least-privilege identity where supported.
 - [ ] Only after review, store the value as `SONAR_TOKEN`; never record the value or private payload.
 
-#### Task 4B.3: Separately review any PR trusted-data bridge
+#### Task 4B.3: Separately design and review any PR trusted-data bridge
 
-- [ ] Treat the bridge as a separate implementation/review unit. Never use `pull_request_target`; fork `pull_request` execution remains secretless.
+**Status:** blocked for the current implementation increment. `workflow_run` and `pull_request_target` are forbidden for Sonar. Task 4B.0/4B.1 may proceed for a protected trusted ref, but P0-T09 pull-request Sonar completion remains blocked until a separate reviewed bridge design is accepted.
+
+- [ ] Treat the bridge as a separate implementation/review unit. Ordinary fork `pull_request` execution remains secretless and no privileged follow-up trigger is authorized by this plan revision.
 - [ ] Run contributor code and Cargo/Clippy/coverage production only without privileged credentials.
-- [ ] Take workflow/configuration and PR metadata from trusted context. In the token-bearing workflow, treat source and reports strictly as data.
-- [ ] Accept only schema-validated, bounded-size data with recorded provenance through fixed trusted paths; reject executables, path traversal/links, unexpected or active content, and configuration overrides.
-- [ ] If safety is unproven, defer Sonar proof to a protected trusted ref; absent/skipped fork Sonar is not success.
+- [ ] Before any privileged artifact consumer is authorized, specify and test an immutable binding over repository identity, trusted producer workflow identity and immutable workflow SHA, event type, run ID and attempt, PR number, PR head SHA, artifact ID/name, and expected producer commit.
+- [ ] Require an independently recorded artifact digest before consumption; validate the binding and digest without `SONAR_TOKEN` before any extraction or scanner step.
+- [ ] Define extraction into a new empty isolated directory and reject before extraction: duplicate/colliding names, absolute or escaping paths, symlinks, hardlinks, device/special files, excessive entry count, compression bombs, and per-file/aggregate compressed or expanded sizes above explicit limits.
+- [ ] Allowlist exact artifact file names, media/types, encodings and schemas; reject unexpected files, executable or active content, configuration overrides, and any source capable of altering host, organization, project key, token handling, scanner binary/version, or trusted report paths.
+- [ ] Any future consumer must acquire, validate, extract and normalize artifacts entirely without `SONAR_TOKEN`; the token is injected only into the final approved scanner step after all validation succeeds, with no token-bearing post-processing.
+- [ ] If the complete bridge protocol is not independently accepted, defer Sonar proof to a protected trusted ref. An absent/skipped fork Sonar check is not success, and P0-T09 must remain open rather than weakening the trust boundary.
 
 #### Task 4B.4: Activate with direct no-overlap evidence
 
@@ -173,7 +181,7 @@
 - [ ] Require CodeQL success.
 - [ ] Require GitGuardian success.
 - [ ] Characterize Dependency Review honestly.
-- [ ] Require Sonar PR check `success`, with issue/hotspot counts recorded.
+- [ ] Require Sonar PR check `success`, with issue/hotspot counts recorded, only after the separate trusted-data bridge design and implementation are independently accepted. Until then this step is blocked and must not be satisfied by `workflow_run`, `pull_request_target`, a direct secret-bearing contributor workflow, or an absent/skipped check.
 - [ ] Request a fresh configuration/security review.
 - [ ] Reject any hidden issue suppression, unpinned action, excessive permission, or mixed analysis method.
 - [ ] Commit review evidence only after exact-head checks.
