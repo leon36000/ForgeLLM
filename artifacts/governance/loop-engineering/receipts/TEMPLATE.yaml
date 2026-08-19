@@ -1,4 +1,4 @@
-schema_version: '1.0'
+schema_version: '1.1'
 project: ForgeLLM
 task_id: P0-T10
 plan: docs/superpowers/plans/2026-08-19-bounded-loop-engineering.md
@@ -13,6 +13,9 @@ verify_commands:
   - python scripts/validate_loop_engineering.py --root .
   - python -m pytest -q tests/test_loop_engineering.py
   - make ci
-verify_evidence:
-  - 'TEMPLATE: replace with raw independent verifier evidence.'
-reviewer: 'TEMPLATE: independent verifier required'
+verification:
+  verifier: 'TEMPLATE: external execution verifier identity'
+  verified_commit: 'TEMPLATE: replace with final commit'
+  disposition: template
+  evidence:
+    - 'TEMPLATE: replace with raw verifier evidence.'
