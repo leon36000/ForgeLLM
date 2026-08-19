@@ -1,19 +1,14 @@
 schema_version: '1.0'
 project: ForgeLLM
 task_id: P0-T10
-base_commit: 6a7bf616b972bab00649962fe4eaed84a5020dbf
-GOAL: Eliminate remaining authority and evidence escalation paths in bounded Loop Engineering and produce an exact-head independent-review candidate.
+base_commit: 8a1e1aafb60ff7c8a32ca76d6b548bbd03b5a4b5
+GOAL: Recover the failed receipt-1.1 hardening without widening authority and produce an exact-head review candidate.
 SCOPE:
   - src/forgellm_governance/loop_engineering.py
+  - src/forgellm_governance/loop_engineering_legacy.py
   - scripts/validate_loop_engineering.py
   - tests/test_loop_engineering.py
-  - third_party/loop-engineering/PROVENANCE.yaml
   - artifacts/governance/loop-engineering/
-  - .agents/skills/forgellm-loop-engineering/
-  - .claude/skills/forgellm-loop-engineering/
-  - AGENTS.md
-  - CLAUDE.md
-  - Makefile
   - docs/quality/P0-T10-LOOP-ENGINEERING.md
   - tasks/open/P0-T10-bounded-loop-engineering.yaml
   - docs/architecture/ADR-0005-bounded-loop-engineering.md
@@ -23,12 +18,12 @@ VERIFY:
   - python -m pytest -q tests/test_loop_engineering.py
   - make ci
 BUDGET:
-  max_iterations: 6
+  max_iterations: 4
   max_identical_failures: 3
-  max_wall_minutes: 45
+  max_wall_minutes: 30
 STOP:
   on_verify_pass: true
   on_budget_exhausted: true
   on_identical_failure_limit: true
   privileged_operation: stop_and_escalate
-RECEIPT: artifacts/governance/loop-engineering/receipts/P0-T10-run-02.yaml
+RECEIPT: artifacts/governance/loop-engineering/receipts/P0-T10-run-03.yaml
