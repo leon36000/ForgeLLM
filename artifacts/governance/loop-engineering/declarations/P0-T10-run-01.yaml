@@ -1,0 +1,34 @@
+schema_version: '1.0'
+project: ForgeLLM
+task_id: P0-T10
+base_commit: 8594ef5abb19ca7a870fe6d71ae7aad8e15f4602
+GOAL: Install a bounded and independently verifiable Loop Engineering bridge without widening ForgeLLM authority.
+SCOPE:
+  - third_party/loop-engineering/
+  - src/forgellm_governance/loop_engineering.py
+  - scripts/validate_loop_engineering.py
+  - tests/test_loop_engineering.py
+  - .agents/skills/forgellm-loop-engineering/
+  - .claude/skills/forgellm-loop-engineering/
+  - AGENTS.md
+  - CLAUDE.md
+  - Makefile
+  - docs/quality/P0-T10-LOOP-ENGINEERING.md
+  - artifacts/governance/loop-engineering/
+  - tasks/open/P0-T10-bounded-loop-engineering.yaml
+  - docs/architecture/ADR-0005-bounded-loop-engineering.md
+  - docs/superpowers/plans/2026-08-19-bounded-loop-engineering.md
+VERIFY:
+  - python scripts/validate_loop_engineering.py --root .
+  - python -m pytest -q tests/test_loop_engineering.py
+  - make ci
+BUDGET:
+  max_iterations: 10
+  max_identical_failures: 3
+  max_wall_minutes: 60
+STOP:
+  on_verify_pass: true
+  on_budget_exhausted: true
+  on_identical_failure_limit: true
+  privileged_operation: stop_and_escalate
+RECEIPT: artifacts/governance/loop-engineering/receipts/P0-T10.yaml

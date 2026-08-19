@@ -1,0 +1,16 @@
+schema_version: '1.0'
+project: ForgeLLM
+task_id: P0-T10
+runs:
+  - run_id: P0-T10-run-01
+    declaration_path: artifacts/governance/loop-engineering/declarations/P0-T10-run-01.yaml
+    declaration_source_commit: 6a7bf616b972bab00649962fe4eaed84a5020dbf
+    declaration_source_blob_sha: 75a1beed565411fb93b9c8c9483d25d253c516bd
+    receipt_path: artifacts/governance/loop-engineering/receipts/P0-T10-run-01.yaml
+    receipt_schema_version: '1.0'
+  - run_id: P0-T10-run-02
+    declaration_path: artifacts/governance/loop-engineering/declarations/P0-T10-run-02.yaml
+    declaration_source_commit: b09cf7ca0ab2ebf24beb5fe3a9911cdc4e07471d
+    declaration_source_blob_sha: b13f94788c9eb73aa97246d700abe1e04d5c6b00
+    receipt_path: artifacts/governance/loop-engineering/receipts/P0-T10-run-02.yaml
+    receipt_schema_version: '1.1'
