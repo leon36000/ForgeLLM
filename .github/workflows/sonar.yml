@@ -3,9 +3,20 @@ name: Sonar CI
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
   workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number
+        required: true
+        type: number
+      head_sha:
+        description: Exact pull request head SHA
+        required: true
+        type: string
+      head_ref:
+        description: Pull request head branch
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -15,8 +26,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  sonar:
-    if: ${{ vars.FORGELLM_SONAR_CI_ENABLED == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false) }}
+  main:
+    if: ${{ vars.FORGELLM_SONAR_CI_ENABLED == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -29,12 +40,12 @@ jobs:
             echo "::error::SONAR_TOKEN is not configured"
             exit 1
           fi
-      - name: Check out source
+      - name: Check out main
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 release snapshot
         with:
           persist-credentials: false
           fetch-depth: 0
-      - name: SonarQube Cloud scan
+      - name: SonarQube Cloud main scan
         uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -48,3 +59,40 @@ jobs:
             -Dsonar.rust.clippy.enable=false
             -Dsonar.qualitygate.wait=true
             -Dsonar.qualitygate.timeout=300
+  pull_request:
+    if: ${{ vars.FORGELLM_SONAR_CI_ENABLED == 'true' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.actor == github.repository_owner }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Require SONAR_TOKEN
+        shell: bash
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          if [[ -z "${SONAR_TOKEN}" ]]; then
+            echo "::error::SONAR_TOKEN is not configured"
+            exit 1
+          fi
+      - name: Check out exact PR head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 release snapshot
+        with:
+          ref: ${{ inputs.head_sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - name: SonarQube Cloud PR scan
+        uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          scannerVersion: 8.1.0.6389
+          args: >-
+            -Dsonar.host.url=https://sonarcloud.io
+            -Dsonar.organization=leon36000
+            -Dsonar.projectKey=leon36000_ForgeLLM
+            -Dsonar.sca.enabled=false
+            -Dsonar.rust.clippy.enable=false
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=300
+            -Dsonar.pullrequest.key=${{ inputs.pr_number }}
+            -Dsonar.pullrequest.branch=${{ inputs.head_ref }}
+            -Dsonar.pullrequest.base=main
