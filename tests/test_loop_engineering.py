@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import copy
 import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -283,3 +285,11 @@ def test_fixture_copy_is_independent() -> None:
     cloned = copy.deepcopy(original)
     cloned["BUDGET"]["max_iterations"] = 1
     assert original["BUDGET"]["max_iterations"] == 10
+
+
+def test_repository_loop_gate_runs_successfully() -> None:
+    command = [sys.executable, str(ROOT / "scripts/validate_loop_engineering.py"), "--root", str(ROOT)]
+    result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, check=False)
+    output = result.stdout + result.stderr
+    assert result.returncode == 0, output
+    assert "OK: bounded Loop Engineering contract is valid" in result.stdout
