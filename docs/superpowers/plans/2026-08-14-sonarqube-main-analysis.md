@@ -108,24 +108,27 @@ ADR-0004 is accepted and selects `ci_based_only`. The canonical Task 4B base is 
 
 **Interfaces:**
 - Consumes: accepted ADR-0004, `SONAR_TOKEN`, repository variable `FORGELLM_SONAR_CI_ENABLED`, exact GitHub pull-request metadata resolved immediately before dispatch, and the public Sonar project identity `leon36000_ForgeLLM` / organization `leon36000`.
-- Produces: one guarded CI scanner workflow whose disabled state cannot submit analysis, whose protected-`main` job runs only on a `main` push, and whose PR job can run only through `workflow_dispatch` from the workflow already stored on default `main`, with repository-owner actor and exact PR metadata guards.
+- Produces: one guarded CI scanner workflow whose disabled state cannot submit analysis, whose protected-`main` job runs only on a `main` push, and whose PR job can run only through `workflow_dispatch` from the workflow already stored on default `main`, with repository-owner actor, exact PR metadata guards, and project settings created outside the untrusted checkout.
 
 #### Stage 4B.1: Commit an inert, reviewable scanner scaffold
 
 - [ ] Reconfirm `main == 8594ef5abb19ca7a870fe6d71ae7aad8e15f4602` or rebase the execution plan before writing.
 - [ ] Record the Task 3 post-merge evidence before changing analysis method: Sonar main check `95933687884` success, exact Sonar revision `8594ef5abb19ca7a870fe6d71ae7aad8e15f4602`, Quality Gate `OK`, `ncloc=6939`, Phase 0 run `32207542577` success, CodeQL run `32207542554` success, and 67 open new-code issues that remain debt rather than a zero-issue claim.
 - [ ] Preserve the rejected preparation experiment: the first inert scaffold used ordinary same-repository `pull_request`. It was safe while `FORGELLM_SONAR_CI_ENABLED` was absent/false, but is rejected for activation because a same-repository PR can modify the workflow definition that would receive repository secrets. Ref ownership does not make the workflow or checked-out source trusted.
+- [ ] Preserve the second negative result: SonarScanner CLI can load a root `sonar-project.properties` from the checked-out PR. A trusted dispatch alone therefore does not make scanner configuration trusted; PR-controlled project settings could alter scope/exclusions for properties not overridden at higher precedence.
 - [ ] Create `.github/workflows/sonar.yml` with no `pull_request`, `pull_request_target`, or `workflow_run` trigger. Use `push` limited to `main` plus `workflow_dispatch` with required inputs `pr_number:number`, `head_sha:string`, and `head_ref:string`.
 - [ ] Split the workflow into exactly two token-bearing scanner jobs. The `main` job requires the enable variable, `github.event_name == 'push'`, and `github.ref == 'refs/heads/main'`. The PR job requires the enable variable, `github.event_name == 'workflow_dispatch'`, `github.ref == 'refs/heads/main'`, and `github.actor == github.repository_owner`.
 - [ ] Treat `github.actor == github.repository_owner` as a fail-closed project-specific gate. If ForgeLLM later moves to an organization-owned repository, this expression must be replaced through reviewed governance before PR dispatch can run; do not weaken it implicitly.
 - [ ] For a dispatched PR, resolve `pr_number`, exact `head_sha`, `head_ref`, and target branch from canonical GitHub immediately before dispatch. Verify the PR is still open, targets `main`, and the supplied head SHA/ref still equal GitHub readback; stale or mismatched metadata blocks dispatch.
 - [ ] Checkout PR source by exact `${{ inputs.head_sha }}` only. Pass Sonar PR identity explicitly as trusted workflow arguments: `sonar.pullrequest.key=${{ inputs.pr_number }}`, `sonar.pullrequest.branch=${{ inputs.head_ref }}`, and `sonar.pullrequest.base=main`. Never accept an arbitrary base branch input.
 - [ ] Set workflow permissions to exactly `contents: read`. Do not add write permissions unless a later primary-source requirement and independent security review prove one necessary.
-- [ ] Before checkout, add a trusted static preflight step that receives `secrets.SONAR_TOKEN` only in that step and fails with `SONAR_TOKEN is not configured` when empty without printing the value.
+- [ ] Before checkout, create exactly one static `${RUNNER_TEMP}/forgellm-sonar.properties` without any secret in the step. Use `umask 077` and fix the scope to `sonar.sources=.`, `sonar.tests=tests`, and `sonar.exclusions=tests/**`; the exclusion only prevents double-indexing of `tests/**` as main code while the rest of the repository remains in source scope.
+- [ ] Force the scanner to that pre-checkout file with `-Dproject.settings=${{ runner.temp }}/forgellm-sonar.properties`. Do not let a checked-out `sonar-project.properties` become the project-settings source for the authenticated scanner.
+- [ ] After the trusted settings file is created, add the fixed token preflight that receives `secrets.SONAR_TOKEN` only in that step and fails with `SONAR_TOKEN is not configured` when empty without printing the value.
 - [ ] Pin checkout to `actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1`, set `persist-credentials: false`, and set `fetch-depth: 0`.
 - [ ] Pin the scanner action to `SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f` and pin its scanner input to `8.1.0.6389` unless fresh primary-source verification shows that exact immutable pair is no longer acceptable.
-- [ ] Pass critical controls as trusted scanner arguments, not repository-controlled project configuration: `sonar.host.url=https://sonarcloud.io`, `sonar.organization=leon36000`, `sonar.projectKey=leon36000_ForgeLLM`, `sonar.sca.enabled=false`, `sonar.rust.clippy.enable=false`, `sonar.qualitygate.wait=true`, and `sonar.qualitygate.timeout=300`.
-- [ ] Keep `SONAR_TOKEN` step-scoped to the fixed preflight/scanner steps. No build, package-manager, test, Cargo, Clippy, proc-macro, dependency, or contributor-provided command may execute in a token-bearing scanner job.
+- [ ] Pass critical controls as trusted scanner arguments: `sonar.host.url=https://sonarcloud.io`, `sonar.organization=leon36000`, `sonar.projectKey=leon36000_ForgeLLM`, `project.settings=${{ runner.temp }}/forgellm-sonar.properties`, `sonar.sca.enabled=false`, `sonar.rust.clippy.enable=false`, `sonar.qualitygate.wait=true`, and `sonar.qualitygate.timeout=300`.
+- [ ] Keep `SONAR_TOKEN` step-scoped to the fixed preflight/scanner steps. No build, package-manager, test, Cargo, Clippy, proc-macro, dependency, or contributor-provided command may execute in a token-bearing scanner job. The only other `run:` step allowed in such a job is the exact reviewed trusted-settings initializer, which itself receives no token.
 - [ ] Treat checked-out source as untrusted scanner input even when the dispatch itself is trusted. The scanner may parse source but must not invoke project code, dependencies, package hooks, or build tooling in the token-bearing context.
 - [ ] Do not generate Rust Clippy or coverage reports in the scanner job. When Rust enters the analyzed tree, generate required reports in a separate secretless job and import only bounded validated report paths; avoid duplicate Clippy ingestion.
 - [ ] Explicitly keep initial SCA disabled. Current ForgeLLM Free-plan evidence has no SCA surface, while Sonar documents `sonar.sca.enabled=true` as the scanner default when Advanced Security is active and may invoke build tools. Enabling SCA later requires a separate reviewed threat model; `false` here preserves rather than weakens the current surface.
@@ -147,7 +150,7 @@ ADR-0004 is accepted and selects `ci_based_only`. The canonical Task 4B base is 
 - [ ] Open a controlled same-repository PR targeting `main` whose changes do not modify the already-merged Sonar workflow. Resolve the PR number, exact current head SHA/ref and base from GitHub immediately before each dispatch.
 - [ ] Invoke `workflow_dispatch` on the workflow stored on protected `main`, as the repository owner/trusted controller, passing only the verified PR number, head SHA and head ref. Re-read the PR after dispatch and reject evidence if the head changed during the run.
 - [ ] Require the dispatched PR scanner job to complete and fail the workflow on a red Quality Gate via `sonar.qualitygate.wait=true`. Also require Phase 0, CodeQL and GitGuardian success; characterize Dependency Review by its actual terminal result.
-- [ ] Record the workflow run, Sonar task/analysis identifier, exact PR head, Quality Gate, issue/hotspot counts, action/scanner SHAs and the absence of secret leakage. Do not call a skipped/absent check success.
+- [ ] Record the workflow run, Sonar task/analysis identifier, exact PR head, Quality Gate, issue/hotspot counts, action/scanner SHAs, trusted settings path/scope, and the absence of secret leakage. Do not call a skipped/absent check success.
 - [ ] Merge only after fresh configuration/security review accepts the exact implementation and dispatched-evidence boundary.
 - [ ] Require the resulting protected `main` push to trigger the `main` scanner job automatically, and require both its GitHub check and Sonar revision to equal the merge commit with Quality Gate success.
 
@@ -176,13 +179,15 @@ Task 5 moves ahead of Stage 4B.3 as a security prerequisite. Use strict TDD: eac
 - [ ] Require exactly the `main` and `pull_request` scanner jobs with the enable guard. Require the main job's push/main guards and the dispatch job's workflow-dispatch/main-ref/repository-owner guards.
 - [ ] Require the dispatched PR checkout to use exactly `${{ inputs.head_sha }}` and require the three explicit Sonar PR parameters with hardcoded `base=main`.
 - [ ] Require exactly `contents: read`, immutable full-SHA action references, `persist-credentials: false`, and `fetch-depth: 0` in both scanner jobs.
+- [ ] Require exactly one trusted Sonar settings initializer in each scanner job, before checkout, with no `SONAR_TOKEN`, exact static script, and fixed scope `sonar.sources=.`, `sonar.tests=tests`, `sonar.exclusions=tests/**`.
+- [ ] Require `project.settings=${{ runner.temp }}/forgellm-sonar.properties` in the scanner arguments so a checked-out root `sonar-project.properties` cannot become the authenticated scanner's project-settings source.
 - [ ] Require trusted markers `sonar.sca.enabled=false`, `sonar.rust.clippy.enable=false`, `sonar.qualitygate.wait=true`, exact public project key/organization/host, and a non-empty pinned scanner version.
-- [ ] Require scanner auth to use exactly `secrets.SONAR_TOKEN` and reject every non-preflight `run:` command in a token-bearing scanner job.
+- [ ] Require scanner auth to use exactly `secrets.SONAR_TOKEN`. Reject every non-preflight `run:` command in a token-bearing scanner job except the exact reviewed trusted-settings initializer, which must itself be secretless.
 - [ ] Preserve regression tests for forbidden `pull_request_target`, unsafe self-hosted PR workflows, action pinning, and existing guarded workflows.
-- [ ] Add a positive fixture for the reviewed trusted-dispatch workflow and prove `validate_project()` returns no Sonar-policy issue.
+- [ ] Add a positive fixture for the reviewed trusted-dispatch/project-settings workflow and prove `validate_project()` returns no Sonar-policy issue.
 - [ ] Run strict RED/GREEN through the exact PR CI, then run the complete test suite, `make validate`, `make ci`, `git diff --check`, and secret-pattern grep.
 - [ ] Preserve every existing repository gate and keep P0-T04/P0-T05 untouched.
-- [ ] Commit: `test(quality): guard trusted Sonar dispatch`.
+- [ ] Commit: `test(quality): guard trusted Sonar dispatch and settings`.
 
 ### Task 6: Verify pull-request evidence
 
@@ -196,7 +201,7 @@ Task 5 moves ahead of Stage 4B.3 as a security prerequisite. Use strict TDD: eac
 - [ ] Characterize Dependency Review honestly.
 - [ ] Require the controlled trusted-dispatch Sonar PR run to complete successfully on the exact verified PR head, with issue/hotspot counts recorded.
 - [ ] Request a fresh configuration/security review.
-- [ ] Reject any hidden issue suppression, unpinned action, excessive permission, mixed analysis method, stale dispatch metadata, or secret-bearing workflow definition taken from untrusted PR content.
+- [ ] Reject any hidden issue suppression, unpinned action, excessive permission, mixed analysis method, stale dispatch metadata, secret-bearing workflow definition taken from untrusted PR content, or PR-controlled Sonar project settings/scope.
 - [ ] Commit review evidence only after exact-head checks.
 
 ### Task 7: Verify `main` analysis and close out
