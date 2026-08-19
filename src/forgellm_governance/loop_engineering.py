@@ -413,6 +413,53 @@ def validate_loop_receipt(receipt: Mapping[str, Any], declaration: Mapping[str, 
     return issues
 
 
+def _validate_template_identity(receipt: Mapping[str, Any], declaration: Mapping[str, Any]) -> list[str]:
+    issues = _validate_receipt_binding(receipt, declaration)
+    if not _is_nonzero_full_sha(receipt.get("base_commit")):
+        issues.append("receipt template base_commit must be a non-zero full Git SHA")
+    if receipt.get("base_commit") != declaration.get("base_commit"):
+        issues.append("receipt template base_commit must equal the loop declaration base_commit")
+    if receipt.get("final_commit") != _TEMPLATE_FINAL_COMMIT:
+        issues.append(f"receipt template final_commit must be exactly {_TEMPLATE_FINAL_COMMIT}")
+    plan = receipt.get("plan")
+    if not isinstance(plan, str) or not plan.strip():
+        issues.append("receipt template plan must identify the controlling plan")
+    return issues
+
+
+def _validate_template_state(receipt: Mapping[str, Any]) -> list[str]:
+    issues: list[str] = []
+    expected = {
+        "iterations": 0,
+        "identical_failures_at_stop": 0,
+        "stop_reason": _TEMPLATE_STOP_REASON,
+        "changed_paths": [],
+        "scope_check": "pass",
+    }
+    for field, value in expected.items():
+        if receipt.get(field) != value:
+            issues.append(f"receipt template {field} must be {value!r}")
+    return issues
+
+
+def _validate_template_verification(receipt: Mapping[str, Any], declaration: Mapping[str, Any]) -> list[str]:
+    issues: list[str] = []
+    if receipt.get("verify_commands") != declaration.get("VERIFY"):
+        issues.append("receipt template verify_commands must exactly equal declared VERIFY")
+
+    evidence = receipt.get("verify_evidence")
+    evidence_valid = _is_sequence(evidence) and bool(evidence)
+    if evidence_valid:
+        evidence_valid = all(isinstance(item, str) and item.startswith(_TEMPLATE_PREFIX) for item in evidence)
+    if not evidence_valid:
+        issues.append("receipt template verify_evidence entries must be non-empty and start with TEMPLATE:")
+
+    reviewer = receipt.get("reviewer")
+    if not isinstance(reviewer, str) or not reviewer.startswith(_TEMPLATE_PREFIX):
+        issues.append("receipt template reviewer must start with TEMPLATE:")
+    return issues
+
+
 def validate_loop_receipt_template(receipt: Mapping[str, Any], declaration: Mapping[str, Any]) -> list[str]:
     """Validate the inert receipt template without promoting it to final evidence."""
 
@@ -422,35 +469,7 @@ def validate_loop_receipt_template(receipt: Mapping[str, Any], declaration: Mapp
         return ["loop declaration must be a mapping before validating its receipt template"]
 
     issues = _receipt_keys(receipt)
-    issues.extend(_validate_receipt_binding(receipt, declaration))
-    if not _is_nonzero_full_sha(receipt.get("base_commit")):
-        issues.append("receipt template base_commit must be a non-zero full Git SHA")
-    if receipt.get("base_commit") != declaration.get("base_commit"):
-        issues.append("receipt template base_commit must equal the loop declaration base_commit")
-    if receipt.get("final_commit") != _TEMPLATE_FINAL_COMMIT:
-        issues.append(f"receipt template final_commit must be exactly {_TEMPLATE_FINAL_COMMIT}")
-    if receipt.get("iterations") != 0:
-        issues.append("receipt template iterations must be 0")
-    if receipt.get("identical_failures_at_stop") != 0:
-        issues.append("receipt template identical_failures_at_stop must be 0")
-    if receipt.get("stop_reason") != _TEMPLATE_STOP_REASON:
-        issues.append("receipt template stop_reason must be exactly template")
-    if receipt.get("changed_paths") != []:
-        issues.append("receipt template changed_paths must be empty")
-    if receipt.get("scope_check") != "pass":
-        issues.append("receipt template scope_check must be pass")
-    if receipt.get("verify_commands") != declaration.get("VERIFY"):
-        issues.append("receipt template verify_commands must exactly equal declared VERIFY")
-
-    evidence = receipt.get("verify_evidence")
-    if not _is_sequence(evidence) or not evidence:
-        issues.append("receipt template verify_evidence must contain a TEMPLATE marker")
-    elif not all(isinstance(item, str) and item.startswith(_TEMPLATE_PREFIX) for item in evidence):
-        issues.append("receipt template verify_evidence entries must start with TEMPLATE:")
-    reviewer = receipt.get("reviewer")
-    if not isinstance(reviewer, str) or not reviewer.startswith(_TEMPLATE_PREFIX):
-        issues.append("receipt template reviewer must start with TEMPLATE:")
-    plan = receipt.get("plan")
-    if not isinstance(plan, str) or not plan.strip():
-        issues.append("receipt template plan must identify the controlling plan")
+    issues.extend(_validate_template_identity(receipt, declaration))
+    issues.extend(_validate_template_state(receipt))
+    issues.extend(_validate_template_verification(receipt, declaration))
     return issues
