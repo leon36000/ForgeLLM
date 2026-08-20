@@ -1,9 +1,9 @@
 # ForgeLLM — état, décisions et continuité
 
-**Mise à jour :** 2026-08-14  
-**Version d’état :** S-0007  
+**Mise à jour :** 2026-08-20
+**Version d’état :** S-0008
 **Phase :** P0 — gouvernance, simulation et laboratoire de preuve  
-**Statut global :** P0-T07 et P0-T08 terminés; P0-T09 est actif en diagnostic Sonar read-only; la méthode Sonar actuelle est maintenant confirmée comme analyse automatique activée et recommandée; P0-T04 attend toujours la désignation d’un hôte
+**Statut global :** P0-T07 et P0-T08 terminés; P0-T11/P0-T12 fournissent maintenant une ligne de référence Rust CPU bornée et fusionnée sur `main`; P0-T09 est actif en diagnostic Sonar read-only; la méthode Sonar actuelle est confirmée comme analyse automatique activée et recommandée; P0-T04 attend toujours la désignation d’un hôte
 
 ## Objectif invariant
 
@@ -14,7 +14,7 @@ Concevoir et construire un moteur d’inférence LLM hétérogène dont correcti
 - dépôt : `leon36000/ForgeLLM`;
 - branche par défaut : `main` protégée par `FLLM`;
 - base initiale P0-T09 : `1b1a3621fcdf4129268663c497cdcd53aed48c29`;
-- dernier probe `main` : `bd03e479ff4649a254c41726b33f2b6e841a0e0c`;
+- dernier `main` canonique : `7962abe6c08a79da28e083735507fbae29529d74`;
 - paquet : `tasks/open/P0-T09-sonarqube-main-analysis.yaml`;
 - issue : #26;
 - autorisation : `P0-T09 / subagent-driven`, 2026-08-14.

@@ -11,6 +11,8 @@
 | P0-T07 | complete | synthetic cache-aware topology and placement simulator | PR #20; 102 tests; PR/post-merge gates |
 | P0-T08 / CA-03 | complete | finite exact speculative-decoding reference semantics | PR #24 + remediation PR #25; 332 complete and 230 focused tests; dual review; PR/post-merge gates |
 | P0-T09 / QG-01 | in progress — remediation verification | stabilize SonarQube Cloud analysis on protected `main` | LOC-limit cause classified; ForgeLLM visibility remediation applied; evidence PR → protected `main` verification required |
+| P0-T11 | complete | bounded Rust CPU reference core: checked tensors, matmul, softmax, RMSNorm, argmax and recoverable allocations | PR #48; 28 Rust tests; independent review; hosted exact-head gates; merge `04342c8` |
+| P0-T12 | complete | bounded decoder tensor primitives: reshape, exact-shape add/multiply and embedding gather | PR #53; 46 Rust tests on the stacked line; independent review; hosted exact-head gates; merge `7962abe6` |
 
 ## P0-T09 current gate
 
@@ -32,6 +34,26 @@ Public and owner-authenticated evidence now shows five PR-success/`main`-failure
 The administrative readback records binding `leon36000/ForgeLLM`, Automatic Analysis/Autoscan, no CI method selected, New Code `previous_version`, default/no custom scope or issue-ignore settings, and default `Sonar way`. After ForgeLLM was aligned from private to public in Sonar, anonymous Sonar API access independently confirmed the public project while Billing & usage returned below the private-LOC limit.
 
 The next gate is the reviewed evidence-update PR itself: its exact head must pass Sonar, Phase 0, CodeQL and GitGuardian; after merge, the resulting protected `main` Sonar check must complete successfully. No artificial probe is required. ADR-0004 may select exactly one analysis method only after this post-remediation cycle; Automatic and CI-based methods may not run concurrently.
+
+## P0-T11 / P0-T12 final evidence
+
+- P0-T11 base: `main@aff9897e1c9e3aaebd67889eb9ff6d65a1710694`; published head:
+  `dfd6849cfc3c48e801f1e495239f2ec1ad810569`; PR #48 merge:
+  `04342c859f790948fa784b72df940ac441ed5ed3`.
+- P0-T12 stacked implementation head: `0e14b9471cc68227b589fa274fbb6cf65bc6802e`; corrected
+  validation head: `95139f8aea2aa1b4adedb66c22ecf698b127f8ab`; final publication head:
+  `0ce6bb4ed39125c39c2b149ae6bf26688ec649cb`; PR #53 merge:
+  `7962abe6c08a79da28e083735507fbae29529d74`.
+- The final source tree contains a CPU reference increment only: 46 Rust tests pass (2 unit,
+  17 decoder, 3 numerical, 24 reference), with rustfmt, Clippy, `make ci`, direct packet
+  validation and the required hosted checks green.
+- Hosted `dependency-review` was `SKIPPED` on both PRs by the existing workflow configuration;
+  Validate and test, reference-core, SonarCloud and GitGuardian passed on each exact head.
+- The independent local verdicts are recorded in `docs/reviews/P0-T11-CODEX-REVIEW-2026-08-20.md`
+  and `docs/reviews/P0-T12-CODEX-REVIEW-2026-08-20.md`.
+- This line does not establish real-model conformance, PyTorch numerical agreement, hardware or
+  accelerator behavior, performance, ABI, scheduling, KV cache, service runtime, P1/P2 promotion,
+  or production readiness.
 
 ## P0-T08 final evidence
 

@@ -2,7 +2,7 @@ schema_version: "1.0"
 task_id: P0-T11
 title: Bootstrap the Rust CPU reference core experiment
 phase: P0
-status: in_progress
+status: complete
 charter_goals:
   - Build the first executable engine path as a correctness reference.
   - Keep Rust as the default control-plane/runtime language while preserving explicit semantics.
@@ -24,6 +24,7 @@ inputs:
   - Official Rust release evidence selecting Rust 1.97.1 as the pinned experiment toolchain.
   - Official Rust standard-library documentation states that `f64::exp` has unspecified precision, so the softmax evidence contract is tolerance-based rather than a bitwise cross-platform claim.
   - Official Rust standard-library allocation APIs provide recoverable `try_reserve`/`try_reserve_exact` errors for capacity overflow or allocation failure within their documented contract.
+  - "PR #48 exact head `dfd6849cfc3c48e801f1e495239f2ec1ad810569` passed hosted validation, Rust reference-core, SonarCloud and GitGuardian checks and merged to `main` as `04342c859f790948fa784b72df940ac441ed5ed3`."
 outputs:
   - Pinned Rust workspace and toolchain.
   - Production-quality `forgellm-reference` crate with no third-party runtime dependency in this slice.
