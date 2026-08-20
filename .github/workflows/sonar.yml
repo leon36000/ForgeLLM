@@ -5,11 +5,10 @@ on:
     branches: [main]
   workflow_dispatch: {}
 
-permissions:
-  contents: read
-
 jobs:
   producer:
+    permissions:
+      contents: read
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -19,6 +18,8 @@ jobs:
           printf '%s\n' 'secretless producer boundary'
 
   scanner:
+    permissions:
+      contents: read
     needs: [producer]
     if: vars.FORGELLM_ENABLE_SONAR_CI == 'true' && vars.FORGELLM_AUTOMATIC_ANALYSIS_DISABLED == 'true' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
