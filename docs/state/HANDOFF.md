@@ -1,8 +1,8 @@
 # ForgeLLM Handoff
 
-**From state:** S-0007  
-**To work:** P0-T09 evidence PR -> protected `main` Automatic Analysis verification, then ADR-0004
-**Generated:** 2026-08-17
+**From state:** S-0008
+**To work:** P0-T09 evidence PR -> protected `main` Automatic Analysis verification, then ADR-0004; P0-T04 still awaits host designation
+**Generated:** 2026-08-20
 
 ## Canonical status
 
@@ -11,6 +11,7 @@
 - P0-T07: complete;
 - P0-T08 / CA-03: complete;
 - P0-T09 / QG-01: owner-authorized and `in_progress`;
+- P0-T11/P0-T12: bounded Rust CPU reference line complete and merged on `main`;
 - P0-T04: blocked only on owner host designation;
 - P0-T05/P0-T06: blocked behind inventory and workload/SLO gates;
 - no model, runtime, backend, kernel, or Transition Atlas implementation is authorized.
@@ -21,7 +22,7 @@
 Owner command           autorise P0-T09 / subagent-driven
 Recorded date           2026-08-14
 Initial base            1b1a3621fcdf4129268663c497cdcd53aed48c29
-Latest main recurrence  484fec34007fd89f554c9c03bffa9a5275676602
+Latest main recurrence  7962abe6c08a79da28e083735507fbae29529d74
 Tracking issue          #26
 Task packet             tasks/open/P0-T09-sonarqube-main-analysis.yaml
 ```
@@ -157,6 +158,14 @@ ADR-0004 will select exactly one analysis method:
 - `ci_based_only`.
 
 Method selection is orthogonal to the current LOC-limit failure: CI-based analysis does not bypass the subscription entitlement. The methods may never run concurrently.
+
+## Rust reference closeout
+
+The current protected `main` contains the completed P0-T11/P0-T12 reference line. PR #48 merged at `04342c859f790948fa784b72df940ac441ed5ed3` from exact head `dfd6849cfc3c48e801f1e495239f2ec1ad810569`; PR #53 merged at `7962abe6c08a79da28e083735507fbae29529d74` from exact head `0ce6bb4ed39125c39c2b149ae6bf26688ec649cb`.
+
+The final exact-head evidence is 46 Rust tests, 371 Python tests, 230 focused Python tests, formatting, locked Clippy with warnings denied, `make validate`, `make ci`, packet validation, simulation hash verification, diff-check and cleanup. Hosted `Validate and test`, `reference-core`, SonarCloud and GitGuardian checks passed; dependency review was skipped by the existing workflow. Independent writable Codex review accepted both implementation packets after a scope finding was corrected.
+
+This line is CPU-only reference work. The next work remains P0-T09's protected-main Sonar verification and ADR-0004, plus P0-T04 host designation; no production runtime, GPU/backend, ABI, performance, KV-cache, service, P1 or P2 claim follows from these merges.
 
 ## Exact oracle preserved
 

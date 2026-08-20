@@ -1,10 +1,10 @@
 # ForgeLLM Current State
 
-- **State ID:** S-0007
-- **Updated:** 2026-08-17
+- **State ID:** S-0008
+- **Updated:** 2026-08-20
 - **Phase:** P0
 - **Milestone:** P0-M6 — exact speculative-decoding reference verified
-- **Overall status:** P0-T08 / CA-03 is complete; P0-T09 / QG-01 remains active; the immediate failure is classified `platform_limitation / subscription_loc_limit_exceeded` with internal task status `FAILED`; the owner-authorized minimal remediation has changed only Sonar project visibility for `leon36000_ForgeLLM` from private to public, matching the already-public canonical GitHub repository. Anonymous Sonar API readback independently confirms visibility `public`, GitHub binding unchanged, Automatic Analysis enabled, `ncloc=1658`, and Quality Gate `OK` on the latest completed main analysis. Billing & usage after the change shows Free plan, 50,000 private-LOC entitlement, 48,248 private LOC consumed and approximately 1.8k remaining, so the organization is now below the private-LOC limit. Current GitHub `main@484fec34007fd89f554c9c03bffa9a5275676602` remains newer than Sonar's latest completed main analysis (`d5cd25bd9d6fc3f9cded27781c2051939dcdde85`), so post-remediation main verification is still required; P0-T04 remains blocked on designation of one owner-authorized host
+- **Overall status:** P0-T08 / CA-03 is complete; the bounded Rust CPU reference line P0-T11/P0-T12 is complete and merged; P0-T09 / QG-01 remains active; the immediate failure is classified `platform_limitation / subscription_loc_limit_exceeded` with internal task status `FAILED`; the owner-authorized minimal remediation has changed only Sonar project visibility for `leon36000_ForgeLLM` from private to public, matching the already-public canonical GitHub repository. Anonymous Sonar API readback independently confirms visibility `public`, GitHub binding unchanged, Automatic Analysis enabled, `ncloc=1658`, and Quality Gate `OK` on the latest completed main analysis. Billing & usage after the change shows Free plan, 50,000 private-LOC entitlement, 48,248 private LOC consumed and approximately 1.8k remaining, so the organization is now below the private-LOC limit. Current GitHub `main@7962abe6c08a79da28e083735507fbae29529d74` remains newer than Sonar's latest completed main analysis (`d5cd25bd9d6fc3f9cded27781c2051939dcdde85`), so post-remediation main verification is still required; P0-T04 remains blocked on designation of one owner-authorized host
 - **Authorized next work:** the administrative readback is complete enough for the decision gate: binding `leon36000/ForgeLLM`, New Code `previous_version`, no custom scope/issue-ignore settings, Automatic Analysis/Autoscan, default `Sonar way`, and no selected/canonical CI scanner are recorded. Use the reviewed P0-T09 evidence-update pull request itself as the controlled Automatic Analysis trigger. Do not switch analysis method, add exclusions, delete projects, change another project's visibility, change the subscription, or incur cost. After the evidence PR passes all exact-head gates, merge it and require the resulting protected `main` Sonar check to complete successfully before ADR-0004/final closeout; P0-T04 may proceed independently after host designation.
 - **State anchor:** the Git commit containing this file
 
@@ -17,7 +17,7 @@ Preserve the exact speculative-decoding oracle as the correctness reference for 
 - Repository: `leon36000/ForgeLLM`.
 - Default branch: protected `main`.
 - Initial P0-T09 base: `1b1a3621fcdf4129268663c497cdcd53aed48c29`.
-- Latest observed `main` recurrence: `484fec34007fd89f554c9c03bffa9a5275676602`.
+- Latest observed `main` recurrence: `7962abe6c08a79da28e083735507fbae29529d74`.
 - Active task packet: `tasks/open/P0-T09-sonarqube-main-analysis.yaml`.
 - Tracking issue: #26.
 - Owner authorization: `P0-T09 / subagent-driven`, recorded 2026-08-14.
@@ -128,6 +128,18 @@ No Sonar or GitHub **analysis configuration** may change until:
 The already-completed `private -> public` visibility change is a bounded, owner-authorized subscription/visibility remediation, not an analysis-method change. No further visibility, subscription, scope, Quality Gate or analysis-method mutation is authorized by this state.
 
 Automatic and CI-based analysis must never run concurrently for the same Sonar project.
+
+## P0-T11 / P0-T12 completed Rust reference line
+
+The bounded CPU-only Rust reference work is complete and published on protected `main`:
+
+- P0-T11 decoder-free reference core: PR #48 exact head `dfd6849cfc3c48e801f1e495239f2ec1ad810569`, hosted exact-head checks passed, squash merge `04342c859f790948fa784b72df940ac441ed5ed3`;
+- P0-T12 decoder tensor primitives: PR #53 exact head `0ce6bb4ed39125c39c2b149ae6bf26688ec649cb`, hosted exact-head checks passed, squash merge `7962abe6c08a79da28e083735507fbae29529d74`;
+- final local evidence at the P0-T12 publication head: 46 Rust tests, 371 Python tests, 230 focused Python tests, `cargo fmt --all --check`, locked Clippy with warnings denied, `make validate`, `make ci`, task-packet validation, simulation hash verification, diff-check and cleanup;
+- hosted exact-head checks passed: `Validate and test`, `reference-core`, SonarCloud Code Analysis and GitGuardian Security Checks. `dependency-review` was skipped by the existing workflow configuration;
+- independent final writable Codex review: `ACCEPT`, with no concrete findings. The review record is in `docs/reviews/P0-T11-CODEX-REVIEW-2026-08-20.md` and `docs/reviews/P0-T12-CODEX-REVIEW-2026-08-20.md`.
+
+This evidence establishes only a bounded CPU reference implementation. It does not claim a production decoder, GPU/backend support, ABI stability, performance, scheduler, KV-cache, service, P1 or P2 completion.
 
 ## Established claims
 

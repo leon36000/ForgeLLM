@@ -2,7 +2,7 @@ schema_version: "1.0"
 task_id: P0-T12
 title: Add deterministic decoder tensor primitives
 phase: P0
-status: in_progress
+status: complete
 charter_goals:
   - Continue the first executable engine path as a correctness reference.
   - Build explicit decoder-relevant tensor semantics in Rust before optimization.
@@ -18,6 +18,8 @@ inputs:
   - Canonical P0-T11 stacked base candidate be155b9ec475a208674ab7cab6ef95d6c775c6e5.
   - Issue #50 records the bounded P0-T12 scope and hard dependency on P0-T11.
   - Existing forgellm-reference Tensor, typed-error and recoverable-allocation semantics from P0-T11.
+  - P0-T11 merge `04342c859f790948fa784b72df940ac441ed5ed3` satisfied the hard dependency before this task landed.
+  - "PR #53 exact head `0ce6bb4ed39125c39c2b149ae6bf26688ec649cb` passed hosted validation, Rust reference-core, SonarCloud and GitGuardian checks and merged to `main` as `7962abe6c08a79da28e083735507fbae29529d74`."
 outputs:
   - Consuming reshape that preserves contiguous data order while validating the new shape.
   - Exact-shape deterministic elementwise add and multiply.
