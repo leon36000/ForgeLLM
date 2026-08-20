@@ -42,6 +42,14 @@ pub enum ReferenceError {
         left: usize,
         right: usize,
     },
+    /// Two tensors that must have identical shapes are different.
+    ShapeMismatch { operation: &'static str },
+    /// A requested index is outside the operation's valid half-open range.
+    IndexOutOfBounds {
+        operation: &'static str,
+        index: usize,
+        upper_bound: usize,
+    },
     /// A vector operation requires at least one value.
     EmptyInput { operation: &'static str },
     /// Two vectors that must have the same length are different.
@@ -104,6 +112,20 @@ impl Display for ReferenceError {
             } => write!(
                 formatter,
                 "{operation} dimension mismatch: left={left}, right={right}"
+            ),
+            Self::ShapeMismatch { operation } => {
+                write!(
+                    formatter,
+                    "{operation} requires tensors with identical shapes"
+                )
+            }
+            Self::IndexOutOfBounds {
+                operation,
+                index,
+                upper_bound,
+            } => write!(
+                formatter,
+                "{operation} index {index} is outside the valid range 0..{upper_bound}"
             ),
             Self::EmptyInput { operation } => {
                 write!(formatter, "{operation} input must not be empty")
@@ -212,6 +234,12 @@ fn try_vec_with_capacity<T>(
     Ok(values)
 }
 
+fn try_clone_shape(shape: &[usize], operation: &'static str) -> Result<Vec<usize>, ReferenceError> {
+    let mut cloned = try_vec_with_capacity(shape.len(), operation)?;
+    cloned.extend_from_slice(shape);
+    Ok(cloned)
+}
+
 fn first_non_finite(values: &[f32]) -> Option<usize> {
     values.iter().position(|value| !value.is_finite())
 }
@@ -221,6 +249,126 @@ fn require_finite(values: &[f32], operation: &'static str) -> Result<(), Referen
         return Err(ReferenceError::NonFiniteInput { operation, index });
     }
     Ok(())
+}
+
+fn require_same_shape(
+    lhs: &Tensor,
+    rhs: &Tensor,
+    operation: &'static str,
+) -> Result<(), ReferenceError> {
+    if lhs.shape != rhs.shape {
+        return Err(ReferenceError::ShapeMismatch { operation });
+    }
+    Ok(())
+}
+
+/// Changes tensor metadata without reordering the contiguous data buffer.
+///
+/// The tensor is consumed so the existing data allocation is reused. The new shape is checked
+/// by [`Tensor::new`] using the same non-empty, non-zero and overflow-safe constructor contract.
+pub fn reshape(tensor: Tensor, new_shape: Vec<usize>) -> Result<Tensor, ReferenceError> {
+    Tensor::new(new_shape, tensor.data)
+}
+
+/// Adds two tensors element by element using exact-shape, fixed-order `f32` semantics.
+pub fn elementwise_add(lhs: &Tensor, rhs: &Tensor) -> Result<Tensor, ReferenceError> {
+    const OPERATION: &str = "elementwise_add";
+
+    require_same_shape(lhs, rhs, OPERATION)?;
+    require_finite(&lhs.data, OPERATION)?;
+    require_finite(&rhs.data, OPERATION)?;
+
+    let mut output = try_vec_with_capacity(lhs.data.len(), OPERATION)?;
+    for (index, (left, right)) in lhs.data.iter().zip(&rhs.data).enumerate() {
+        let value = *left + *right;
+        if !value.is_finite() {
+            return Err(ReferenceError::NonFiniteResult {
+                operation: OPERATION,
+                index,
+            });
+        }
+        output.push(value);
+    }
+
+    Tensor::new(try_clone_shape(&lhs.shape, OPERATION)?, output)
+}
+
+/// Multiplies two tensors element by element using exact-shape, fixed-order `f32` semantics.
+pub fn elementwise_mul(lhs: &Tensor, rhs: &Tensor) -> Result<Tensor, ReferenceError> {
+    const OPERATION: &str = "elementwise_mul";
+
+    require_same_shape(lhs, rhs, OPERATION)?;
+    require_finite(&lhs.data, OPERATION)?;
+    require_finite(&rhs.data, OPERATION)?;
+
+    let mut output = try_vec_with_capacity(lhs.data.len(), OPERATION)?;
+    for (index, (left, right)) in lhs.data.iter().zip(&rhs.data).enumerate() {
+        let value = *left * *right;
+        if !value.is_finite() {
+            return Err(ReferenceError::NonFiniteResult {
+                operation: OPERATION,
+                index,
+            });
+        }
+        output.push(value);
+    }
+
+    Tensor::new(try_clone_shape(&lhs.shape, OPERATION)?, output)
+}
+
+/// Gathers embedding rows from a finite rank-two table in token-ID order.
+///
+/// Repeated token IDs repeat rows in the output. Empty token-ID sequences are rejected because
+/// the initial reference tensor contract does not admit zero-length dimensions.
+pub fn embedding_gather(table: &Tensor, token_ids: &[usize]) -> Result<Tensor, ReferenceError> {
+    const OPERATION: &str = "embedding_gather";
+
+    if table.shape.len() != 2 {
+        return Err(ReferenceError::RankMismatch {
+            operation: OPERATION,
+            expected: 2,
+            actual: table.shape.len(),
+        });
+    }
+    if token_ids.is_empty() {
+        return Err(ReferenceError::EmptyInput {
+            operation: OPERATION,
+        });
+    }
+    require_finite(&table.data, OPERATION)?;
+
+    let vocabulary = table.shape[0];
+    let width = table.shape[1];
+    let output_len = token_ids
+        .len()
+        .checked_mul(width)
+        .ok_or(ReferenceError::ElementCountOverflow)?;
+    let mut output = try_vec_with_capacity(output_len, OPERATION)?;
+
+    for token_id in token_ids.iter().copied() {
+        if token_id >= vocabulary {
+            return Err(ReferenceError::IndexOutOfBounds {
+                operation: OPERATION,
+                index: token_id,
+                upper_bound: vocabulary,
+            });
+        }
+
+        let row_start = token_id
+            .checked_mul(width)
+            .ok_or(ReferenceError::ElementCountOverflow)?;
+        let row_end = row_start
+            .checked_add(width)
+            .ok_or(ReferenceError::ElementCountOverflow)?;
+        for value in &table.data[row_start..row_end] {
+            output.push(*value);
+        }
+    }
+
+    let mut output_shape = try_vec_with_capacity(2, OPERATION)?;
+    output_shape.push(token_ids.len());
+    output_shape.push(width);
+    Tensor::new(output_shape, output)
 }
 
 /// Multiplies two rank-two row-major tensors using a fixed accumulation order.
