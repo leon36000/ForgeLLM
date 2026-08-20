@@ -339,11 +339,6 @@ pub fn embedding_gather(table: &Tensor, token_ids: &[usize]) -> Result<Tensor, R
 
     let vocabulary = table.shape[0];
     let width = table.shape[1];
-    let output_len = token_ids
-        .len()
-        .checked_mul(width)
-        .ok_or(ReferenceError::ElementCountOverflow)?;
-    let mut output = try_vec_with_capacity(output_len, OPERATION)?;
 
     for token_id in token_ids.iter().copied() {
         if token_id >= vocabulary {
@@ -353,7 +348,15 @@ pub fn embedding_gather(table: &Tensor, token_ids: &[usize]) -> Result<Tensor, R
                 upper_bound: vocabulary,
             });
         }
+    }
 
+    let output_len = token_ids
+        .len()
+        .checked_mul(width)
+        .ok_or(ReferenceError::ElementCountOverflow)?;
+    let mut output = try_vec_with_capacity(output_len, OPERATION)?;
+
+    for token_id in token_ids.iter().copied() {
         let row_start = token_id
             .checked_mul(width)
             .ok_or(ReferenceError::ElementCountOverflow)?;

@@ -37,6 +37,15 @@ fn reshape_rejects_zero_dimension() {
 }
 
 #[test]
+fn reshape_rejects_empty_shape() {
+    let tensor = Tensor::new(vec![2, 3], vec![1.0; 6]).unwrap();
+
+    let error = reshape(tensor, vec![]).unwrap_err();
+
+    assert_eq!(error, ReferenceError::EmptyShape);
+}
+
+#[test]
 fn elementwise_add_matches_exact_shape_golden_result() {
     let lhs = Tensor::new(vec![2, 2], vec![1.0, -2.0, 3.5, 4.0]).unwrap();
     let rhs = Tensor::new(vec![2, 2], vec![4.0, 2.0, 0.5, -1.0]).unwrap();
@@ -103,6 +112,22 @@ fn elementwise_mul_matches_exact_shape_golden_result() {
 
     assert_eq!(output.shape(), &[2, 2]);
     assert_eq!(output.data(), &[4.0, -4.0, 1.5, -4.0]);
+}
+
+#[test]
+fn elementwise_mul_rejects_non_finite_input() {
+    let lhs = Tensor::new(vec![2], vec![1.0, f32::NAN]).unwrap();
+    let rhs = Tensor::new(vec![2], vec![1.0, 2.0]).unwrap();
+
+    let error = elementwise_mul(&lhs, &rhs).unwrap_err();
+
+    assert_eq!(
+        error,
+        ReferenceError::NonFiniteInput {
+            operation: "elementwise_mul",
+            index: 1,
+        }
+    );
 }
 
 #[test]
