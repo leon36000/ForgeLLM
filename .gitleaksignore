@@ -1,0 +1,2 @@
+sonar-project.properties:generic-api-key:1
+.github/workflows/sonar.yml:generic-api-key:40
