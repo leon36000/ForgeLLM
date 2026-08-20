@@ -48,9 +48,9 @@ def _safe_workflow() -> dict[str, Any]:
             "push": {"branches": ["main"]},
             "workflow_dispatch": {},
         },
-        "permissions": {"contents": "read"},
         "jobs": {
             "producer": {
+                "permissions": {"contents": "read"},
                 "runs-on": "ubuntu-24.04",
                 "timeout-minutes": 10,
                 "steps": [
@@ -61,6 +61,7 @@ def _safe_workflow() -> dict[str, Any]:
                 ],
             },
             "scanner": {
+                "permissions": {"contents": "read"},
                 "needs": ["producer"],
                 "if": (
                     "vars.FORGELLM_ENABLE_SONAR_CI == 'true' && "
@@ -158,6 +159,28 @@ def test_sonar_validation_is_inert_before_candidate_configuration(tmp_path: Path
 def test_safe_prepared_inactive_configuration_passes(tmp_path: Path) -> None:
     root = _write_root(tmp_path)
     assert validate_sonar_ci_configuration(root) == []
+
+
+def test_permissions_must_not_be_declared_at_workflow_scope(tmp_path: Path) -> None:
+    workflow = _safe_workflow()
+    workflow["permissions"] = {"contents": "read"}
+    root = _write_root(tmp_path, workflow=workflow)
+    _assert_code(root, "SONAR_ACTIVATION_GATE")
+
+
+def test_every_sonar_job_requires_read_only_permissions(tmp_path: Path) -> None:
+    workflow = _safe_workflow()
+    del workflow["jobs"]["producer"]["permissions"]
+    root = _write_root(tmp_path, workflow=workflow)
+    _assert_code(root, "SONAR_ACTIVATION_GATE")
+
+
+@pytest.mark.parametrize("job_name", ("producer", "scanner"))
+def test_sonar_job_permissions_cannot_widen(tmp_path: Path, job_name: str) -> None:
+    workflow = _safe_workflow()
+    workflow["jobs"][job_name]["permissions"] = {"contents": "write"}
+    root = _write_root(tmp_path, workflow=workflow)
+    _assert_code(root, "SONAR_ACTIVATION_GATE")
 
 
 @pytest.mark.parametrize(

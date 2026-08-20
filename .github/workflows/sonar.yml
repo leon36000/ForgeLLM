@@ -1,0 +1,41 @@
+name: Prepared inactive SonarQube Cloud scanner
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  producer:
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Prepare source and reports without privileged credentials
+        run: |
+          set -euo pipefail
+          printf '%s\n' 'secretless producer boundary'
+
+  scanner:
+    permissions:
+      contents: read
+    needs: [producer]
+    if: vars.FORGELLM_ENABLE_SONAR_CI == 'true' && vars.FORGELLM_AUTOMATIC_ANALYSIS_DISABLED == 'true' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Validate bounded source and report data
+        run: |
+          set -euo pipefail
+          test -d .sonar-input/source
+          test -f .sonar-input/reports/clippy.json
+      - name: Run reviewed immutable scanner
+        uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          projectBaseDir: .
+          scannerVersion: "8.1.0.6389"
+          skipSignatureVerification: false
+          args: "-Dsonar.host.url=https://sonarcloud.io -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }} -Dsonar.projectKey=leon36000_ForgeLLM -Dsonar.sources=.sonar-input/source -Dsonar.rust.clippy.enable=false -Dsonar.rust.clippyReport.reportPaths=.sonar-input/reports/clippy.json -Dsonar.qualitygate.wait=true -Dsonar.qualitygate.timeout=300"

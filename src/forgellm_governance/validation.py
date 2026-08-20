@@ -574,13 +574,12 @@ def _sonar_validate_events(
             "Task 4B.0 forbids contributor-controlled dispatch inputs before the bridge design is accepted",
         )
 
-    permissions = _sonar_mapping(workflow.get("permissions"))
-    if dict(permissions) != {"contents": "read"}:
+    if workflow.get("permissions") is not None:
         _sonar_add_issue(
             issues,
             workflow_path,
             "SONAR_ACTIVATION_GATE",
-            "workflow permissions must be exactly contents: read",
+            "permissions must be declared per job, not at workflow scope",
         )
 
 
@@ -646,12 +645,12 @@ def _sonar_validate_job_scopes(
                 "scanner job failure must not be converted to success",
             )
         job_permissions = job.get("permissions")
-        if job_permissions is not None and dict(_sonar_mapping(job_permissions)) != {"contents": "read"}:
+        if dict(_sonar_mapping(job_permissions)) != {"contents": "read"}:
             _sonar_add_issue(
                 issues,
                 job_path,
                 "SONAR_ACTIVATION_GATE",
-                "job permissions must not widen the workflow's contents: read grant",
+                "every Sonar job must declare exactly contents: read at job scope",
             )
 
 

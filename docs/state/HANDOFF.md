@@ -1,7 +1,7 @@
 # ForgeLLM Handoff
 
 **From state:** S-0008
-**To work:** P0-T09 evidence PR -> protected `main` Automatic Analysis verification, then ADR-0004; P0-T04 still awaits host designation
+**To work:** P0-T09 Task 4B.1 inactive CI preparation for accepted ADR-0004 `ci_based_only`; P0-T04 still awaits host designation
 **Generated:** 2026-08-20
 
 ## Canonical status
@@ -22,7 +22,7 @@
 Owner command           autorise P0-T09 / subagent-driven
 Recorded date           2026-08-14
 Initial base            1b1a3621fcdf4129268663c497cdcd53aed48c29
-Latest main recurrence  7962abe6c08a79da28e083735507fbae29529d74
+Latest canonical main   a52a3386309db12449f865159d4330d2e8d0f8bd
 Tracking issue          #26
 Task packet             tasks/open/P0-T09-sonarqube-main-analysis.yaml
 ```
@@ -51,7 +51,7 @@ with SHA-256 evidence binding:
 bfab677e68396b0452bf6348be773e974a3f4325768b080961a0f5e936f7e5e1
 ```
 
-This confirms the current project setting but does not yet choose the final architecture.
+This is the historical platform readback: Automatic Analysis was enabled and no CI method was selected at that time. The later accepted ADR-0004 selects `ci_based_only` for the durable architecture; Automatic Analysis remains active until the reviewed no-overlap migration sequence.
 
 ## Post-import probe
 
@@ -68,14 +68,14 @@ Phase 0 and CodeQL succeeded on the probe path. Therefore project import alone d
 
 ## 2026-08-17 independent read-only diagnosis
 
-The canonical repository was verified clean at `main@484fec34007fd89f554c9c03bffa9a5275676602`, matching `origin/main` and the GitHub `main` head. Isolated Codex, Claude Code, and OpenHands reviews independently converged on the same result without repository modifications.
+At the 2026-08-17 diagnostic snapshot, the canonical repository was verified clean at then-current `main@484fec34007fd89f554c9c03bffa9a5275676602`, matching `origin/main` and the GitHub `main` head. Isolated Codex, Claude Code, and OpenHands reviews independently converged on the same result without repository modifications.
 
 A fifth recurrence is visible after PR #31:
 
 ```text
 PR #31 head             a2d68d910e270fe15f590808de5041814a416b1f
 PR Sonar                94948153214 / success
-main                    484fec34007fd89f554c9c03bffa9a5275676602
+then-current main       484fec34007fd89f554c9c03bffa9a5275676602
 main Sonar GitHub check 94948378776 / conclusion cancelled / 0 annotations
 Phase 0                 success
 CodeQL                  success
@@ -101,7 +101,7 @@ failure_subtype         subscription_loc_limit_exceeded
 analysis_id             472eadb9-b554-47ca-8336-2033fb3b7408
 background_task_id      AaADNoZ4U0I7o8og6Mb6
 internal_task_status    FAILED
-method_selection        not_selected
+method_selection        ci_based_only
 configuration_changes   sonar_visibility_private_to_public_only
 ```
 
@@ -126,13 +126,16 @@ The owner subsequently authenticated manually in the isolated OpenClaw browser. 
 Independent anonymous Sonar Web API reads then returned HTTP 200 and confirmed:
 
 ```text
-visibility                    public
-binding                       https://github.com/leon36000/ForgeLLM
-automatic analysis            enabled
-latest completed main ncloc   1658
-quality gate                  OK / Sonar way
-latest completed main         d5cd25bd9d6fc3f9cded27781c2051939dcdde85
-canonical GitHub main         484fec34007fd89f554c9c03bffa9a5275676602
+visibility                         public
+binding                            https://github.com/leon36000/ForgeLLM
+automatic analysis                 enabled
+historical visibility revision     d5cd25bd9d6fc3f9cded27781c2051939dcdde85
+historical visibility ncloc        1658
+historical quality gate            OK / Sonar way
+post-remediation main              86f32319847a011fb4d48c98f0c467282fcfbe49
+post-remediation ncloc             6939
+post-remediation quality gate      OK / Sonar way
+canonical GitHub main at readback  484fec34007fd89f554c9c03bffa9a5275676602
 ```
 
 Billing & usage after the change reports:
@@ -144,20 +147,17 @@ private LOC consumed           48248
 remaining                      approximately 1.8k
 ```
 
-The organization is therefore back below the private-LOC limit. Final readback also records binding `leon36000/ForgeLLM`, New Code `previous_version`, no custom analysis-scope or issue-ignore values, Automatic Analysis/Autoscan, no CI method selected, and the default `Sonar way` Quality Gate. The latest completed Sonar main analysis is still stale relative to current GitHub `main`, so the visibility change alone is not proof of recovery. Use the evidence-update PR itself as the controlled trigger; no artificial probe commit is needed.
+The organization is therefore back below the private-LOC limit. The historical final readback also records binding `leon36000/ForgeLLM`, New Code `previous_version`, no custom analysis-scope or issue-ignore values, Automatic Analysis/Autoscan, no CI method selected at that time, and the default `Sonar way` Quality Gate. Post-remediation Automatic Analysis later succeeded on exact `main@86f32319847a011fb4d48c98f0c467282fcfbe49` with `ncloc=6939`; current canonical `main@a52a3386309db12449f865159d4330d2e8d0f8bd` is newer, so current-main verification remains open. The accepted ADR-0004 now governs the repository preparation; no artificial probe commit or external activation is authorized in this increment.
 
 ## Decision gate after readback
 
 The organization LOC blocker has been remediated by the smallest evidence-supported action: align ForgeLLM Sonar visibility with its already-public canonical repository. No source exclusion, project deletion, subscription purchase or analysis-method change was needed.
 
-Next: complete the evidence-update PR. Require Sonar, Phase 0, CodeQL and GitGuardian on its exact head; merge only after review; then require the resulting protected `main` Sonar check to complete successfully. If this cycle succeeds, ADR-0004 can select the retained analysis architecture from evidence rather than speculation.
+The current immediate next gate is the in-repo prepared inactive CI path for Task 4B.1 while Automatic Analysis remains active. Do not provision `SONAR_TOKEN`, do not activate CI submission, and do not submit Sonar analyses from this increment until the non-overlap activation gate is reviewed and executed.
 
-ADR-0004 will select exactly one analysis method:
+ADR-0004 is accepted and selects exactly `ci_based_only`. Task 4B.1 prepares the protected-ref scanner path only; the workflow remains default-off while Automatic Analysis is active. CI-based analysis does not bypass the subscription entitlement, and the two methods may never run concurrently. Token identity/lifecycle review, the ordered Automatic Analysis disable/readback, first CI submission, and successful exact-head evidence remain human-only follow-up gates.
 
-- `automatic_only`, or
-- `ci_based_only`.
-
-Method selection is orthogonal to the current LOC-limit failure: CI-based analysis does not bypass the subscription entitlement. The methods may never run concurrently.
+As a bounded Task 4B.1 scope exception, `.gitleaksignore` contains exactly two path/rule/line fingerprints for the required public `sonar.projectKey` identifier; it suppresses no credential finding and does not alter scanner behavior.
 
 ## Rust reference closeout
 
@@ -165,7 +165,7 @@ The current protected `main` contains the completed P0-T11/P0-T12 reference line
 
 The final exact-head evidence is 46 Rust tests, 371 Python tests, 230 focused Python tests, formatting, locked Clippy with warnings denied, `make validate`, `make ci`, packet validation, simulation hash verification, diff-check and cleanup. Hosted `Validate and test`, `reference-core`, SonarCloud and GitGuardian checks passed; dependency review was skipped by the existing workflow. Independent writable Codex review accepted both implementation packets after a scope finding was corrected.
 
-This line is CPU-only reference work. The next work remains P0-T09's protected-main Sonar verification and ADR-0004, plus P0-T04 host designation; no production runtime, GPU/backend, ABI, performance, KV-cache, service, P1 or P2 claim follows from these merges.
+This line is CPU-only reference work. The next work remains P0-T09's human-gated CI activation/evidence sequence, plus P0-T04 host designation; no production runtime, GPU/backend, ABI, performance, KV-cache, service, P1 or P2 claim follows from these merges.
 
 ## Exact oracle preserved
 
@@ -173,4 +173,4 @@ Future implementations must continue to use CA-03 as their correctness oracle. P
 
 ## Evidence limits
 
-P0-T09 now establishes Automatic Analysis enabled/recommended, the repeated PR-success/`main` failure pattern, internal branch-task status `FAILED`, direct failure classification `platform_limitation / subscription_loc_limit_exceeded`, owner-authorized visibility remediation, anonymous proof that ForgeLLM is now public, and post-change private LOC below the Free entitlement. It does **not** yet establish a healthy Sonar analysis on current GitHub `main` or the final ADR method selection.
+P0-T09 now establishes Automatic Analysis enabled/recommended, the repeated PR-success/`main` failure pattern, internal branch-task status `FAILED`, direct failure classification `platform_limitation / subscription_loc_limit_exceeded`, owner-authorized visibility remediation, anonymous proof that ForgeLLM is now public, post-change private LOC below the Free entitlement, and accepted ADR-0004 selection of `ci_based_only`. It does **not** yet establish a healthy CI Sonar analysis on current GitHub `main`, token readiness, Automatic Analysis disablement, or final P0-T09 completion.
