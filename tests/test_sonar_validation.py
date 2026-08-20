@@ -441,6 +441,17 @@ def test_unaccepted_method_cannot_enable_ci_candidate(tmp_path: Path) -> None:
     _assert_code(root, "SONAR_METHOD_DECISION")
 
 
+def test_decision_section_does_not_consume_following_heading(tmp_path: Path) -> None:
+    root = _write_root(tmp_path)
+    adr = root / "docs/architecture/ADR-0004-sonarqube-analysis-method.md"
+    adr.write_text(
+        _accepted_adr().replace("ci_based_only", "automatic_only")
+        + "\n## Historical note\nSelect exactly **`ci_based_only`** in a later section.\n",
+        encoding="utf-8",
+    )
+    _assert_code(root, "SONAR_METHOD_DECISION")
+
+
 def test_fixture_mutations_do_not_alias_the_safe_workflow() -> None:
     first = _safe_workflow()
     second = deepcopy(first)
