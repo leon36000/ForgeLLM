@@ -452,6 +452,17 @@ def test_decision_section_does_not_consume_following_heading(tmp_path: Path) -> 
     _assert_code(root, "SONAR_METHOD_DECISION")
 
 
+@pytest.mark.parametrize("terminal_newline", ("", "\n"))
+def test_decision_section_accepts_choice_at_absolute_end(
+    tmp_path: Path,
+    terminal_newline: str,
+) -> None:
+    root = _write_root(tmp_path)
+    adr = root / "docs/architecture/ADR-0004-sonarqube-analysis-method.md"
+    adr.write_text(_accepted_adr().rstrip("\n") + terminal_newline, encoding="utf-8")
+    assert validate_sonar_ci_configuration(root) == []
+
+
 def test_fixture_mutations_do_not_alias_the_safe_workflow() -> None:
     first = _safe_workflow()
     second = deepcopy(first)
