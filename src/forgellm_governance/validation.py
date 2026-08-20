@@ -427,7 +427,7 @@ def _sonar_method_is_accepted(root: Path) -> bool:
     except (FileNotFoundError, UnicodeDecodeError):
         return False
     status_accepted = re.search(r"(?mi)^\s*-\s+\*\*Status:\*\*\s+accepted\s*$", text) is not None
-    decision = re.search(r"(?ms)^\s*##\s+Decision\s*$\n(?P<body>.*?)(?=(?:^\s*##\s+)|\Z)", text)
+    decision = re.search(r"(?ms)^\s*##\s+Decision\s*$\n(?P<body>.*?)(?=(?:^\s*##\s+|\Z))", text)
     return (
         status_accepted
         and decision is not None
