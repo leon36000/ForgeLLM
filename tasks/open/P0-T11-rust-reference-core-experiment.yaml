@@ -57,7 +57,7 @@ forbidden_actions:
   - Treat this experiment as satisfying P1 or P2 exit gates.
   - Represent `f64::exp` as bitwise deterministic across Rust versions, targets or platforms.
 acceptance_criteria:
-  - `rust-toolchain.toml` pins exactly Rust 1.97.1 with rustfmt and clippy components.
+  - "`rust-toolchain.toml` pins exactly Rust 1.97.1 with rustfmt and clippy components."
   - The workspace builds without third-party Rust runtime dependencies in the reference crate.
   - Tensor construction rejects empty shape, checked element-count overflow, data-length mismatch and non-finite inputs where an operation requires finite values.
   - Matmul has deterministic row-major semantics, checked dimensions and typed shape errors.
@@ -65,10 +65,10 @@ acceptance_criteria:
   - Softmax comparison claims are tolerance-based on the pinned Rust 1.97.1 hosted x86_64 Ubuntu 24.04 evidence environment; no bitwise or cross-platform transcendental reproducibility claim is made.
   - RMSNorm validates epsilon, dimensions and finite values and has golden/boundary tests.
   - Argmax has explicit deterministic first-index tie semantics and rejects empty/non-finite input.
-  - Reference-operation output vectors use recoverable `try_reserve_exact` capacity reservation and map recoverable reservation failures to `ReferenceError::AllocationFailed`.
+  - "Reference-operation output vectors use recoverable `try_reserve_exact` capacity reservation and map recoverable reservation failures to `ReferenceError::AllocationFailed`."
   - A deterministic capacity-overflow seam verifies typed allocation failure without inducing an actual OOM.
   - No `unsafe`, TODO implementation markers, stubs or unimplemented production paths exist in the crate.
-  - `cargo fmt --check`, `cargo clippy --workspace --all-targets --locked -- -D warnings` and `cargo test --workspace --all-targets --locked` pass on the exact final head.
+  - "`cargo fmt --check`, `cargo clippy --workspace --all-targets --locked -- -D warnings` and `cargo test --workspace --all-targets --locked` pass on the exact final head."
   - Existing `make ci` remains green on the exact final head.
   - Fresh independent correctness and code-quality reviews record ACCEPT before merge.
   - The final report explicitly states that the work is a risk-reduction reference experiment, not P2 production promotion.
