@@ -39,7 +39,7 @@ def create_session_snapshot(root: Path | str, output: Path | str) -> Path:
         "# ForgeLLM Session Continuity Snapshot",
         "",
         f"Generated: `{generated}`",
-        f"Repository: `{root}`",
+        "Repository: `ForgeLLM`",
         f"Branch: `{_git(root, 'branch', '--show-current')}`",
         f"Commit: `{_git(root, 'rev-parse', 'HEAD')}`",
         f"Dirty status: `{_git(root, 'status', '--short')}`",
