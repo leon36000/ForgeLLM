@@ -7,8 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from forgellm_governance import cli
-from forgellm_governance import hardware
+from forgellm_governance import cli, hardware
 from forgellm_governance.hardware import CommandResult, collect_hardware_inventory
 from scripts import hardware_inventory as publication
 from scripts.hardware_inventory import sanitize_inventory
