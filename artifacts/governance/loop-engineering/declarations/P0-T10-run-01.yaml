@@ -1,0 +1,36 @@
+schema_version: '1.0'
+project: ForgeLLM
+task_id: P0-T10
+base_commit: f8364f12402c3c58796dbc1b56f8c65d378e88de
+GOAL: Add the bounded inert Loop Engineering bridge and prove its repository-native gates without widening ForgeLLM authority.
+SCOPE:
+  - tasks/open/P0-T10-bounded-loop-engineering.yaml
+  - third_party/loop-engineering/
+  - src/forgellm_governance/loop_engineering.py
+  - scripts/validate_loop_engineering.py
+  - .agents/skills/forgellm-loop-engineering/
+  - .claude/skills/forgellm-loop-engineering/
+  - AGENTS.md
+  - CLAUDE.md
+  - docs/architecture/ADR-0005-bounded-loop-engineering.md
+  - docs/quality/P0-T10-LOOP-ENGINEERING.md
+  - artifacts/governance/loop-engineering/
+  - docs/roadmap/PHASE0_TASKS.md
+  - docs/state/CURRENT_STATE.md
+  - docs/state/HANDOFF.md
+  - docs/state/RISKS.md
+  - Makefile
+VERIFY:
+  - make validate-loop
+  - make lint
+  - git diff --check
+BUDGET:
+  max_iterations: 10
+  max_identical_failures: 3
+  max_wall_minutes: 60
+STOP:
+  on_verify_pass: true
+  on_budget_exhausted: true
+  on_identical_failure_limit: true
+  privileged_operation: stop_and_escalate
+RECEIPT: artifacts/governance/loop-engineering/receipts/P0-T10-run-01.yaml
