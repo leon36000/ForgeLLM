@@ -52,6 +52,7 @@ _RECEIPT_FIELDS = frozenset(
         "stop_reason",
         "changed_paths",
         "scope_check",
+        "verification",
         "verify_commands",
         "verify_evidence",
         "reviewer",
@@ -59,7 +60,20 @@ _RECEIPT_FIELDS = frozenset(
 )
 _RECEIPT_PREFIX = "artifacts/governance/loop-engineering/receipts"
 _SHADOW_STATE_BASENAMES = frozenset({"goals.md", "status.md", "project_brief.md", "project-brief.md"})
-_STOP_REASONS = frozenset({"verify_pass", "budget_exhausted", "identical_failure_limit", "stop_and_escalate"})
+_STOP_REASONS = frozenset(
+    {"verify_pass", "budget_exhausted", "identical_failure_limit", "stop_and_escalate", "manual_stop"}
+)
+_VERIFICATION_FIELDS = frozenset({"disposition"})
+_VERIFICATION_DISPOSITIONS = frozenset(
+    {"pass", "budget_exhausted", "identical_failure_limit", "stop_and_escalate", "manual_stop"}
+)
+_STOP_DISPOSITION = {
+    "verify_pass": "pass",
+    "budget_exhausted": "budget_exhausted",
+    "identical_failure_limit": "identical_failure_limit",
+    "stop_and_escalate": "stop_and_escalate",
+    "manual_stop": "manual_stop",
+}
 _TEMPLATE_MARKERS = ("template", "replace_with", "<placeholder>", "tbd", "todo")
 
 
@@ -421,6 +435,20 @@ def _validate_receipt_common(
             "max_identical_failures"
         ):
             issues.append("identical_failure_limit stop_reason requires identical_failures_at_stop at its ceiling")
+
+    verification = receipt.get("verification")
+    if not isinstance(verification, Mapping):
+        issues.append("verification must be a mapping with one disposition")
+    else:
+        issues.extend(_key_set_issue(verification, _VERIFICATION_FIELDS, "verification"))
+        disposition = verification.get("disposition")
+        if allow_template:
+            if disposition != "template":
+                issues.append("template verification disposition must be 'template'")
+        elif disposition not in _VERIFICATION_DISPOSITIONS:
+            issues.append("verification.disposition must be a permitted final disposition")
+        elif _STOP_DISPOSITION.get(stop_reason) != disposition:
+            issues.append("verification.disposition must match stop_reason")
 
     changed_paths = _validate_path_list(receipt.get("changed_paths"), "changed_paths", issues, allow_empty=True)
     declared_scope = _validate_path_list(declaration.get("SCOPE"), "SCOPE", issues, allow_empty=False)
