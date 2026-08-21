@@ -130,6 +130,8 @@
 - [ ] Bind `SONAR_TOKEN` only on the final approved scanner step. Prohibit workflow/job/container/service secret environments, direct PR secret delivery, reusable-workflow forwarding, `secrets: inherit`, outputs/state propagation, and all other step scopes; ensure source/report acquisition/extraction/normalization/validation complete before token injection; prohibit token-bearing post-processing and unreviewed action pre/post hooks.
 - [ ] Fail clearly on secret absence without printing or probing the value.
 
+Current implementation checkpoint: the protected-ref producer now transfers one fixed, immutable source/report artifact to the scanner. The governance validator requires the event-SHA checkout, exact artifact action pins and inputs, and a secretless scanner validation step that fails closed on symlinks; the final scanner remains default-off and no activation or submission has occurred.
+
 #### Task 4B.2: Review token identity and lifecycle before provisioning
 
 - [ ] Review identity, issuer/owner, minimum scope, storage boundary, rotation, expiry, revocation, audit trail, and incident response.
@@ -152,7 +154,7 @@
 #### Task 4B.4: Activate with direct no-overlap evidence
 
 - [ ] Independently accept the validator, prepared-inactive path, trusted configuration, token lifecycle, provenance, and any bridge.
-- [ ] Record Automatic Analysis enabled readback, then the disable action, then disabled readback, in that order.
+- [ ] Complete token identity/lifecycle review without provisioning; then record Automatic Analysis enabled readback, the owner-authorized disable action, and disabled readback, in that order.
 - [ ] Only after disabled readback, enable CI and permit the first submission; never infer state from the mutation request.
 - [ ] Validate exact-head PR/trusted-ref and protected-`main` analyses while preserving other gates.
 - [ ] On initial failure before material Rust analysis, stop submissions, prove CI inactive, and use only reviewed ADR-0004 rollback. After material Rust analysis, repair CI or adopt a later ADR.

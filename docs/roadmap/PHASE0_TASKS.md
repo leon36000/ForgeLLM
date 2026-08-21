@@ -47,10 +47,12 @@ The historical administrative readback records binding `leon36000/ForgeLLM`, Aut
 Verified pre-change evidence anchor: protected `main@26a0a66bbbc3c5e3f6e68ed379e074ca06da47f5`. Phase 0 run `32438425091` and CodeQL run `32438425096` succeeded; prepared inactive Sonar workflow run `32438425087` completed with `producer=success` and `scanner=skipped`; Automatic Analysis `2a0d79e4-bbb1-4536-b1e6-6351ab2ef56d` targets that exact revision with Quality Gate `OK`. This is Automatic Analysis evidence, not a CI scanner submission.
 Merging this four-file documentation synchronization will create a different protected-main SHA. That merge SHA is not claimed as verified by this snapshot. No fourth documentation-only synchronization may chase it.
 
-Next gate (not executed or authorized by this documentation increment): obtain explicit human review and authorization for the no-overlap migration sequence. Automatic Analysis remains enabled and the prepared CI scanner remains inactive.
-If separately authorized, capture the sequence in order: fresh Automatic Analysis enabled readback; human disable action; Automatic Analysis disabled readback. Complete a separate token identity/lifecycle security review before provisioning `SONAR_TOKEN`, and require another explicit gate before CI activation or the first controlled submission.
+Next gate (not executed or authorized by this documentation increment): obtain explicit independent review and authorization for the no-overlap migration sequence. Automatic Analysis remains enabled and the prepared CI scanner remains inactive.
+If separately authorized, complete a separate token identity/lifecycle security review without provisioning `SONAR_TOKEN`; then capture the sequence in order: fresh Automatic Analysis enabled readback; owner-authorized disable action; Automatic Analysis disabled readback. Require another explicit gate before CI activation or the first controlled submission.
 Until those gates are satisfied: no `SONAR_TOKEN`, no Sonar or GitHub setting change, no scanner activation, no scan submission, and no PR bridge. P0-T09 remains `in_progress`. After this final snapshot cycle, stop the documentation loop; resume only after a material activation, evidence, status, or substantive-error change.
 Automatic and CI-based methods may not run concurrently for the same project; this increment is preparation-only.
+
+Current local checkpoint: the protected-ref producer now prepares source and Clippy data without credentials and transfers one immutable fixed artifact to the scanner; the validator mechanically requires the event-SHA checkout, fixed upload/download pins and fail-closed symlink rejection. Focused governance evidence is 53 tests passing; P0-T09 remains `in_progress` because token lifecycle, no-overlap activation and exact-head CI evidence are still open.
 
 ## P0-T11 / P0-T12 final evidence
 
