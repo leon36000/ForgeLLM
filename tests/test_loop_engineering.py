@@ -1,6 +1,7 @@
 import copy
 import hashlib
 import importlib
+import shutil
 from pathlib import Path
 
 import pytest
@@ -445,6 +446,27 @@ def test_vendor_provenance_accepts_exact_static_subset():
 
 def test_vendor_snapshot_contains_no_shell_scripts():
     assert list((ROOT / "third_party/loop-engineering").rglob("*.sh")) == []
+
+
+def test_vendor_provenance_rejects_upstream_commit_drift(tmp_path):
+    vendor = tmp_path / "third_party/loop-engineering"
+    shutil.copytree(ROOT / "third_party/loop-engineering", vendor)
+    path = vendor / "PROVENANCE.yaml"
+    provenance = yaml.safe_load(path.read_text(encoding="utf-8"))
+    provenance["upstream_commit"] = "0" * 40
+    path.write_text(yaml.safe_dump(provenance, sort_keys=False), encoding="utf-8")
+    messages = _messages(validate_vendor_provenance(tmp_path))
+    assert "upstream_commit" in messages
+
+
+def test_vendor_provenance_rejects_static_blob_drift(tmp_path):
+    vendor = tmp_path / "third_party/loop-engineering"
+    shutil.copytree(ROOT / "third_party/loop-engineering", vendor)
+    path = vendor / "core/METHODOLOGY.md"
+    path.write_text(path.read_text(encoding="utf-8") + "\nDRIFT\n", encoding="utf-8")
+    messages = _messages(validate_vendor_provenance(tmp_path))
+    assert "METHODOLOGY.md" in messages
+    assert "blob" in messages.lower()
 
 
 def test_project_local_loop_agent_skills_exist_and_match():
