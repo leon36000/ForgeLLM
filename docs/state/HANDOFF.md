@@ -1,7 +1,7 @@
 # ForgeLLM Handoff
 
-**From state:** S-0010
-**To work:** independently review the bounded secretless P0-T09 artifact boundary, then continue only through the ordered token/lifecycle and no-overlap gates; P0-T04 still awaits host designation
+**From state:** S-0011
+**To work:** continue P0-T09 through the ordered token/lifecycle and no-overlap gates after the merged inactive artifact-boundary checkpoint; P0-T04 still awaits host designation
 **Generated:** 2026-08-21
 
 ## P0-T10 completed handoff
@@ -181,6 +181,12 @@ The prepared protected-ref path now has a concrete same-run data boundary. The p
 The scanner downloads that fixed artifact first, validates the fixed source/report paths, rejects symlinks, and then invokes the final immutable Sonar action. The governance validator and 53 focused Sonar tests reject missing or mutable transfer pins, wrong artifact paths/names, checkout ref/repository overrides, and removal of the symlink guard. This is still default-off preparation: no secret is provisioned, no Sonar/GitHub setting is changed, no scan is submitted, and no PR bridge is designed or activated.
 
 The official action provenance is recorded in `CURRENT_STATE.md`; no scanner archive digest is claimed.
+
+## P0-T09 publication evidence
+
+PR #67 exact head `a58ee2f0a705f73bcc769330547f1b6bb7de6a67` merged as protected `main@83f8ea624bc4382f22e2e168c5444df5304b189a`. PR checks passed for Phase 0 validation, CodeQL, SonarCloud Code Analysis and GitGuardian; Dependency Review was `SKIPPED`. Post-merge runs passed: Phase 0 `32532087564`, CodeQL `32532087569`, and prepared Sonar workflow `32532087558`, whose producer succeeded and scanner was skipped by the default-off/Automatic-Analysis gate.
+
+This is exact-head repository and inactive-workflow evidence, not a Sonar CI submission. No token was provisioned, Automatic Analysis was not changed, and no PR bridge was introduced.
 
 ## Loop Engineering cycle 3/3: final snapshot stop
 
