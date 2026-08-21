@@ -84,12 +84,13 @@ def _git_blob_sha(data: bytes) -> str:
 def _git_read(root: Path, arguments: list[str]) -> subprocess.CompletedProcess[str]:
     if not arguments or any("\x00" in argument or "\n" in argument or "\r" in argument for argument in arguments):
         return subprocess.CompletedProcess(arguments, 2, "", "unsafe Git argument")
-    return subprocess.run(
+    # NOSONAR: shell=False plus strict SHA/path token validation prevents command interpretation.
+    return subprocess.run(  # NOSONAR
         ["git", "-C", str(root), *arguments],
         capture_output=True,
         text=True,
         check=False,
-        shell=False,  # NOSONAR: arguments are fixed Git subcommands or validated full SHA/path tokens.
+        shell=False,
     )
 
 
@@ -222,18 +223,9 @@ def _index_record_identity(
     return run_id if isinstance(run_id, str) else None, declaration_path, receipt_path
 
 
-def _validate_index_artifacts(
-    root: Path,
-    record: Mapping[object, object],
-    prefix: str,
-    declaration_path: str | None,
-    receipt_path: str | None,
-    task_packet: Mapping[object, object],
-    issues: list[str],
-) -> None:
-    declaration: Mapping[object, object] | None = None
-    declaration_bytes: bytes | None = None
-
+def _load_index_declaration(
+    root: Path, record: Mapping[object, object], prefix: str, declaration_path: str | None, issues: list[str]
+) -> Mapping[object, object] | None:
     if declaration_path is not None:
         declaration, declaration_bytes = _load_mapping(
             root, declaration_path, issues, f"declaration {declaration_path}"
@@ -250,21 +242,40 @@ def _validate_index_artifacts(
             issues,
             prefix,
         )
+        return declaration
+    return None
 
+
+def _validate_index_declaration(
+    declaration: Mapping[object, object] | None,
+    declaration_path: str | None,
+    receipt_path: str | None,
+    task_packet: Mapping[object, object],
+    issues: list[str],
+) -> None:
+    if declaration is None:
+        return
+    issues.extend(
+        f"declaration {declaration_path}: {message}" for message in validate_loop_declaration(declaration, task_packet)
+    )
+    declared_receipt = _safe_relative_yaml_path(declaration.get("RECEIPT"))
+    if receipt_path is not None and declared_receipt != receipt_path:
+        issues.append(f"declaration {declaration_path}: RECEIPT must match indexed receipt_path {receipt_path}")
+
+
+def _validate_index_receipt(
+    root: Path,
+    receipt_path: str | None,
+    declaration_path: str | None,
+    declaration: Mapping[object, object] | None,
+    prefix: str,
+    record: Mapping[object, object],
+    issues: list[str],
+) -> None:
     if receipt_path is not None:
         receipt, _ = _load_mapping(root, receipt_path, issues, f"receipt {receipt_path}")
     else:
         receipt = None
-
-    if declaration is not None:
-        issues.extend(
-            f"declaration {declaration_path}: {message}"
-            for message in validate_loop_declaration(declaration, task_packet)
-        )
-        declared_receipt = _safe_relative_yaml_path(declaration.get("RECEIPT"))
-        if receipt_path is not None and declared_receipt != receipt_path:
-            issues.append(f"declaration {declaration_path}: RECEIPT must match indexed receipt_path {receipt_path}")
-
     if receipt is not None:
         issues.extend(
             f"receipt {receipt_path}: {message}" for message in validate_loop_receipt(receipt, declaration or {})
@@ -272,6 +283,20 @@ def _validate_index_artifacts(
         _validate_receipt_changed_paths(root, receipt, issues)
         if receipt.get("schema_version") != record.get("receipt_schema_version"):
             issues.append(f"{prefix}.receipt_schema_version must match receipt {receipt_path}")
+
+
+def _validate_index_artifacts(
+    root: Path,
+    record: Mapping[object, object],
+    prefix: str,
+    declaration_path: str | None,
+    receipt_path: str | None,
+    task_packet: Mapping[object, object],
+    issues: list[str],
+) -> None:
+    declaration = _load_index_declaration(root, record, prefix, declaration_path, issues)
+    _validate_index_declaration(declaration, declaration_path, receipt_path, task_packet, issues)
+    _validate_index_receipt(root, receipt_path, declaration_path, declaration, prefix, record, issues)
 
 
 def _validate_index_record(

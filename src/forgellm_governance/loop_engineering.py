@@ -275,7 +275,7 @@ def _validate_path_list(
             suffix = " within allowed_paths" if field == "SCOPE" else ""
             issues.append(f"{field}[{index}] must be a safe relative POSIX path{suffix}")
             continue
-        path, directory = parsed
+        path, _directory = parsed
         if _is_shadow_state_path(path):
             issues.append(f"{field}[{index}] targets forbidden shadow-state path {path}")
         if parsed in seen:
@@ -356,7 +356,7 @@ def _validate_declaration_verify(
             issues.append(f"VERIFY[{index}] is not authorized by task packet verification_commands")
 
 
-def _validate_declaration_budget_stop_receipt(declaration: Mapping[str, Any], issues: list[str]) -> None:
+def _validate_declaration_budget(declaration: Mapping[str, Any], issues: list[str]) -> None:
     budget = declaration.get("BUDGET")
     if not isinstance(budget, Mapping):
         issues.append("BUDGET must be a mapping")
@@ -366,6 +366,8 @@ def _validate_declaration_budget_stop_receipt(declaration: Mapping[str, Any], is
         _validate_positive_budget(budget.get("max_identical_failures"), "max_identical_failures", issues, integer=True)
         _validate_positive_budget(budget.get("max_wall_minutes"), "max_wall_minutes", issues, integer=False)
 
+
+def _validate_declaration_stop(declaration: Mapping[str, Any], issues: list[str]) -> None:
     stop = declaration.get("STOP")
     if not isinstance(stop, Mapping):
         issues.append("STOP must be a mapping")
@@ -377,6 +379,8 @@ def _validate_declaration_budget_stop_receipt(declaration: Mapping[str, Any], is
         if stop.get("privileged_operation") != "stop_and_escalate":
             issues.append("STOP.privileged_operation must be stop_and_escalate")
 
+
+def _validate_declaration_receipt(declaration: Mapping[str, Any], issues: list[str]) -> None:
     receipt = _canonical_posix_path(declaration.get("RECEIPT"))
     if receipt is None or receipt[1]:
         issues.append("RECEIPT must be a relative POSIX file path")
@@ -386,6 +390,12 @@ def _validate_declaration_budget_stop_receipt(declaration: Mapping[str, Any], is
             issues.append(f"RECEIPT must be contained under {_RECEIPT_PREFIX}/")
         elif not receipt_path.endswith((".yaml", ".yml")):
             issues.append("RECEIPT must name a YAML receipt file")
+
+
+def _validate_declaration_budget_stop_receipt(declaration: Mapping[str, Any], issues: list[str]) -> None:
+    _validate_declaration_budget(declaration, issues)
+    _validate_declaration_stop(declaration, issues)
+    _validate_declaration_receipt(declaration, issues)
 
 
 def _validate_declaration_semantics(
@@ -548,7 +558,7 @@ def _validate_receipt_evidence(receipt: Mapping[str, Any], *, allow_template: bo
                 issues.append(f"verify_evidence[{index}] must not contain template evidence")
 
 
-def _validate_receipt_review(receipt: Mapping[str, Any], *, allow_template: bool, issues: list[str]) -> None:
+def _validate_reviewer_identity(receipt: Mapping[str, Any], *, allow_template: bool, issues: list[str]) -> None:
     reviewer = receipt.get("reviewer")
     if not isinstance(reviewer, str) or not reviewer.strip():
         issues.append("reviewer must identify an independent reviewer")
@@ -559,23 +569,54 @@ def _validate_receipt_review(receipt: Mapping[str, Any], *, allow_template: bool
     ):
         issues.append("reviewer must identify an independent reviewer, not template or self-asserted evidence")
 
+
+def _validate_review_shape(review: Mapping[object, object], *, allow_template: bool, issues: list[str]) -> object:
+    issues.extend(_key_set_issue(review, _REVIEW_FIELDS, "review"))
+    agent = review.get("agent")
+    if not isinstance(agent, str) or not agent.strip() or (not allow_template and _looks_like_template(agent)):
+        issues.append("review.agent must identify a non-template independent reviewer")
+    input_commit = review.get("input_commit")
+    _validate_sha(input_commit, "review.input_commit", issues, allow_template=allow_template)
+    return input_commit
+
+
+def _validate_review_disposition(
+    review: Mapping[object, object],
+    input_commit: object,
+    final_commit: object,
+    *,
+    allow_template: bool,
+    issues: list[str],
+) -> None:
+    disposition = review.get("disposition")
+    if allow_template:
+        if disposition != "TEMPLATE: ACCEPT":
+            issues.append("template review disposition must be 'TEMPLATE: ACCEPT'")
+        return
+    if input_commit != final_commit:
+        issues.append("review.input_commit must equal receipt final_commit")
+    if disposition != _FINAL_REVIEW_DISPOSITION:
+        issues.append("review.disposition must be ACCEPT")
+
+
+def _validate_review_binding(receipt: Mapping[str, Any], *, allow_template: bool, issues: list[str]) -> None:
     review = receipt.get("review")
     if not isinstance(review, Mapping):
         issues.append("review must bind an independent reviewer, input commit, and ACCEPT disposition")
-    else:
-        issues.extend(_key_set_issue(review, _REVIEW_FIELDS, "review"))
-        agent = review.get("agent")
-        if not isinstance(agent, str) or not agent.strip() or (not allow_template and _looks_like_template(agent)):
-            issues.append("review.agent must identify a non-template independent reviewer")
-        input_commit = review.get("input_commit")
-        _validate_sha(input_commit, "review.input_commit", issues, allow_template=allow_template)
-        if allow_template:
-            if review.get("disposition") != "TEMPLATE: ACCEPT":
-                issues.append("template review disposition must be 'TEMPLATE: ACCEPT'")
-        elif input_commit != receipt.get("final_commit"):
-            issues.append("review.input_commit must equal receipt final_commit")
-        elif review.get("disposition") != _FINAL_REVIEW_DISPOSITION:
-            issues.append("review.disposition must be ACCEPT")
+        return
+    input_commit = _validate_review_shape(review, allow_template=allow_template, issues=issues)
+    _validate_review_disposition(
+        review,
+        input_commit,
+        receipt.get("final_commit"),
+        allow_template=allow_template,
+        issues=issues,
+    )
+
+
+def _validate_receipt_review(receipt: Mapping[str, Any], *, allow_template: bool, issues: list[str]) -> None:
+    _validate_reviewer_identity(receipt, allow_template=allow_template, issues=issues)
+    _validate_review_binding(receipt, allow_template=allow_template, issues=issues)
 
 
 def _validate_receipt_common(

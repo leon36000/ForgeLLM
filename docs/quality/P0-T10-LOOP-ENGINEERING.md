@@ -13,6 +13,8 @@ The bridge validates the six semantic fields GOAL, SCOPE, VERIFY, BUDGET, STOP, 
 
 The repository gate also supports GitHub's shallow checkout safely: when a fixed, full SHA required by an indexed declaration or receipt is absent locally, it fetches only that exact ForgeLLM revision from the configured `origin`, then verifies the commit/blob or diff. It never fetches a floating branch or interprets an untrusted shell command.
 
+The validator keeps the subprocess boundary explicit (`shell=False`), rejects control characters before invoking Git, and uses only fixed subcommands plus validated revision/path tokens. The hosted quality gate's complexity findings are addressed by keeping declaration, index, and reviewer checks in small single-purpose helpers.
+
 ## Upstream provenance
 
 The reviewed source is https://github.com/lcajigasm/loop-engineering at commit ae2d610985064bb30c5013261988c813013c09e3, licensed under MIT. The license Git blob is 84524f23b209fccb02a8f239165f0444bfd70f3f.
