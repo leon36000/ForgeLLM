@@ -2,7 +2,7 @@ schema_version: '1.0'
 task_id: P0-T10
 title: Adopt bounded Loop Engineering orchestration
 phase: P0
-status: in_progress
+status: complete
 charter_goals:
   - Preserve Git and accepted ADRs as ForgeLLM source of truth.
   - Make long-running agent work bounded, reproducible, interruptible, and independently verifiable.
