@@ -34,6 +34,11 @@ _SONAR_PROPERTIES_PATH = "sonar-project.properties"
 _SONAR_AUTOMATIC_PROPERTIES_PATH = ".sonarcloud.properties"
 _SONAR_ADR_PATH = "docs/architecture/ADR-0004-sonarqube-analysis-method.md"
 _SONAR_SCANNER_ACTION = "SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f"
+_SONAR_CHECKOUT_ACTION = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"
+_SONAR_UPLOAD_ARTIFACT_ACTION = "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
+_SONAR_DOWNLOAD_ARTIFACT_ACTION = "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c"
+_SONAR_ARTIFACT_NAME = "forgellm-sonar-input"
+_SONAR_ARTIFACT_PATH = ".sonar-input"
 _SONAR_CHECKOUT_PREFIX = "actions/checkout@"
 _SONAR_TOKEN_NAME = "SONAR_TOKEN"
 _SONAR_TOKEN_REFERENCE = "${{ secrets.SONAR_TOKEN }}"
@@ -928,6 +933,224 @@ def _sonar_validate_scanner_job(
         )
 
 
+def _sonar_validate_artifact_boundary(
+    workflow_path: Path,
+    scanner_name: str | None,
+    scanner_job: Mapping[str, Any],
+    jobs: Mapping[str, Any],
+    issues: list[ValidationIssue],
+) -> None:
+    """Require one fixed, secretless producer-to-scanner artifact boundary."""
+
+    if scanner_name is None:
+        return
+
+    scanner_path = f"{workflow_path}#jobs.{scanner_name}"
+    needs_value = scanner_job.get("needs")
+    needs = [needs_value] if isinstance(needs_value, str) else [str(item) for item in _sonar_sequence(needs_value)]
+    if needs != ["producer"] or "producer" not in jobs:
+        _sonar_add_issue(
+            issues,
+            scanner_path,
+            "SONAR_ARTIFACT_BOUNDARY",
+            "scanner must depend on exactly one named producer job",
+        )
+        return
+
+    producer_job = _sonar_mapping(jobs["producer"])
+    producer_path = f"{workflow_path}#jobs.producer"
+    producer_steps = [step for step in _sonar_sequence(producer_job.get("steps")) if isinstance(step, Mapping)]
+    checkout_indexes = [
+        index
+        for index, step in enumerate(producer_steps)
+        if str(step.get("uses", "")).startswith(_SONAR_CHECKOUT_PREFIX)
+    ]
+    upload_indexes = [
+        index
+        for index, step in enumerate(producer_steps)
+        if str(step.get("uses", "")).startswith("actions/upload-artifact@")
+    ]
+    if len(checkout_indexes) != 1 or str(producer_steps[checkout_indexes[0]].get("uses", "")) != _SONAR_CHECKOUT_ACTION:
+        _sonar_add_issue(
+            issues,
+            producer_path,
+            "SONAR_ARTIFACT_BOUNDARY",
+            "producer must use exactly one reviewed immutable checkout action",
+        )
+    if (
+        len(upload_indexes) != 1
+        or str(producer_steps[upload_indexes[0]].get("uses", "")) != _SONAR_UPLOAD_ARTIFACT_ACTION
+    ):
+        _sonar_add_issue(
+            issues,
+            producer_path,
+            "SONAR_ARTIFACT_BOUNDARY",
+            "producer must publish exactly one reviewed immutable artifact",
+        )
+
+    if len(checkout_indexes) == 1:
+        checkout_index = checkout_indexes[0]
+        checkout_step = producer_steps[checkout_index]
+        checkout_path = f"{producer_path}.steps[{checkout_index}]"
+        checkout_with = _sonar_mapping(checkout_step.get("with"))
+        if (
+            set(checkout_with) != {"fetch-depth", "persist-credentials", "repository", "ref"}
+            or checkout_with.get("fetch-depth") != "1"
+            or checkout_with.get("persist-credentials") != "false"
+            or checkout_with.get("repository") != "${{ github.repository }}"
+            or checkout_with.get("ref") != "${{ github.sha }}"
+        ):
+            _sonar_add_issue(
+                issues,
+                checkout_path,
+                "SONAR_ARTIFACT_BOUNDARY",
+                "producer checkout must bind the canonical repository and immutable event SHA with shallow non-persistent credentials",
+            )
+
+    producer_runs = "\n".join(str(step.get("run", "")) for step in producer_steps)
+    required_producer_markers = (
+        ".sonar-input/source",
+        ".sonar-input/reports/clippy.json",
+        "cargo clippy",
+    )
+    if any(marker not in producer_runs for marker in required_producer_markers):
+        _sonar_add_issue(
+            issues,
+            producer_path,
+            "SONAR_ARTIFACT_BOUNDARY",
+            "producer must prepare fixed source and Clippy report paths without privileged credentials",
+        )
+
+    for index, step in enumerate(producer_steps):
+        step_path = f"{producer_path}.steps[{index}]"
+        uses = str(step.get("uses", ""))
+        if uses and uses not in {_SONAR_CHECKOUT_ACTION, _SONAR_UPLOAD_ARTIFACT_ACTION}:
+            _sonar_add_issue(
+                issues,
+                step_path,
+                "SONAR_ARTIFACT_BOUNDARY",
+                "producer actions must be limited to the reviewed checkout and artifact upload pins",
+            )
+        if _sonar_contains_token(step):
+            _sonar_add_issue(
+                issues,
+                step_path,
+                "SONAR_TOKEN_SCOPE",
+                "producer source/report preparation and upload must remain secretless",
+            )
+
+    if len(upload_indexes) == 1:
+        upload_index = upload_indexes[0]
+        upload_step = producer_steps[upload_index]
+        upload_path = f"{producer_path}.steps[{upload_index}]"
+        upload_with = _sonar_mapping(upload_step.get("with"))
+        if (
+            set(upload_with) != {"name", "path", "if-no-files-found", "include-hidden-files", "retention-days"}
+            or upload_with.get("name") != _SONAR_ARTIFACT_NAME
+            or upload_with.get("path") != _SONAR_ARTIFACT_PATH
+            or upload_with.get("if-no-files-found") != "error"
+            or not _sonar_truthy(upload_with.get("include-hidden-files"))
+            or upload_with.get("retention-days") != "1"
+        ):
+            _sonar_add_issue(
+                issues,
+                upload_path,
+                "SONAR_ARTIFACT_BOUNDARY",
+                "artifact upload must use the fixed name/path, fail closed, include the hidden input directory, and retain it for one day",
+            )
+        if upload_step.get("if") is not None or _sonar_truthy(upload_step.get("continue-on-error")):
+            _sonar_add_issue(
+                issues,
+                upload_path,
+                "SONAR_ARTIFACT_BOUNDARY",
+                "artifact publication must not be conditionally skipped or masked as success",
+            )
+
+    scanner_steps = [step for step in _sonar_sequence(scanner_job.get("steps")) if isinstance(step, Mapping)]
+    input_validation_markers = (
+        "test -d .sonar-input/source",
+        "test -f .sonar-input/reports/clippy.json",
+        "if find .sonar-input -type l -print -quit | grep -q .; then",
+        "exit 1",
+    )
+    validation_indexes = [
+        index
+        for index, step in enumerate(scanner_steps)
+        if all(marker in str(step.get("run", "")) for marker in input_validation_markers)
+    ]
+    if len(validation_indexes) != 1:
+        _sonar_add_issue(
+            issues,
+            scanner_path,
+            "SONAR_ARTIFACT_BOUNDARY",
+            "scanner must validate fixed source/report paths and fail closed on symlink input before the token-bearing action",
+        )
+    download_indexes = [
+        index
+        for index, step in enumerate(scanner_steps)
+        if str(step.get("uses", "")).startswith("actions/download-artifact@")
+    ]
+    if (
+        len(download_indexes) != 1
+        or str(scanner_steps[download_indexes[0]].get("uses", "")) != _SONAR_DOWNLOAD_ARTIFACT_ACTION
+    ):
+        _sonar_add_issue(
+            issues,
+            scanner_path,
+            "SONAR_ARTIFACT_BOUNDARY",
+            "scanner must consume exactly one reviewed immutable artifact download",
+        )
+
+    scanner_action_indexes = [
+        index
+        for index, step in enumerate(scanner_steps)
+        if str(step.get("uses", "")).startswith("SonarSource/sonarqube-scan-action@")
+    ]
+    if (
+        len(validation_indexes) == 1
+        and len(download_indexes) == 1
+        and len(scanner_action_indexes) == 1
+        and not download_indexes[0] < validation_indexes[0] < scanner_action_indexes[0]
+    ):
+        _sonar_add_issue(
+            issues,
+            scanner_path,
+            "SONAR_ARTIFACT_BOUNDARY",
+            "scanner input validation must run after artifact download and before the final scanner action",
+        )
+
+    for index, step in enumerate(scanner_steps):
+        uses = str(step.get("uses", ""))
+        if uses and uses not in {_SONAR_DOWNLOAD_ARTIFACT_ACTION, _SONAR_SCANNER_ACTION}:
+            _sonar_add_issue(
+                issues,
+                f"{scanner_path}.steps[{index}]",
+                "SONAR_ARTIFACT_BOUNDARY",
+                "scanner actions must be limited to the reviewed artifact download and scanner pins",
+            )
+
+    if len(download_indexes) == 1:
+        download_index = download_indexes[0]
+        download_step = scanner_steps[download_index]
+        download_path = f"{scanner_path}.steps[{download_index}]"
+        download_with = _sonar_mapping(download_step.get("with"))
+        if (
+            download_index != 0
+            or set(download_with) != {"name", "path"}
+            or download_with.get("name") != _SONAR_ARTIFACT_NAME
+            or download_with.get("path") != _SONAR_ARTIFACT_PATH
+            or download_step.get("if") is not None
+            or _sonar_truthy(download_step.get("continue-on-error"))
+            or _sonar_contains_token(download_step)
+        ):
+            _sonar_add_issue(
+                issues,
+                download_path,
+                "SONAR_ARTIFACT_BOUNDARY",
+                "artifact download must be the unconditional first scanner step with fixed same-run inputs and no credential",
+            )
+
+
 def _sonar_validate_bridge_markers(
     workflow_path: Path,
     jobs: Mapping[str, Any],
@@ -1006,6 +1229,7 @@ def validate_sonar_ci_configuration(root: Path | str) -> list[ValidationIssue]:
     _sonar_validate_job_scopes(workflow_path, workflow, jobs, issues)
     scanner_name, scanner_job = _sonar_find_scanner_job(jobs)
     _sonar_validate_scanner_job(root, workflow_path, scanner_name, scanner_job, jobs, issues)
+    _sonar_validate_artifact_boundary(workflow_path, scanner_name, scanner_job, jobs, issues)
     _sonar_validate_bridge_markers(workflow_path, jobs, issues)
     return sorted(issues, key=lambda issue: (issue.path, issue.message))
 

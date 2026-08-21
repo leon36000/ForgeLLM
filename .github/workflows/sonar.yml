@@ -12,10 +12,35 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
+      - name: Checkout trusted protected source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          repository: ${{ github.repository }}
+          ref: ${{ github.sha }}
+      - name: Install pinned Rust toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.97.1 --profile minimal --component clippy
+          rustup override set 1.97.1
       - name: Prepare source and reports without privileged credentials
         run: |
           set -euo pipefail
-          printf '%s\n' 'secretless producer boundary'
+          rm -rf .sonar-input
+          mkdir -p .sonar-input/source .sonar-input/reports
+          cp -a src .sonar-input/source/src
+          cp -a crates .sonar-input/source/crates
+          cargo clippy --workspace --all-targets --locked --message-format=json -- -D warnings > .sonar-input/reports/clippy.json
+      - name: Publish secretless source and reports
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: forgellm-sonar-input
+          path: .sonar-input
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 1
 
   scanner:
     permissions:
@@ -25,11 +50,20 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
+      - name: Download secretless source and reports
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: forgellm-sonar-input
+          path: .sonar-input
       - name: Validate bounded source and report data
         run: |
           set -euo pipefail
           test -d .sonar-input/source
           test -f .sonar-input/reports/clippy.json
+          if find .sonar-input -type l -print -quit | grep -q .; then
+            echo 'symlinks are forbidden in the downloaded Sonar input' >&2
+            exit 1
+          fi
       - name: Run reviewed immutable scanner
         uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f
         env:

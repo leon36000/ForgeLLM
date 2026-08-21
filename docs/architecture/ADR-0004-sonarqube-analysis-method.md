@@ -90,7 +90,7 @@ Rejected because it would weaken the intended quality and security evidence surf
 1. Prepare and independently review the workflow, project properties and governance checks without submitting a CI scanner analysis.
 2. Demonstrate the trust split: Rust Cargo/Clippy/coverage and source/report acquisition/validation are secretless; the eventual scanner job does not check out contributor-originated source; the final scanner step alone receives `SONAR_TOKEN`; the pinned scanner action/invocation including pre/main/post behavior is reviewed; automatic Clippy is disabled; and untrusted source/configuration cannot redirect or reconfigure the authenticated scanner.
 3. Establish an acceptable token identity/lifecycle and store only the value as GitHub `SONAR_TOKEN`.
-4. Immediately before the first controlled CI submission, read back the current Automatic Analysis state, disable Automatic Analysis, then submit the reviewed CI candidate and record before/after evidence. The two methods never overlap.
+4. Immediately before the first controlled CI submission, after the token identity/lifecycle review and explicit activation authorization, read back the current Automatic Analysis state, perform the disable action, read back the disabled state, and only then submit the reviewed CI candidate while recording each transition. The two methods never overlap.
 5. If the first CI validation fails before Rust is materially analyzed, stop scanner submissions, confirm no CI path can submit, and re-enable Automatic Analysis only through reviewed rollback.
 6. Once Rust is materially analyzed, Automatic Analysis is not a valid steady-state rollback while official Rust ineligibility remains. Repair the CI path or adopt a later reviewed ADR.
 

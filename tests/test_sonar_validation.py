@@ -11,6 +11,10 @@ from forgellm_governance.validation import validate_sonar_ci_configuration
 
 _SCANNER_ACTION = "SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f"
 _CHECKOUT_ACTION = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"
+_UPLOAD_ARTIFACT_ACTION = "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
+_DOWNLOAD_ARTIFACT_ACTION = "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c"
+_ARTIFACT_NAME = "forgellm-sonar-input"
+_ARTIFACT_PATH = ".sonar-input"
 _TOKEN_KEY = "SONAR_" + "TOKEN"
 _TOKEN_REFERENCE = "${{ secrets." + _TOKEN_KEY + " }}"
 
@@ -55,9 +59,37 @@ def _safe_workflow() -> dict[str, Any]:
                 "timeout-minutes": 10,
                 "steps": [
                     {
+                        "name": "Checkout trusted protected source",
+                        "uses": _CHECKOUT_ACTION,
+                        "with": {
+                            "fetch-depth": 1,
+                            "persist-credentials": False,
+                            "repository": "${{ github.repository }}",
+                            "ref": "${{ github.sha }}",
+                        },
+                    },
+                    {
                         "name": "Prepare source and reports without privileged credentials",
-                        "run": "set -euo pipefail\nprintf '%s\\n' 'secretless producer boundary'\n",
-                    }
+                        "run": (
+                            "set -euo pipefail\n"
+                            "mkdir -p .sonar-input/source .sonar-input/reports\n"
+                            "cp -a src .sonar-input/source/src\n"
+                            "cp -a crates .sonar-input/source/crates\n"
+                            "cargo clippy --workspace --all-targets --locked --message-format=json "
+                            "-- -D warnings > .sonar-input/reports/clippy.json\n"
+                        ),
+                    },
+                    {
+                        "name": "Publish secretless source and reports",
+                        "uses": _UPLOAD_ARTIFACT_ACTION,
+                        "with": {
+                            "name": _ARTIFACT_NAME,
+                            "path": _ARTIFACT_PATH,
+                            "if-no-files-found": "error",
+                            "include-hidden-files": True,
+                            "retention-days": 1,
+                        },
+                    },
                 ],
             },
             "scanner": {
@@ -72,11 +104,20 @@ def _safe_workflow() -> dict[str, Any]:
                 "timeout-minutes": 20,
                 "steps": [
                     {
+                        "name": "Download secretless source and reports",
+                        "uses": _DOWNLOAD_ARTIFACT_ACTION,
+                        "with": {"name": _ARTIFACT_NAME, "path": _ARTIFACT_PATH},
+                    },
+                    {
                         "name": "Validate bounded source and report data",
                         "run": (
                             "set -euo pipefail\n"
                             "test -d .sonar-input/source\n"
                             "test -f .sonar-input/reports/clippy.json\n"
+                            "if find .sonar-input -type l -print -quit | grep -q .; then\n"
+                            "  echo 'symlinks are forbidden in the downloaded Sonar input' >&2\n"
+                            "  exit 1\n"
+                            "fi\n"
                         ),
                     },
                     {
@@ -159,6 +200,43 @@ def test_sonar_validation_is_inert_before_candidate_configuration(tmp_path: Path
 def test_safe_prepared_inactive_configuration_passes(tmp_path: Path) -> None:
     root = _write_root(tmp_path)
     assert validate_sonar_ci_configuration(root) == []
+
+
+@pytest.mark.parametrize("mutation", ("missing-upload", "missing-download", "mutable-download", "wrong-path"))
+def test_secretless_source_report_transfer_is_bounded(tmp_path: Path, mutation: str) -> None:
+    workflow = _safe_workflow()
+    if mutation == "missing-upload":
+        workflow["jobs"]["producer"]["steps"].pop()
+    else:
+        download = workflow["jobs"]["scanner"]["steps"][0]
+        if mutation == "missing-download":
+            workflow["jobs"]["scanner"]["steps"].pop(0)
+        elif mutation == "mutable-download":
+            download["uses"] = "actions/download-artifact@v8"
+        else:
+            download["with"]["path"] = "untrusted-input"
+    root = _write_root(tmp_path, workflow=workflow)
+    _assert_code(root, "SONAR_ARTIFACT_BOUNDARY")
+
+
+def test_scanner_input_validation_must_reject_symlinks(tmp_path: Path) -> None:
+    workflow = _safe_workflow()
+    validation = _scanner_job(workflow)["steps"][1]
+    validation["run"] = validation["run"].split("if find .sonar-input", maxsplit=1)[0]
+    root = _write_root(tmp_path, workflow=workflow)
+    _assert_code(root, "SONAR_ARTIFACT_BOUNDARY")
+
+
+@pytest.mark.parametrize("input_name", ("repository", "ref"))
+def test_producer_checkout_must_bind_the_trusted_repository_and_event_sha(
+    tmp_path: Path,
+    input_name: str,
+) -> None:
+    workflow = _safe_workflow()
+    checkout = workflow["jobs"]["producer"]["steps"][0]
+    checkout["with"].pop(input_name)
+    root = _write_root(tmp_path, workflow=workflow)
+    _assert_code(root, "SONAR_ARTIFACT_BOUNDARY")
 
 
 def test_permissions_must_not_be_declared_at_workflow_scope(tmp_path: Path) -> None:
@@ -467,7 +545,7 @@ def test_fixture_mutations_do_not_alias_the_safe_workflow() -> None:
     first = _safe_workflow()
     second = deepcopy(first)
     _scanner_job(second)["steps"].clear()
-    assert len(_scanner_job(first)["steps"]) == 2
+    assert len(_scanner_job(first)["steps"]) == 3
 
 
 def test_issue_helper_uses_stable_codes(tmp_path: Path) -> None:

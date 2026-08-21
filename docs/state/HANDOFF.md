@@ -1,7 +1,7 @@
 # ForgeLLM Handoff
 
-**From state:** S-0009
-**To work:** obtain explicit human review and authorization for the no-overlap P0-T09 migration sequence; stop the documentation loop after this final snapshot; P0-T04 still awaits host designation
+**From state:** S-0010
+**To work:** independently review the bounded secretless P0-T09 artifact boundary, then continue only through the ordered token/lifecycle and no-overlap gates; P0-T04 still awaits host designation
 **Generated:** 2026-08-21
 
 ## P0-T10 completed handoff
@@ -168,11 +168,19 @@ The organization is therefore back below the private-LOC limit. The historical f
 
 The organization LOC blocker has been remediated by the smallest evidence-supported action: align ForgeLLM Sonar visibility with its already-public canonical repository. No source exclusion, project deletion, subscription purchase or analysis-method change was needed.
 
-Next gate (not executed or authorized by this documentation increment): obtain explicit human review and authorization for the no-overlap migration sequence. Automatic Analysis remains enabled and the prepared CI scanner remains inactive.
+Next gate (not executed or authorized by this documentation increment): obtain explicit independent review and authorization for the no-overlap migration sequence. Automatic Analysis remains enabled and the prepared CI scanner remains inactive.
 
-If separately authorized, capture the sequence in order: fresh Automatic Analysis enabled readback; human disable action; Automatic Analysis disabled readback. Complete a separate token identity/lifecycle security review before provisioning `SONAR_TOKEN`, and require another explicit gate before CI activation or the first controlled submission.
+If separately authorized, complete the separate token identity/lifecycle security review without provisioning `SONAR_TOKEN`; then capture the sequence in order: fresh Automatic Analysis enabled readback; owner-authorized disable action; Automatic Analysis disabled readback. Require another explicit gate before CI activation or the first controlled submission.
 
 Until those gates are satisfied: no `SONAR_TOKEN`, no Sonar or GitHub setting change, no scanner activation, no scan submission, and no PR bridge. P0-T09 remains `in_progress`.
+
+## P0-T09 local checkpoint: secretless artifact boundary
+
+The prepared protected-ref path now has a concrete same-run data boundary. The producer uses the immutable checkout pin with `repository: ${{ github.repository }}` and `ref: ${{ github.sha }}`, non-persistent credentials, and the pinned Rust 1.97.1 toolchain. It copies only `src` and `crates`, generates the Clippy JSON report without `SONAR_TOKEN`, and uploads exactly `forgellm-sonar-input` with the reviewed upload-artifact pin.
+
+The scanner downloads that fixed artifact first, validates the fixed source/report paths, rejects symlinks, and then invokes the final immutable Sonar action. The governance validator and 53 focused Sonar tests reject missing or mutable transfer pins, wrong artifact paths/names, checkout ref/repository overrides, and removal of the symlink guard. This is still default-off preparation: no secret is provisioned, no Sonar/GitHub setting is changed, no scan is submitted, and no PR bridge is designed or activated.
+
+The official action provenance is recorded in `CURRENT_STATE.md`; no scanner archive digest is claimed.
 
 ## Loop Engineering cycle 3/3: final snapshot stop
 
@@ -204,10 +212,10 @@ RECEIPT:
   pre_change_gate: GPT-5.6-Sol — GO for the final snapshot scope
   limitations: Automatic Analysis remains active; no token; no CI submission;
                P0-T09 remains open; P0-T10 remains blocked
-  next_step: human-only no-overlap review and authorization; no fourth sync
+  next_step: independent no-overlap review and authorization; no fourth sync
 ```
 
-ADR-0004 is accepted and selects exactly `ci_based_only`. Task 4B.1 prepares the protected-ref scanner path only; the workflow remains default-off while Automatic Analysis is active. CI-based analysis does not bypass the subscription entitlement, and the two methods may never run concurrently. Token identity/lifecycle review, the ordered Automatic Analysis disable/readback, first CI submission, and successful exact-head evidence remain human-only follow-up gates.
+ADR-0004 is accepted and selects exactly `ci_based_only`. Task 4B.1 prepares the protected-ref scanner path only; the workflow remains default-off while Automatic Analysis is active. CI-based analysis does not bypass the subscription entitlement, and the two methods may never run concurrently. Token identity/lifecycle review without provisioning, the ordered Automatic Analysis disable/readback, first CI submission, and successful exact-head evidence remain independent follow-up gates.
 
 As a bounded Task 4B.1 scope exception, `.gitleaksignore` contains exactly two path/rule/line fingerprints for the required public `sonar.projectKey` identifier; it suppresses no credential finding and does not alter scanner behavior.
 
