@@ -1,6 +1,6 @@
 # ForgeLLM Current State
 
-- **State ID:** S-0011
+- **State ID:** S-0012
 - **Updated:** 2026-08-21
 - **Phase:** P0
 - **Milestone:** P0-M6 — exact speculative-decoding reference verified
@@ -145,6 +145,14 @@ The scanner consumes only that same-run artifact through pinned `actions/downloa
 Action provenance reviewed 2026-08-21 from the [official upload-artifact v7.0.1 release](https://github.com/actions/upload-artifact/releases/tag/v7.0.1) and [official download-artifact v8.0.1 release](https://github.com/actions/download-artifact/releases/tag/v8.0.1): commits `043fb46d1a93c77aae656e7c1c64a875d1fc6a0a` and `3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c`, respectively. The scanner archive digest remains an explicit open limitation.
 
 Publication evidence for this checkpoint: PR #67 exact head passed Validate and test (`32531975996`), SonarCloud Code Analysis, CodeQL (`96925821594`), and GitGuardian; Dependency Review was terminal `SKIPPED`. The resulting protected `main@83f8ea624bc4382f22e2e168c5444df5304b189a` passed Phase 0 run `32532087564`, CodeQL run `32532087569`, and the prepared inactive Sonar run `32532087558` with `producer=success` and `scanner=skipped`. These checks prove workflow preparation and repository gates only; they do not prove token readiness, Automatic Analysis disablement, CI scanner activation, or a Sonar CI submission.
+
+### P0-T09 token identity/lifecycle pre-provisioning checkpoint
+
+The pre-provisioning review is recorded in `artifacts/governance/P0-T09-token-lifecycle-review.json` with status `not_ready_for_provisioning`. A fresh repository-scoped readback at protected `main@a2af0ac86ab7fddbca48ceec5116426d8267a6ea` found no `SONAR_TOKEN` repository secret and no repository variables; secret values were not read. This does not establish organization- or environment-level secret state.
+
+The review prefers a Scoped Organization Token when the plan supports it because SonarQube Cloud documents it as non-user-specific, project-scoped and limited to Execute Analysis. The recorded project plan is Free, for which the official setup documentation identifies a Personal Access Token as the candidate; no issuing identity or token was selected. An owner/administrator personal token chosen for convenience is rejected. Identity/issuer, minimum scope, storage boundary, expiry, rotation, revocation, audit trail and incident-response controls remain open and must be resolved without generating a token. The [official Scoped Organization Token documentation](https://docs.sonarsource.com/sonarqube-cloud/administering-sonarcloud/scoped-organization-tokens), [Personal Access Token documentation](https://docs.sonarsource.com/sonarqube-cloud/managing-your-account/managing-tokens), and [GitHub Actions secret guidance](https://docs.github.com/en/actions/concepts/security/secrets) are recorded as the review sources.
+
+This checkpoint changes no Sonar or GitHub setting, does not provision `SONAR_TOKEN`, and does not activate or submit a scanner. The ordered no-overlap readbacks remain the next external gate.
 
 ## P0-T11 / P0-T12 completed Rust reference line
 

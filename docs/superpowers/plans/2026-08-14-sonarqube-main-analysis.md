@@ -140,6 +140,8 @@ Publication checkpoint: PR #67 merged this inactive preparation at protected `ma
 - [ ] Reject an owner/admin personal token chosen merely for convenience; prefer a dedicated least-privilege identity where supported.
 - [ ] Only after review, store the value as `SONAR_TOKEN`; never record the value or private payload.
 
+Pre-provisioning checkpoint 2026-08-21: [`artifacts/governance/P0-T09-token-lifecycle-review.json`](../../artifacts/governance/P0-T09-token-lifecycle-review.json) records the official token-type and GitHub secret-boundary review as `not_ready_for_provisioning`. The repository-scoped readback found no `SONAR_TOKEN` secret and no repository variables; no secret value was read. The recorded Free plan makes a Personal Access Token the documented candidate, but no issuing identity, scope or lifecycle decision is selected. All identity, scope, storage, expiry/rotation, revocation, audit and incident-response controls remain open. No token or external setting was changed.
+
 #### Task 4B.3: Separately design and review any PR trusted-data bridge
 
 **Status:** blocked for the current implementation increment. `workflow_run` and `pull_request_target` are forbidden for Sonar. Task 4B.0/4B.1 may proceed for a protected trusted ref, but P0-T09 pull-request Sonar completion remains blocked until a separate reviewed bridge design is accepted.
