@@ -21,6 +21,7 @@ outputs:
   - One canonical publication sanitizer and safe hardware inventory writer in the governance package.
   - CLI and script paths that use the same safe writer.
   - Session snapshots that identify ForgeLLM without exposing an absolute local path.
+  - Generic hosted validation of every open and closed task packet.
   - Focused RED-to-GREEN regression tests and exact-head verification evidence.
 allowed_paths:
   - tasks/open/P0-T13-public-artifact-privacy-hardening.yaml
@@ -31,6 +32,7 @@ allowed_paths:
   - scripts/hardware_inventory.py
   - tests/test_hardware.py
   - tests/test_snapshot.py
+  - tests/test_validation.py
   - docs/roadmap/PHASE0_TASKS.md
   - docs/state/CURRENT_STATE.md
   - docs/state/HANDOFF.md
@@ -50,12 +52,13 @@ acceptance_criteria:
   - The canonical hardware writer sanitizes before serialization and rejects output outside root/artifacts.
   - Both the package CLI and scripts/hardware_inventory.py call the canonical safe writer rather than a raw collector writer.
   - Session snapshots contain no absolute local repository path and use a stable ForgeLLM repository identifier.
+  - Every YAML task packet under tasks/open and tasks/closed is schema-validated by the normal hosted pytest gate.
   - Focused tests demonstrate the two pre-fix failures and pass after the minimal implementation.
   - Ruff, focused tests, make ci and git diff --check pass on the exact final head.
   - An independent blind review records ACCEPT with no unresolved BLOCKER or MAJOR finding before merge.
 verification_commands:
-  - PYTHONPATH=src python -m pytest -q tests/test_hardware.py tests/test_snapshot.py
-  - ruff check src/forgellm_governance/hardware.py src/forgellm_governance/cli.py src/forgellm_governance/snapshot.py scripts/hardware_inventory.py tests/test_hardware.py tests/test_snapshot.py
+  - PYTHONPATH=src python -m pytest -q tests/test_hardware.py tests/test_snapshot.py tests/test_validation.py
+  - ruff check src/forgellm_governance/hardware.py src/forgellm_governance/cli.py src/forgellm_governance/snapshot.py scripts/hardware_inventory.py tests/test_hardware.py tests/test_snapshot.py tests/test_validation.py
   - make ci
   - git diff --check
   - git status --short
