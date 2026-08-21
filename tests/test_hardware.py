@@ -104,6 +104,23 @@ def test_published_inventory_fails_closed_on_unparsed_structured_probes() -> Non
     assert "REMOVE-ME" not in json.dumps(inventory)
 
 
+def test_published_inventory_removes_stderr_from_every_probe() -> None:
+    raw = {
+        "probes": {
+            "cpu": {
+                "status": "error",
+                "returncode": 1,
+                "data": "",
+                "stderr": "/home/private-user/REMOVE-ME",
+            }
+        }
+    }
+
+    inventory = sanitize_inventory(raw)
+    assert inventory["probes"]["cpu"]["stderr"] == ""
+    assert "REMOVE-ME" not in json.dumps(inventory)
+
+
 def test_script_inventory_routes_through_canonical_public_writer(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -142,6 +159,22 @@ def test_canonical_public_inventory_writer_sanitizes_and_confines_output(tmp_pat
     with pytest.raises(ValueError, match="artifacts"):
         writer(tmp_path, outside, runner=privacy_runner)
     assert not outside.exists()
+
+
+def test_public_inventory_rejects_symlinked_artifacts_root(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    outside = tmp_path / "outside"
+    repository.mkdir()
+    outside.mkdir()
+    (repository / "artifacts").symlink_to(outside, target_is_directory=True)
+
+    with pytest.raises(ValueError, match="symlink|artifacts"):
+        hardware.write_public_hardware_inventory(
+            repository,
+            Path("artifacts/leak.json"),
+            runner=privacy_runner,
+        )
+    assert not (outside / "leak.json").exists()
 
 
 def test_cli_inventory_routes_through_canonical_public_writer(
