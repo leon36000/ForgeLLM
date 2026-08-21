@@ -33,7 +33,7 @@ The exact selected upstream blob bindings are recorded in third_party/loop-engin
 
 - Public merge: PR #65, `main@87a1ddeb76d2bca45fe75853b4c3b4c9f19c78b0`.
 - Receipt binding: `base_commit=f8364f12402c3c58796dbc1b56f8c65d378e88de`, `final_commit=87a1ddeb76d2bca45fe75853b4c3b4c9f19c78b0`; the 29 recorded paths equal `git diff --name-only f8364f1..87a1dde`.
-- Independent gate record: GPT-5.6-Terra/Kepler accepted the implementation head; GPT-5.6-Terra/Chandrasekhar accepted the catalog-only binding. The final public-head correction was required because the first receipt named a private pre-merge commit; no source or scope change was introduced by that correction.
+- Independent gate record: GPT-5.6-Terra/Kepler accepted the implementation head; GPT-5.6-Terra/Chandrasekhar accepted the catalog-only binding; GPT-5.6-Terra/Dewey accepted the public-head closeout. The final public-head correction was required because the first receipt named a private pre-merge commit; no source or scope change was introduced by that correction.
 - Post-merge local evidence: `make ci` passed with 464 complete tests and 230 focused speculative tests; the focused P0-T10 suite passed 86 tests, and task-packet, catalog/provenance, lint, format, and diff checks passed.
 - Hosted PR evidence: Phase 0, CodeQL, GitGuardian and SonarCloud succeeded; Dependency Review was `SKIPPED` under the existing workflow configuration.
 - Scope boundary: no P0-T09 activation, token, hardware probe, runtime, backend, CUDA/ROCm, or model execution was performed. ADR-0005 remains proposed pending explicit architectural acceptance.

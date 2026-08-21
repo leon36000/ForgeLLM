@@ -48,8 +48,8 @@ verify_evidence:
   - 'Focused controller suite: 86 passed.'
   - 'Static implementation commit: 87a1dde.'
   - 'Vendor provenance and catalog checks completed after the indexed artifact commit.'
-reviewer: gpt-5.6-terra/Locke
+reviewer: gpt-5.6-terra/Dewey
 review:
-  agent: gpt-5.6-terra/Locke
+  agent: gpt-5.6-terra/Dewey
   input_commit: 87a1ddeb76d2bca45fe75853b4c3b4c9f19c78b0
   disposition: ACCEPT
