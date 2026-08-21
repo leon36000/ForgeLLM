@@ -1,7 +1,7 @@
 # ForgeLLM Handoff
 
 **From state:** S-0008
-**To work:** obtain explicit human review and authorization for the no-overlap P0-T09 migration sequence; P0-T04 still awaits host designation
+**To work:** obtain explicit human review and authorization for the no-overlap P0-T09 migration sequence; stop the documentation loop after this final snapshot; P0-T04 still awaits host designation
 **Generated:** 2026-08-20
 
 ## Canonical status
@@ -22,7 +22,7 @@
 Owner command           autorise P0-T09 / subagent-driven
 Recorded date           2026-08-14
 Initial base            1b1a3621fcdf4129268663c497cdcd53aed48c29
-Latest canonical main   2339a8daa1c26aa13c043ef1739fa647352b60a5
+Verified pre-change main 26a0a66bbbc3c5e3f6e68ed379e074ca06da47f5
 Tracking issue          #26
 Task packet             tasks/open/P0-T09-sonarqube-main-analysis.yaml
 ```
@@ -31,7 +31,9 @@ Task packet             tasks/open/P0-T09-sonarqube-main-analysis.yaml
 
 The pre-merge canonical `main@4dec19558d076af03ee2bee45482a3f83a2b6f33` included the merged inactive preparation from PR #58 and PR #60. Its Automatic Analysis was `55533f96-c27b-480a-8e1f-f820bbced2f3` with public Quality Gate `OK`; the committed Sonar workflow was default-off with `producer=success` and `scanner=skipped`.
 
-After PR #61, current canonical `main@2339a8daa1c26aa13c043ef1739fa647352b60a5` has Automatic Analysis `8b20603d-12a6-4d13-9d55-663d2c295384` with Quality Gate `OK`. Phase 0 run `32437158659` and CodeQL run `32437158653` succeeded; prepared workflow run `32437158674` completed with `producer=success` and `scanner=skipped`. These facts establish current-main Automatic Analysis health and inactive workflow posture; they are not a CI scanner submission and do not close P0-T09.
+After PR #61, historical `main@2339a8daa1c26aa13c043ef1739fa647352b60a5` had Automatic Analysis `8b20603d-12a6-4d13-9d55-663d2c295384` with Quality Gate `OK`. Phase 0 run `32437158659` and CodeQL run `32437158653` succeeded; prepared workflow run `32437158674` completed with `producer=success` and `scanner=skipped`.
+
+Verified pre-change evidence anchor after PR #62: protected `main@26a0a66bbbc3c5e3f6e68ed379e074ca06da47f5` had Automatic Analysis `2a0d79e4-bbb1-4536-b1e6-6351ab2ef56d` with Quality Gate `OK`. Phase 0 run `32438425091` and CodeQL run `32438425096` succeeded; prepared inactive workflow run `32438425087` completed with `producer=success` and `scanner=skipped`. These are Automatic Analysis and inactive-workflow readbacks, not a CI scanner submission; the merge SHA created by this final documentation synchronization is not claimed as verified by this snapshot.
 
 The readback is not a repository-wide zero-issues claim; baseline debt and any remaining findings require their own versioned evidence and disposition.
 
@@ -155,7 +157,7 @@ private LOC consumed           48248
 remaining                      approximately 1.8k
 ```
 
-The organization is therefore back below the private-LOC limit. The historical final readback also records binding `leon36000/ForgeLLM`, New Code `previous_version`, no custom analysis-scope or issue-ignore values, Automatic Analysis/Autoscan, no CI method selected at that time, and the default `Sonar way` Quality Gate. Post-remediation Automatic Analysis later succeeded on exact `main@86f32319847a011fb4d48c98f0c467282fcfbe49` with `ncloc=6939`; the pre-merge `main@4dec19558d076af03ee2bee45482a3f83a2b6f33` and post-merge `main@2339a8daa1c26aa13c043ef1739fa647352b60a5` readbacks are recorded above. The accepted ADR-0004 governs the merged repository preparation; no artificial probe commit or external activation is authorized in this increment.
+The organization is therefore back below the private-LOC limit. The historical final readback also records binding `leon36000/ForgeLLM`, New Code `previous_version`, no custom analysis-scope or issue-ignore values, Automatic Analysis/Autoscan, no CI method selected at that time, and the default `Sonar way` Quality Gate. Post-remediation Automatic Analysis later succeeded on exact `main@86f32319847a011fb4d48c98f0c467282fcfbe49` with `ncloc=6939`; the pre-merge `main@4dec19558d076af03ee2bee45482a3f83a2b6f33`, post-merge `main@2339a8daa1c26aa13c043ef1739fa647352b60a5`, and verified pre-change `main@26a0a66bbbc3c5e3f6e68ed379e074ca06da47f5` readbacks are recorded above. The accepted ADR-0004 governs the merged repository preparation; no artificial probe commit or external activation is authorized in this increment.
 
 ## Decision gate after readback
 
@@ -166,6 +168,39 @@ Next gate (not executed or authorized by this documentation increment): obtain e
 If separately authorized, capture the sequence in order: fresh Automatic Analysis enabled readback; human disable action; Automatic Analysis disabled readback. Complete a separate token identity/lifecycle security review before provisioning `SONAR_TOKEN`, and require another explicit gate before CI activation or the first controlled submission.
 
 Until those gates are satisfied: no `SONAR_TOKEN`, no Sonar or GitHub setting change, no scanner activation, no scan submission, and no PR bridge. P0-T09 remains `in_progress`.
+
+## Loop Engineering cycle 3/3: final snapshot stop
+
+```text
+GOAL:
+  Record the final verified pre-change evidence anchor after PR #62 and stop
+  the documentation loop without chasing the SHA created by this sync.
+
+SCOPE:
+  The same four P0-T09 state/roadmap/task files only.
+  No workflow, source, test, secret, setting, token, scan, or external mutation.
+
+VERIFY:
+  Exact anchor 26a0a66…; Phase 0 32438425091; CodeQL 32438425096;
+  prepared Sonar workflow 32438425087 with producer success/scanner skipped;
+  Automatic Analysis 2a0d79e4… targeting the anchor with Quality Gate OK;
+  packet validation, make validate, make ci, diff-check, and clean status.
+
+BUDGET:
+  Third and final documentation synchronization; no fourth SHA-chasing cycle.
+
+STOP:
+  After this candidate is reviewed and merged, do not create another
+  documentation-only synchronization solely for its new merge SHA. Resume only
+  after material activation/evidence/status change or substantive error.
+
+RECEIPT:
+  verified_pre_change_anchor: 26a0a66bbbc3c5e3f6e68ed379e074ca06da47f5
+  pre_change_gate: GPT-5.6-Sol — GO for the final snapshot scope
+  limitations: Automatic Analysis remains active; no token; no CI submission;
+               P0-T09 remains open; P0-T10 remains blocked
+  next_step: human-only no-overlap review and authorization; no fourth sync
+```
 
 ADR-0004 is accepted and selects exactly `ci_based_only`. Task 4B.1 prepares the protected-ref scanner path only; the workflow remains default-off while Automatic Analysis is active. CI-based analysis does not bypass the subscription entitlement, and the two methods may never run concurrently. Token identity/lifecycle review, the ordered Automatic Analysis disable/readback, first CI submission, and successful exact-head evidence remain human-only follow-up gates.
 

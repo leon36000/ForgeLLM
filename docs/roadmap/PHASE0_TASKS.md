@@ -19,7 +19,7 @@
 - owner command: `autorise P0-T09 / subagent-driven`;
 - canonical base: `1b1a3621fcdf4129268663c497cdcd53aed48c29`;
 - evidence branch: `forgeai/manual-p0-t09-evidence-update-20260817102053`;
-- current canonical `main`: `2339a8daa1c26aa13c043ef1739fa647352b60a5`;
+- verified pre-change evidence anchor: protected `main@26a0a66bbbc3c5e3f6e68ed379e074ca06da47f5`;
 - task packet: `tasks/open/P0-T09-sonarqube-main-analysis.yaml`;
 - selected analysis method: `ci_based_only` (ADR-0004), with explicit preparation-only posture;
 - current Sonar analysis method in platform: Automatic Analysis remains active;
@@ -31,17 +31,20 @@
 - internal failed branch-task status: `FAILED`;
 - post-remediation Billing & usage: Free plan, 50,000 private-LOC entitlement, 48,248 consumed, approximately 1.8k remaining;
 - method selection: `ci_based_only` (ADR-0004 accepted); Task 4B.1 remains preparation-only.
-- merged preparation: PR #58 and PR #60; post-merge state synchronization: PR #61; workflow remains default-off and inactive;
-- current main Automatic Analysis: `8b20603d-12a6-4d13-9d55-663d2c295384` on `main@2339a8daa1c26aa13c043ef1739fa647352b60a5`, Quality Gate `OK`;
-- workflow posture on current main: `producer=success`, `scanner=skipped`; this is not a CI scanner submission.
+- merged preparation: PR #58 and PR #60; post-merge state synchronizations: PR #61 and PR #62; workflow remains default-off and inactive;
+- verified pre-change Automatic Analysis: `2a0d79e4-bbb1-4536-b1e6-6351ab2ef56d` on `main@26a0a66bbbc3c5e3f6e68ed379e074ca06da47f5`, Quality Gate `OK`;
+- workflow posture on the verified anchor: `producer=success`, `scanner=skipped`; this is not a CI scanner submission.
 
-Public and owner-authenticated evidence now shows five historical PR-success/`main`-failure recurrences, with Phase 0 and CodeQL succeeding on the corresponding commits. Sonar Background Tasks establishes the internal branch-analysis status as `FAILED`, and the owner-authenticated error identifies the organization private-LOC subscription limit as the immediate cause. The current `main` now contains `.github/workflows/sonar.yml` and `sonar-project.properties` as an inactive, default-off CI path; the producer succeeded, the scanner was skipped, and no CI scan was submitted.
+Public and owner-authenticated evidence now shows five historical PR-success/`main`-failure recurrences, with Phase 0 and CodeQL succeeding on the corresponding commits. Sonar Background Tasks establishes the internal branch-analysis status as `FAILED`, and the owner-authenticated error identifies the organization private-LOC subscription limit as the immediate cause. The verified pre-change anchor contains `.github/workflows/sonar.yml` and `sonar-project.properties` as an inactive, default-off CI path; the producer succeeded, the scanner was skipped, and no CI scan was submitted.
 
 The historical administrative readback records binding `leon36000/ForgeLLM`, Automatic Analysis/Autoscan, no CI method selected at that time, New Code `previous_version`, default/no custom scope or issue-ignore settings, and default `Sonar way`. ADR-0004 subsequently accepted `ci_based_only`. After ForgeLLM was aligned from private to public in Sonar, anonymous Sonar API access independently confirmed the public project while Billing & usage returned below the private-LOC limit.
 
+Verified pre-change evidence anchor: protected `main@26a0a66bbbc3c5e3f6e68ed379e074ca06da47f5`. Phase 0 run `32438425091` and CodeQL run `32438425096` succeeded; prepared inactive Sonar workflow run `32438425087` completed with `producer=success` and `scanner=skipped`; Automatic Analysis `2a0d79e4-bbb1-4536-b1e6-6351ab2ef56d` targets that exact revision with Quality Gate `OK`. This is Automatic Analysis evidence, not a CI scanner submission.
+Merging this four-file documentation synchronization will create a different protected-main SHA. That merge SHA is not claimed as verified by this snapshot. No fourth documentation-only synchronization may chase it.
+
 Next gate (not executed or authorized by this documentation increment): obtain explicit human review and authorization for the no-overlap migration sequence. Automatic Analysis remains enabled and the prepared CI scanner remains inactive.
 If separately authorized, capture the sequence in order: fresh Automatic Analysis enabled readback; human disable action; Automatic Analysis disabled readback. Complete a separate token identity/lifecycle security review before provisioning `SONAR_TOKEN`, and require another explicit gate before CI activation or the first controlled submission.
-Until those gates are satisfied: no `SONAR_TOKEN`, no Sonar or GitHub setting change, no scanner activation, no scan submission, and no PR bridge. P0-T09 remains `in_progress`.
+Until those gates are satisfied: no `SONAR_TOKEN`, no Sonar or GitHub setting change, no scanner activation, no scan submission, and no PR bridge. P0-T09 remains `in_progress`. After this final snapshot cycle, stop the documentation loop; resume only after a material activation, evidence, status, or substantive-error change.
 Automatic and CI-based methods may not run concurrently for the same project; this increment is preparation-only.
 
 ## P0-T11 / P0-T12 final evidence
