@@ -1,7 +1,7 @@
 # ForgeLLM Handoff
 
 **From state:** S-0008
-**To work:** P0-T09 Task 4B.1 inactive CI preparation for accepted ADR-0004 `ci_based_only`; P0-T04 still awaits host designation
+**To work:** independently review the merged, inactive P0-T09 Task 4B.1 preparation for accepted ADR-0004 `ci_based_only`; P0-T04 still awaits host designation
 **Generated:** 2026-08-20
 
 ## Canonical status
@@ -22,10 +22,16 @@
 Owner command           autorise P0-T09 / subagent-driven
 Recorded date           2026-08-14
 Initial base            1b1a3621fcdf4129268663c497cdcd53aed48c29
-Latest canonical main   a52a3386309db12449f865159d4330d2e8d0f8bd
+Latest canonical main   4dec19558d076af03ee2bee45482a3f83a2b6f33
 Tracking issue          #26
 Task packet             tasks/open/P0-T09-sonarqube-main-analysis.yaml
 ```
+
+## Post-merge main readback
+
+The current canonical `main@4dec19558d076af03ee2bee45482a3f83a2b6f33` includes the merged inactive preparation from PR #58 and PR #60. The latest Automatic Analysis is `55533f96-c27b-480a-8e1f-f820bbced2f3` with public Quality Gate `OK`. The committed Sonar workflow remains default-off: `producer=success` and `scanner=skipped`. These facts establish current-main Automatic Analysis health and the inactive workflow posture; they are not a CI scanner submission and do not close P0-T09.
+
+The readback is not a repository-wide zero-issues claim; baseline debt and any remaining findings require their own versioned evidence and disposition.
 
 ## Analysis Method now confirmed
 
@@ -147,7 +153,7 @@ private LOC consumed           48248
 remaining                      approximately 1.8k
 ```
 
-The organization is therefore back below the private-LOC limit. The historical final readback also records binding `leon36000/ForgeLLM`, New Code `previous_version`, no custom analysis-scope or issue-ignore values, Automatic Analysis/Autoscan, no CI method selected at that time, and the default `Sonar way` Quality Gate. Post-remediation Automatic Analysis later succeeded on exact `main@86f32319847a011fb4d48c98f0c467282fcfbe49` with `ncloc=6939`; current canonical `main@a52a3386309db12449f865159d4330d2e8d0f8bd` is newer, so current-main verification remains open. The accepted ADR-0004 now governs the repository preparation; no artificial probe commit or external activation is authorized in this increment.
+The organization is therefore back below the private-LOC limit. The historical final readback also records binding `leon36000/ForgeLLM`, New Code `previous_version`, no custom analysis-scope or issue-ignore values, Automatic Analysis/Autoscan, no CI method selected at that time, and the default `Sonar way` Quality Gate. Post-remediation Automatic Analysis later succeeded on exact `main@86f32319847a011fb4d48c98f0c467282fcfbe49` with `ncloc=6939`; current canonical `main@4dec19558d076af03ee2bee45482a3f83a2b6f33` now has a subsequent successful Automatic Analysis readback recorded above. The accepted ADR-0004 governs the merged repository preparation; no artificial probe commit or external activation is authorized in this increment.
 
 ## Decision gate after readback
 
@@ -158,6 +164,51 @@ The current immediate next gate is the in-repo prepared inactive CI path for Tas
 ADR-0004 is accepted and selects exactly `ci_based_only`. Task 4B.1 prepares the protected-ref scanner path only; the workflow remains default-off while Automatic Analysis is active. CI-based analysis does not bypass the subscription entitlement, and the two methods may never run concurrently. Token identity/lifecycle review, the ordered Automatic Analysis disable/readback, first CI submission, and successful exact-head evidence remain human-only follow-up gates.
 
 As a bounded Task 4B.1 scope exception, `.gitleaksignore` contains exactly two path/rule/line fingerprints for the required public `sonar.projectKey` identifier; it suppresses no credential finding and does not alter scanner behavior.
+
+## Loop Engineering receipt: documentation synchronization
+
+```text
+GOAL:
+  Synchronize the P0-T09 state with canonical main@4dec195…, PR #58/#60,
+  Automatic Analysis 55533f96…, and the inactive workflow posture without activation.
+
+SCOPE:
+  tasks/open/P0-T09-sonarqube-main-analysis.yaml
+  docs/roadmap/PHASE0_TASKS.md
+  docs/state/CURRENT_STATE.md
+  docs/state/HANDOFF.md
+  No workflow, source, test, secret, setting, token, scan, or external mutation.
+
+VERIFY:
+  make validate; task-packet validation; exact-scope diff check; diff --check;
+  post-change readback of the main SHA, Automatic Analysis/QG, producer/scanner
+  posture, open P0-T09 status, and blocked P0-T10 status.
+
+BUDGET:
+  At most 3 documentation correction cycles; external-mutation budget 0.
+
+STOP:
+  Stop if the diff leaves the four-file scope, a fact is unavailable, activation
+  becomes necessary, the same failure repeats, or the correction budget is exhausted.
+
+RECEIPT:
+  base_sha: 4dec19558d076af03ee2bee45482a3f83a2b6f33
+  reviewed_head_sha: e7f698f8149e10aeeeeb0e84dfa137b505378b05
+  receipt_commit: e7f698f8149e10aeeeeb0e84dfa137b505378b05 (receipt introduced by the reviewed iteration)
+  writer: Codex chief architect
+  pre_change_gate: GPT-5.6-Sol, read-only scope gate — GO
+  exact_head_gate: GPT-5.6-Sol / Hypatia, read-only exact-head gate — NO-GO
+  findings: stale canonical anchor; unsupported unversioned issue claims; pre-signed GO
+             did not represent the exact-head result
+  commands/results: make validate=0; make ci=0 (378 tests, 230 focused tests);
+                    direct packet validation with PYTHONPATH=src=0; diff-check=0
+  evidence: PR #58/#60 merged; Automatic Analysis 55533f96…; Quality Gate OK;
+            producer success; scanner skipped
+  limitations: Automatic Analysis remains enabled; no token; no CI scan submission;
+               P0-T09 remains open; P0-T10 remains blocked by unresolved MAJOR findings
+  next_step: correct the exact-head findings, obtain a fresh Sol review, then proceed
+             only to the human-only no-overlap activation sequence; no activation in this loop
+```
 
 ## Rust reference closeout
 

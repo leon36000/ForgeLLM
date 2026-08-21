@@ -4,8 +4,8 @@
 - **Updated:** 2026-08-20
 - **Phase:** P0
 - **Milestone:** P0-M6 — exact speculative-decoding reference verified
-- **Overall status:** P0-T08 / CA-03 is complete; the bounded Rust CPU reference line P0-T11/P0-T12 is complete and merged; P0-T09 / QG-01 remains active in Task 4B.1 preparation for the accepted ADR-0004 method `ci_based_only`. Automatic Analysis remains enabled in SonarQube Cloud, while the committed CI workflow is default-off and inactive until the human-reviewed no-overlap sequence. The diagnosed failure is classified `platform_limitation / subscription_loc_limit_exceeded` with internal task status `FAILED`; the owner-authorized minimal remediation changed only Sonar project visibility for `leon36000_ForgeLLM` from private to public, matching the already-public canonical GitHub repository. The visibility-change readback recorded `ncloc=1658`; later post-remediation Automatic Analysis on `main@86f32319847a011fb4d48c98f0c467282fcfbe49` succeeded with Quality Gate `OK` and `ncloc=6939`. Billing & usage after the change shows Free plan, 50,000 private-LOC entitlement, 48,248 private LOC consumed and approximately 1.8k remaining. Current canonical GitHub `main@a52a3386309db12449f865159d4330d2e8d0f8bd` is newer than that last known successful Automatic Analysis, so protected-main verification is still required; P0-T04 remains blocked on designation of one owner-authorized host.
-- **Authorized next work:** ADR-0004 is accepted and selects `ci_based_only`. Complete the strictly inactive Task 4B.1 preparation and review; do not provision `SONAR_TOKEN`, disable Automatic Analysis, activate CI submission, submit a scan, or design the blocked PR bridge in this increment. The human-only activation sequence is: read back Automatic Analysis enabled, disable it, read back disabled, then separately review token identity/lifecycle before first CI submission. P0-T04 may proceed independently after host designation.
+- **Overall status:** P0-T08 / CA-03 is complete; the bounded Rust CPU reference line P0-T11/P0-T12 is complete and merged; P0-T09 / QG-01 remains active after the default-off Task 4B.1 preparation was merged for the accepted ADR-0004 method `ci_based_only`. Automatic Analysis remains enabled in SonarQube Cloud, while the committed CI workflow is inactive: current `main@4dec19558d076af03ee2bee45482a3f83a2b6f33` has Automatic Analysis `55533f96-c27b-480a-8e1f-f820bbced2f3` with public Quality Gate `OK`, and the workflow posture is `producer=success`, `scanner=skipped`. This is not a CI scanner submission. The diagnosed historical failure remains classified `platform_limitation / subscription_loc_limit_exceeded` with internal task status `FAILED`; the owner-authorized minimal remediation changed only Sonar project visibility for `leon36000_ForgeLLM` from private to public, matching the already-public canonical GitHub repository. Billing & usage after the change shows Free plan, 50,000 private-LOC entitlement, 48,248 private LOC consumed and approximately 1.8k remaining. P0-T04 remains blocked on designation of one owner-authorized host.
+- **Authorized next work:** ADR-0004 is accepted and selects `ci_based_only`. Independently review the already-merged inactive Task 4B.1 preparation; do not provision `SONAR_TOKEN`, disable Automatic Analysis, activate CI submission, submit a scan, or design the blocked PR bridge in this increment. The human-only activation sequence is: read back Automatic Analysis enabled, disable it, read back disabled, then separately review token identity/lifecycle before first CI submission. P0-T04 may proceed independently after host designation.
 - **State anchor:** the Git commit containing this file
 
 ## Objective
@@ -17,7 +17,7 @@ Preserve the exact speculative-decoding oracle as the correctness reference for 
 - Repository: `leon36000/ForgeLLM`.
 - Default branch: protected `main`.
 - Initial P0-T09 base: `1b1a3621fcdf4129268663c497cdcd53aed48c29`.
-- Latest canonical `main`: `a52a3386309db12449f865159d4330d2e8d0f8bd`.
+- Latest canonical `main`: `4dec19558d076af03ee2bee45482a3f83a2b6f33`.
 - Active task packet: `tasks/open/P0-T09-sonarqube-main-analysis.yaml`.
 - Tracking issue: #26.
 - Owner authorization: `P0-T09 / subagent-driven`, recorded 2026-08-14.
@@ -114,13 +114,15 @@ On 2026-08-17 local time, after the failure class was established, the owner exp
 
 Billing & usage after the visibility change reports Free plan, 50,000 private-LOC entitlement, 48,248 private LOC consumed and approximately 1.8k remaining. The diagnosed organization LOC blocker is therefore no longer active at readback time, although the organization is close to the limit.
 
-Post-remediation Automatic Analysis then succeeded on `main@86f32319847a011fb4d48c98f0c467282fcfbe49`; the anonymous readback matched that exact revision, reported Quality Gate `OK`, public visibility, and `ncloc=6939`. Current GitHub `main@a52a3386309db12449f865159d4330d2e8d0f8bd` is newer than that last known successful Automatic Analysis, so the current protected main still requires verification by the accepted CI method.
+Post-remediation Automatic Analysis then succeeded on `main@86f32319847a011fb4d48c98f0c467282fcfbe49`; the anonymous readback matched that exact revision, reported Quality Gate `OK`, public visibility, and `ncloc=6939`. The later current-main readback on `main@4dec19558d076af03ee2bee45482a3f83a2b6f33` also completed Automatic Analysis `55533f96-c27b-480a-8e1f-f820bbced2f3` with Quality Gate `OK`; its workflow producer succeeded and scanner was skipped. This confirms current-main Automatic Analysis health, not CI activation.
 
 ### Task 4B.1 preparation boundary
 
-The historical evidence, owner-authorized visibility remediation, administrative readback, and accepted ADR-0004 now establish the basis for repository preparation. ADR-0004 selects exactly `ci_based_only`; it does not authorize external activation in this increment.
+The historical evidence, owner-authorized visibility remediation, administrative readback, accepted ADR-0004, and merged inactive preparation now establish the current repository state. ADR-0004 selects exactly `ci_based_only`; it does not authorize external activation in this increment.
 
 The prepared `.github/workflows/sonar.yml` and `sonar-project.properties` are intentionally default-off: the scanner requires explicit repository variables, the disabled-Automatic-Analysis gate, and protected `main`. No token is provisioned, no external analysis setting is changed, and no scan is submitted.
+
+The current-main readback is bounded: Automatic Analysis completed with Quality Gate `OK`; `producer=success` and `scanner=skipped` describe the inactive workflow posture and must not be interpreted as a CI scan result. This readback does not establish repository-wide zero Sonar issues.
 
 As a bounded Task 4B.1 scope exception, `.gitleaksignore` contains exactly two path/rule/line fingerprints for the required public `sonar.projectKey` identifier; it suppresses no credential finding and does not alter scanner behavior.
 
@@ -155,13 +157,13 @@ Within the finite exact oracle and committed test families:
 
 P0-T08 evidence is `finite_exact_reference`. It does not establish real-model, floating-point, KV-tensor, hardware, performance, distributed, or production behavior.
 
-P0-T09 evidence is `quality_governance_read_only + ci_preparation`. It establishes the configured Automatic Analysis method, the repeated PR-success/`main` GitHub-check-cancelled pattern, the immediate Sonar failure class `platform_limitation` with subtype `subscription_loc_limit_exceeded`, and the internal branch-analysis task status `FAILED`. ADR-0004 now selects `ci_based_only`; the evidence does not yet establish a healthy CI Sonar analysis on the current protected `main` or authorize activation.
+P0-T09 evidence is `quality_governance_read_only + ci_preparation`. It establishes the configured Automatic Analysis method, the historical PR-success/`main` GitHub-check-cancelled pattern, the current `main@4dec19558d076af03ee2bee45482a3f83a2b6f33` Automatic Analysis `55533f96-c27b-480a-8e1f-f820bbced2f3` with Quality Gate `OK`, the inactive workflow posture (`producer=success`, `scanner=skipped`), the immediate historical failure class `platform_limitation` with subtype `subscription_loc_limit_exceeded`, and the internal branch-analysis task status `FAILED`. ADR-0004 now selects `ci_based_only`; the evidence does not establish a CI scanner submission, token readiness, Automatic Analysis disablement, or final P0-T09 completion.
 
 ## Active and blocked work
 
 ### P0-T09
 
-Status: `in_progress`. `E-P0-T09-01` classified the immediate failure as `platform_limitation / subscription_loc_limit_exceeded`; authenticated Background Tasks establishes internal status `FAILED`; owner-authorized visibility remediation is applied and independently verified public; Billing/admin evidence is materially complete. ADR-0004 is accepted as `ci_based_only`; `E-P0-T09-04B.1` is the active default-off, inactive protected-ref preparation. P0-T09 remains open until the human-reviewed activation sequence and successful exact-head CI evidence are complete.
+Status: `in_progress`. `E-P0-T09-01` classified the immediate failure as `platform_limitation / subscription_loc_limit_exceeded`; authenticated Background Tasks establishes internal status `FAILED`; owner-authorized visibility remediation is applied and independently verified public; Billing/admin evidence is materially complete. ADR-0004 is accepted as `ci_based_only`; `E-P0-T09-04B.1` is the merged default-off, inactive protected-ref preparation. P0-T09 remains open until the human-reviewed activation sequence and successful exact-head CI evidence are complete.
 
 ### P0-T04
 
