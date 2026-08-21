@@ -7,6 +7,7 @@ import os
 import platform
 import subprocess
 from collections.abc import Callable, Sequence
+from copy import deepcopy
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -24,6 +25,22 @@ class CommandResult:
 
 Runner = Callable[[Sequence[str], float], CommandResult]
 
+_NETWORK_PUBLIC_FIELDS = frozenset(
+    {
+        "ifindex",
+        "ifname",
+        "flags",
+        "mtu",
+        "qdisc",
+        "operstate",
+        "linkmode",
+        "group",
+        "txqlen",
+        "link_type",
+    }
+)
+_STORAGE_OMIT_FIELDS = frozenset({"mountpoint", "mountpoints"})
+
 
 def run_command(command: Sequence[str], timeout: float = 5.0) -> CommandResult:
     argv = list(command)
@@ -36,7 +53,13 @@ def run_command(command: Sequence[str], timeout: float = 5.0) -> CommandResult:
             timeout=timeout,
             env={**os.environ, "LC_ALL": "C"},
         )
-        return CommandResult(argv, "ok" if completed.returncode == 0 else "error", completed.returncode, completed.stdout, completed.stderr)
+        return CommandResult(
+            argv,
+            "ok" if completed.returncode == 0 else "error",
+            completed.returncode,
+            completed.stdout,
+            completed.stderr,
+        )
     except FileNotFoundError:
         return CommandResult(argv, "unavailable", None, "", "command not found")
     except subprocess.TimeoutExpired as exc:
@@ -90,7 +113,11 @@ def collect_hardware_inventory(*, runner: Runner = run_command) -> dict[str, Any
             ],
             timeout=10.0,
         ),
-        "amd": _probe(runner, ["rocm-smi", "--showproductname", "--showmeminfo", "vram", "--showdriverversion", "--json"], timeout=10.0),
+        "amd": _probe(
+            runner,
+            ["rocm-smi", "--showproductname", "--showmeminfo", "vram", "--showdriverversion", "--json"],
+            timeout=10.0,
+        ),
         "network": _probe(runner, ["ip", "-j", "link"]),
         "storage": _probe(runner, ["lsblk", "-J", "-o", "NAME,TYPE,SIZE,ROTA,TRAN,FSTYPE,MOUNTPOINTS"]),
         "numa": _probe(runner, ["numactl", "--hardware"]),
@@ -115,8 +142,76 @@ def collect_hardware_inventory(*, runner: Runner = run_command) -> dict[str, Any
     }
 
 
-def write_hardware_inventory(path: Path | str, *, runner: Runner = run_command) -> Path:
-    output = Path(path)
+def _remove_fields(value: Any, omitted: frozenset[str]) -> Any:
+    if isinstance(value, list):
+        return [_remove_fields(item, omitted) for item in value]
+    if isinstance(value, dict):
+        return {
+            key: _remove_fields(item, omitted)
+            for key, item in value.items()
+            if str(key).casefold() not in omitted
+        }
+    return value
+
+
+def _sanitize_json_probe(probe: dict[str, Any], *, expected_type: type) -> None:
+    if isinstance(probe.get("data"), expected_type):
+        probe["stderr"] = ""
+        return
+    probe["data"] = None
+    probe["stderr"] = ""
+    if probe.get("status") == "ok":
+        probe["status"] = "error"
+
+
+def sanitize_inventory(inventory: dict[str, Any]) -> dict[str, Any]:
+    """Return a publication-safe copy of a collected inventory."""
+
+    published = deepcopy(inventory)
+    probes = published.get("probes", {})
+
+    network = probes.get("network")
+    if isinstance(network, dict):
+        _sanitize_json_probe(network, expected_type=list)
+        data = network.get("data")
+        if isinstance(data, list):
+            network["data"] = [
+                {key: value for key, value in item.items() if key in _NETWORK_PUBLIC_FIELDS}
+                for item in data
+                if isinstance(item, dict)
+            ]
+
+    storage = probes.get("storage")
+    if isinstance(storage, dict):
+        _sanitize_json_probe(storage, expected_type=dict)
+        data = storage.get("data")
+        if isinstance(data, dict):
+            storage["data"] = _remove_fields(data, _STORAGE_OMIT_FIELDS)
+
+    return published
+
+
+def _validated_public_output_path(root: Path | str, path: Path | str) -> Path:
+    project_root = Path(root).resolve()
+    artifacts_root = (project_root / "artifacts").resolve()
+    requested = Path(path)
+    candidate = requested if requested.is_absolute() else project_root / requested
+    resolved = candidate.resolve(strict=False)
+    if artifacts_root not in resolved.parents:
+        raise ValueError("inventory output must be a file inside the repository artifacts directory")
+    return resolved
+
+
+def write_public_hardware_inventory(
+    root: Path | str,
+    path: Path | str,
+    *,
+    runner: Runner = run_command,
+) -> Path:
+    """Collect, sanitize and write one publication-safe inventory under root/artifacts."""
+
+    output = _validated_public_output_path(root, path)
+    inventory = sanitize_inventory(collect_hardware_inventory(runner=runner))
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps(collect_hardware_inventory(runner=runner), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    output.write_text(json.dumps(inventory, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return output

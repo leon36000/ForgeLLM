@@ -35,6 +35,19 @@ def test_task_packet_phase_and_schema_pass() -> None:
     assert issues == []
 
 
+def test_all_repository_task_packets_validate() -> None:
+    task_paths = sorted((ROOT / "tasks/open").glob("*.yaml")) + sorted((ROOT / "tasks/closed").glob("*.yaml"))
+    assert task_paths
+
+    failures: dict[str, list[str]] = {}
+    for path in task_paths:
+        issues = validate_task_packet_file(path, root=ROOT)
+        if issues:
+            failures[path.relative_to(ROOT).as_posix()] = [issue.render() for issue in issues]
+
+    assert failures == {}
+
+
 def test_research_catalogs_cross_reference() -> None:
     assert validate_research_catalogs(ROOT) == []
 
