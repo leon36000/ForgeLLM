@@ -54,7 +54,7 @@ def _key_set_issue(data: Mapping[object, object], expected: frozenset[str], name
 def _safe_relative_yaml_path(value: object) -> str | None:
     if not isinstance(value, str) or not value or "\x00" in value or "\\" in value:
         return None
-    if value.startswith("/") or value.startswith("~"):
+    if value.startswith(("/", "~")):
         return None
     parts = value.split("/")
     if any(not part or part in {".", ".."} for part in parts):
@@ -82,12 +82,28 @@ def _git_blob_sha(data: bytes) -> str:
 
 
 def _git_read(root: Path, arguments: list[str]) -> subprocess.CompletedProcess[str]:
+    if not arguments or any("\x00" in argument or "\n" in argument or "\r" in argument for argument in arguments):
+        return subprocess.CompletedProcess(arguments, 2, "", "unsafe Git argument")
     return subprocess.run(
         ["git", "-C", str(root), *arguments],
         capture_output=True,
         text=True,
         check=False,
+        shell=False,  # NOSONAR: arguments are fixed Git subcommands or validated full SHA/path tokens.
     )
+
+
+def _ensure_revision(root: Path, revision: str) -> bool:
+    check = _git_read(root, ["cat-file", "-e", f"{revision}^{{commit}}"])
+    if check.returncode == 0:
+        return True
+    shallow_marker = root / ".git" / "shallow"
+    if not shallow_marker.is_file():
+        return False
+    fetch = _git_read(root, ["fetch", "--no-tags", "--quiet", "origin", revision])
+    if fetch.returncode != 0:
+        return False
+    return _git_read(root, ["cat-file", "-e", f"{revision}^{{commit}}"]).returncode == 0
 
 
 def _validate_committed_declaration(
@@ -100,8 +116,7 @@ def _validate_committed_declaration(
 ) -> None:
     if not isinstance(commit, str) or not _valid_sha(commit) or not isinstance(expected_blob, str):
         return
-    commit_check = _git_read(root, ["cat-file", "-e", f"{commit}^{{commit}}"])
-    if commit_check.returncode != 0:
+    if not _ensure_revision(root, commit):
         issues.append(f"{prefix}.declaration_source_commit must exist in the repository")
         return
     tree_check = _git_read(root, ["ls-tree", "-r", "--full-tree", commit, "--", declaration_path])
@@ -118,18 +133,18 @@ def _validate_committed_declaration(
 
 
 def _filesystem_path(root: Path, relative: str) -> Path:
-    return root / Path(*relative.split("/"))
+    root_resolved = root.resolve()
+    candidate = (root_resolved / Path(*relative.split("/"))).resolve()
+    candidate.relative_to(root_resolved)
+    return candidate
 
 
 def _load_mapping(
     root: Path, relative: Path | str, issues: list[str], label: str
 ) -> tuple[Mapping[object, object] | None, bytes | None]:
     relative_text = relative.as_posix() if isinstance(relative, Path) else relative
-    path = _filesystem_path(root, relative_text)
     try:
-        root_resolved = root.resolve()
-        path_resolved = path.resolve()
-        path_resolved.relative_to(root_resolved)
+        path = _filesystem_path(root, relative_text)
     except (OSError, RuntimeError, ValueError):
         issues.append(f"{label} path is not safely contained under repository root: {relative_text}")
         return None, None
@@ -188,36 +203,37 @@ def _indexed_path(
     return parsed
 
 
-def _validate_index_record(
-    root: Path,
-    record: object,
-    index_number: int,
-    task_packet: Mapping[object, object],
-    issues: list[str],
+def _index_record_identity(
+    record: Mapping[object, object], prefix: str, issues: list[str]
 ) -> tuple[str | None, str | None, str | None]:
-    prefix = f"index.runs[{index_number}]"
-    if not isinstance(record, Mapping):
-        issues.append(f"{prefix} must be a YAML mapping")
-        return None, None
     issues.extend(_key_set_issue(record, _INDEX_RECORD_FIELDS, prefix))
-
     run_id = record.get("run_id")
     if not isinstance(run_id, str) or not run_id.strip():
         issues.append(f"{prefix}.run_id must be a non-empty string")
-
     declaration_path = _indexed_path(
         record.get("declaration_path"), f"{prefix}.declaration_path", DECLARATION_PREFIX, issues
     )
     receipt_path = _indexed_path(record.get("receipt_path"), f"{prefix}.receipt_path", RECEIPT_PREFIX, issues)
-
     for field in ("declaration_source_commit", "declaration_source_blob_sha"):
         if not _valid_sha(record.get(field)):
             issues.append(f"{prefix}.{field} must be a lowercase non-zero full 40-character SHA-1")
     if record.get("receipt_schema_version") != "1.0":
         issues.append(f"{prefix}.receipt_schema_version must be '1.0'")
+    return run_id if isinstance(run_id, str) else None, declaration_path, receipt_path
 
+
+def _validate_index_artifacts(
+    root: Path,
+    record: Mapping[object, object],
+    prefix: str,
+    declaration_path: str | None,
+    receipt_path: str | None,
+    task_packet: Mapping[object, object],
+    issues: list[str],
+) -> None:
     declaration: Mapping[object, object] | None = None
     declaration_bytes: bytes | None = None
+
     if declaration_path is not None:
         declaration, declaration_bytes = _load_mapping(
             root, declaration_path, issues, f"declaration {declaration_path}"
@@ -235,9 +251,10 @@ def _validate_index_record(
             prefix,
         )
 
-    receipt: Mapping[object, object] | None = None
     if receipt_path is not None:
         receipt, _ = _load_mapping(root, receipt_path, issues, f"receipt {receipt_path}")
+    else:
+        receipt = None
 
     if declaration is not None:
         issues.extend(
@@ -256,7 +273,21 @@ def _validate_index_record(
         if receipt.get("schema_version") != record.get("receipt_schema_version"):
             issues.append(f"{prefix}.receipt_schema_version must match receipt {receipt_path}")
 
-    return run_id if isinstance(run_id, str) else None, declaration_path, receipt_path
+
+def _validate_index_record(
+    root: Path,
+    record: object,
+    index_number: int,
+    task_packet: Mapping[object, object],
+    issues: list[str],
+) -> tuple[str | None, str | None, str | None]:
+    prefix = f"index.runs[{index_number}]"
+    if not isinstance(record, Mapping):
+        issues.append(f"{prefix} must be a YAML mapping")
+        return None, None, None
+    run_id, declaration_path, receipt_path = _index_record_identity(record, prefix, issues)
+    _validate_index_artifacts(root, record, prefix, declaration_path, receipt_path, task_packet, issues)
+    return run_id, declaration_path, receipt_path
 
 
 def _coverage_issue(indexed: set[str], discovered: set[str], kind: str) -> str | None:
@@ -293,20 +324,21 @@ def _validate_receipt_changed_paths(root: Path, receipt: Mapping[object, object]
         )
 
 
-def validate_repository(root: Path) -> list[str]:
-    """Return diagnostics for the fixed P0-T10 loop declaration/receipt catalog."""
-    root = Path(root)
-    issues: list[str] = []
-
+def _load_catalog_mappings(root: Path, issues: list[str]) -> tuple[Mapping[object, object], Mapping[object, object]]:
     task_packet, _ = _load_mapping(root, TASK_PACKET_PATH, issues, "task packet")
     if task_packet is None:
         task_packet = {}
-    if task_packet.get("task_id") != "P0-T10":
-        issues.append("task packet task_id must be 'P0-T10'")
-
     index, _ = _load_mapping(root, INDEX_PATH, issues, "receipt index")
     if index is None:
         index = {}
+    return task_packet, index
+
+
+def _validate_catalog_header(
+    task_packet: Mapping[object, object], index: Mapping[object, object], issues: list[str]
+) -> None:
+    if task_packet.get("task_id") != "P0-T10":
+        issues.append("task packet task_id must be 'P0-T10'")
     issues.extend(_key_set_issue(index, _INDEX_HEADER_FIELDS, "receipt index"))
     if index.get("schema_version") != "1.0":
         issues.append("receipt index schema_version must be '1.0'")
@@ -315,6 +347,10 @@ def validate_repository(root: Path) -> list[str]:
     if index.get("task_id") != "P0-T10":
         issues.append("receipt index task_id must be 'P0-T10'")
 
+
+def _validate_catalog_records(
+    root: Path, index: Mapping[object, object], task_packet: Mapping[object, object], issues: list[str]
+) -> tuple[set[str], set[str], set[str]]:
     indexed_declarations: set[str] = set()
     indexed_receipts: set[str] = set()
     run_ids: set[str] = set()
@@ -336,6 +372,16 @@ def validate_repository(root: Path) -> list[str]:
             if receipt_path in indexed_receipts:
                 issues.append("receipt_path values must be unique")
             indexed_receipts.add(receipt_path)
+    return indexed_declarations, indexed_receipts, run_ids
+
+
+def validate_repository(root: Path) -> list[str]:
+    """Return diagnostics for the fixed P0-T10 loop declaration/receipt catalog."""
+    root = Path(root)
+    issues: list[str] = []
+    task_packet, index = _load_catalog_mappings(root, issues)
+    _validate_catalog_header(task_packet, index, issues)
+    indexed_declarations, indexed_receipts, _ = _validate_catalog_records(root, index, task_packet, issues)
 
     discovered_declarations = _discover_yaml_files(root, DECLARATION_PREFIX, issues, "declaration")
     discovered_receipts = _discover_yaml_files(root, RECEIPT_PREFIX, issues, "receipt")

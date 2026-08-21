@@ -234,7 +234,7 @@ def _canonical_posix_path(value: object) -> tuple[str, bool] | None:
     """Return a safe relative POSIX path and its directory marker."""
     if not isinstance(value, str) or not value or "\x00" in value or "\\" in value:
         return None
-    if value.startswith("/") or value.startswith("~"):
+    if value.startswith(("/", "~")):
         return None
     directory = value.endswith("/")
     path = value[:-1] if directory else value
@@ -319,21 +319,21 @@ def _validate_declaration_header(declaration: Mapping[str, Any], issues: list[st
     _validate_sha(declaration.get("base_commit"), "base_commit", issues)
 
 
-def _validate_declaration_semantics(
+def _validate_declaration_scope(
     declaration: Mapping[str, Any], task_packet: Mapping[str, Any], issues: list[str]
 ) -> None:
-    goal = declaration.get("GOAL")
-    if not isinstance(goal, str) or not goal.strip() or _looks_like_template(goal):
-        issues.append("GOAL must be a non-template, non-empty string")
-
     allowed_paths = _validate_path_list(task_packet.get("allowed_paths"), "allowed_paths", issues, allow_empty=False)
     scope_paths = _validate_path_list(declaration.get("SCOPE"), "SCOPE", issues, allow_empty=False)
-    for scope, _scope_directory in scope_paths:
+    for scope, _ in scope_paths:
         if not any(
             _path_is_contained(scope, allowed, allowed_directory) for allowed, allowed_directory in allowed_paths
         ):
             issues.append(f"SCOPE path {scope!r} is outside task packet allowed_paths")
 
+
+def _validate_declaration_verify(
+    declaration: Mapping[str, Any], task_packet: Mapping[str, Any], issues: list[str]
+) -> None:
     packet_commands = task_packet.get("verification_commands")
     if not isinstance(packet_commands, list) or not packet_commands:
         issues.append("verification_commands must be a non-empty list")
@@ -350,12 +350,13 @@ def _validate_declaration_semantics(
         if command in seen_commands:
             issues.append(f"VERIFY[{index}] duplicates a command")
         seen_commands.add(command)
-        firewall_issues = validate_loop_verify_command(command)
-        if firewall_issues:
-            issues.extend(f"VERIFY[{index}] rejected by verifier firewall: {message}" for message in firewall_issues)
+        for message in validate_loop_verify_command(command):
+            issues.append(f"VERIFY[{index}] rejected by verifier firewall: {message}")
         if command not in packet_commands:
             issues.append(f"VERIFY[{index}] is not authorized by task packet verification_commands")
 
+
+def _validate_declaration_budget_stop_receipt(declaration: Mapping[str, Any], issues: list[str]) -> None:
     budget = declaration.get("BUDGET")
     if not isinstance(budget, Mapping):
         issues.append("BUDGET must be a mapping")
@@ -385,6 +386,17 @@ def _validate_declaration_semantics(
             issues.append(f"RECEIPT must be contained under {_RECEIPT_PREFIX}/")
         elif not receipt_path.endswith((".yaml", ".yml")):
             issues.append("RECEIPT must name a YAML receipt file")
+
+
+def _validate_declaration_semantics(
+    declaration: Mapping[str, Any], task_packet: Mapping[str, Any], issues: list[str]
+) -> None:
+    goal = declaration.get("GOAL")
+    if not isinstance(goal, str) or not goal.strip() or _looks_like_template(goal):
+        issues.append("GOAL must be a non-template, non-empty string")
+    _validate_declaration_scope(declaration, task_packet, issues)
+    _validate_declaration_verify(declaration, task_packet, issues)
+    _validate_declaration_budget_stop_receipt(declaration, issues)
 
 
 def validate_loop_declaration(declaration: Mapping[str, Any], task_packet: Mapping[str, Any]) -> list[str]:
@@ -424,17 +436,7 @@ def _validate_receipt_header(
         issues.append("base_commit must match the declaration base_commit")
 
 
-def _validate_receipt_common(
-    receipt: Mapping[str, Any], declaration: Mapping[str, Any], *, allow_template: bool
-) -> list[str]:
-    issues: list[str] = []
-    if not isinstance(receipt, Mapping):
-        return ["receipt must be a mapping"]
-    if not isinstance(declaration, Mapping):
-        return ["declaration must be a mapping"]
-    _validate_receipt_header(receipt, declaration, issues, allow_template=allow_template)
-    _validate_sha(receipt.get("final_commit"), "final_commit", issues, allow_template=allow_template)
-
+def _validate_receipt_counts(receipt: Mapping[str, Any], declaration: Mapping[str, Any], issues: list[str]) -> None:
     iterations = receipt.get("iterations")
     if isinstance(iterations, bool) or not isinstance(iterations, int) or iterations < 0:
         issues.append("iterations must be a non-negative integer")
@@ -463,7 +465,12 @@ def _validate_receipt_common(
         if isinstance(iterations, int) and isinstance(identical_failures, int) and identical_failures > iterations:
             issues.append("identical_failures_at_stop cannot exceed iterations")
 
+
+def _validate_receipt_stop(
+    receipt: Mapping[str, Any], declaration: Mapping[str, Any], *, allow_template: bool, issues: list[str]
+) -> None:
     stop_reason = receipt.get("stop_reason")
+    budget = declaration.get("BUDGET")
     if allow_template:
         if stop_reason != "template":
             issues.append("template receipt stop_reason must be 'template'")
@@ -477,6 +484,9 @@ def _validate_receipt_common(
         ):
             issues.append("identical_failure_limit stop_reason requires identical_failures_at_stop at its ceiling")
 
+
+def _validate_receipt_disposition(receipt: Mapping[str, Any], *, allow_template: bool, issues: list[str]) -> None:
+    stop_reason = receipt.get("stop_reason")
     verification = receipt.get("verification")
     if not isinstance(verification, Mapping):
         issues.append("verification must be a mapping with one disposition")
@@ -491,6 +501,18 @@ def _validate_receipt_common(
         elif _STOP_DISPOSITION.get(stop_reason) != disposition:
             issues.append("verification.disposition must match stop_reason")
 
+
+def _validate_receipt_state(
+    receipt: Mapping[str, Any], declaration: Mapping[str, Any], *, allow_template: bool, issues: list[str]
+) -> None:
+    _validate_receipt_counts(receipt, declaration, issues)
+    _validate_receipt_stop(receipt, declaration, allow_template=allow_template, issues=issues)
+    _validate_receipt_disposition(receipt, allow_template=allow_template, issues=issues)
+
+
+def _validate_receipt_scope_and_verify(
+    receipt: Mapping[str, Any], declaration: Mapping[str, Any], issues: list[str]
+) -> None:
     changed_paths = _validate_path_list(receipt.get("changed_paths"), "changed_paths", issues, allow_empty=True)
     declared_scope = _validate_path_list(declaration.get("SCOPE"), "SCOPE", issues, allow_empty=False)
     for changed_path, _changed_directory in changed_paths:
@@ -513,6 +535,8 @@ def _validate_receipt_common(
             for message in validate_loop_verify_command(command):
                 issues.append(f"verify_commands[{index}] rejected by verifier firewall: {message}")
 
+
+def _validate_receipt_evidence(receipt: Mapping[str, Any], *, allow_template: bool, issues: list[str]) -> None:
     evidence = receipt.get("verify_evidence")
     if not isinstance(evidence, list) or not evidence:
         issues.append("verify_evidence must be a non-empty list")
@@ -523,6 +547,8 @@ def _validate_receipt_common(
             elif not allow_template and _looks_like_template(item):
                 issues.append(f"verify_evidence[{index}] must not contain template evidence")
 
+
+def _validate_receipt_review(receipt: Mapping[str, Any], *, allow_template: bool, issues: list[str]) -> None:
     reviewer = receipt.get("reviewer")
     if not isinstance(reviewer, str) or not reviewer.strip():
         issues.append("reviewer must identify an independent reviewer")
@@ -551,6 +577,21 @@ def _validate_receipt_common(
         elif review.get("disposition") != _FINAL_REVIEW_DISPOSITION:
             issues.append("review.disposition must be ACCEPT")
 
+
+def _validate_receipt_common(
+    receipt: Mapping[str, Any], declaration: Mapping[str, Any], *, allow_template: bool
+) -> list[str]:
+    if not isinstance(receipt, Mapping):
+        return ["receipt must be a mapping"]
+    if not isinstance(declaration, Mapping):
+        return ["declaration must be a mapping"]
+    issues: list[str] = []
+    _validate_receipt_header(receipt, declaration, issues, allow_template=allow_template)
+    _validate_sha(receipt.get("final_commit"), "final_commit", issues, allow_template=allow_template)
+    _validate_receipt_state(receipt, declaration, allow_template=allow_template, issues=issues)
+    _validate_receipt_scope_and_verify(receipt, declaration, issues)
+    _validate_receipt_evidence(receipt, allow_template=allow_template, issues=issues)
+    _validate_receipt_review(receipt, allow_template=allow_template, issues=issues)
     return issues
 
 
@@ -569,46 +610,50 @@ def _git_blob_sha(data: bytes) -> str:
     return hashlib.sha1(payload, usedforsecurity=False).hexdigest()
 
 
-def validate_vendor_provenance(root: Path | str) -> list[str]:
-    """Verify the pinned vendor tree is exactly the reviewed inert upstream subset."""
-    vendor = Path(root).resolve() / "third_party" / "loop-engineering"
+def _load_vendor_provenance(vendor: Path) -> tuple[Mapping[str, Any] | None, list[str]]:
     provenance_path = vendor / "PROVENANCE.yaml"
-    issues: list[str] = []
     try:
         provenance = yaml.safe_load(provenance_path.read_text(encoding="utf-8"))
     except FileNotFoundError:
-        return [f"vendor provenance file is missing: {provenance_path}"]
+        return None, [f"vendor provenance file is missing: {provenance_path}"]
     except (UnicodeDecodeError, yaml.YAMLError) as exc:
-        return [f"vendor provenance file is invalid: {exc}"]
+        return None, [f"vendor provenance file is invalid: {exc}"]
     if not isinstance(provenance, Mapping):
-        return ["vendor PROVENANCE.yaml root must be a mapping"]
+        return None, ["vendor PROVENANCE.yaml root must be a mapping"]
+    return provenance, []
 
+
+def _validate_vendor_metadata(provenance: Mapping[str, Any]) -> list[str]:
+    issues: list[str] = []
     actual_fields = set(provenance)
     if actual_fields != _PROVENANCE_FIELDS:
         issues.append(
             "vendor provenance requires exact fields; "
             f"missing={sorted(_PROVENANCE_FIELDS - actual_fields)}, extra={sorted(actual_fields - _PROVENANCE_FIELDS)}"
         )
-    if provenance.get("schema_version") != "1.0":
-        issues.append("vendor provenance schema_version must be '1.0'")
-    if provenance.get("upstream_repository") != EXPECTED_UPSTREAM_REPOSITORY:
-        issues.append(f"upstream_repository must be {EXPECTED_UPSTREAM_REPOSITORY}")
-    if provenance.get("upstream_commit") != EXPECTED_UPSTREAM_COMMIT:
-        issues.append(f"upstream_commit must be exactly {EXPECTED_UPSTREAM_COMMIT}")
-    if provenance.get("license") != "MIT":
-        issues.append("vendor license must be exactly MIT")
-    if provenance.get("license_blob_sha") != EXPECTED_LICENSE_BLOB:
-        issues.append(f"license_blob_sha must be exactly {EXPECTED_LICENSE_BLOB}")
+    expected_values = {
+        "schema_version": "1.0",
+        "upstream_repository": EXPECTED_UPSTREAM_REPOSITORY,
+        "upstream_commit": EXPECTED_UPSTREAM_COMMIT,
+        "license": "MIT",
+        "license_blob_sha": EXPECTED_LICENSE_BLOB,
+    }
+    for field, expected in expected_values.items():
+        if provenance.get(field) != expected:
+            issues.append(f"{field} must be exactly {expected}")
     if provenance.get("excluded_executable_surfaces") != list(EXPECTED_EXCLUDED_EXECUTABLE_SURFACES):
         issues.append("excluded_executable_surfaces must preserve the reviewed executable exclusions")
     if provenance.get("excluded_shadow_state_templates") != list(EXPECTED_EXCLUDED_SHADOW_TEMPLATES):
         issues.append("excluded_shadow_state_templates must preserve the reviewed shadow-state exclusions")
+    return issues
 
+
+def _vendor_bindings(provenance: Mapping[str, Any]) -> tuple[dict[str, str], list[str]]:
+    issues: list[str] = []
     bindings: dict[str, str] = {}
     raw_files = provenance.get("files")
     if not isinstance(raw_files, list):
-        issues.append("vendor provenance files must be an array")
-        raw_files = []
+        return {}, ["vendor provenance files must be an array"]
     for item in raw_files:
         if not isinstance(item, Mapping):
             issues.append("each vendor provenance file record must be a mapping")
@@ -626,9 +671,13 @@ def validate_vendor_provenance(root: Path | str) -> list[str]:
         bindings[path] = blob
     if bindings != EXPECTED_VENDOR_FILES:
         issues.append("vendor provenance files must match the exact reviewed static subset and upstream blob SHAs")
+    return bindings, issues
 
+
+def _validate_vendor_tree(vendor: Path) -> list[str]:
     expected_local_files = set(EXPECTED_VENDOR_FILES) | {"PROVENANCE.yaml"}
     actual_local_files = {path.relative_to(vendor).as_posix() for path in vendor.rglob("*") if path.is_file()}
+    issues: list[str] = []
     if actual_local_files != expected_local_files:
         issues.append(
             "vendored Loop Engineering tree must contain only the reviewed inert subset; "
@@ -637,16 +686,34 @@ def validate_vendor_provenance(root: Path | str) -> list[str]:
     symlinks = [path.relative_to(vendor).as_posix() for path in vendor.rglob("*") if path.is_symlink()]
     if symlinks:
         issues.append(f"vendored Loop Engineering tree must not contain symlinks: {sorted(symlinks)}")
+    return issues
 
+
+def _validate_vendor_blobs(vendor: Path, bindings: Mapping[str, str]) -> list[str]:
+    issues: list[str] = []
     for relative, expected_blob in EXPECTED_VENDOR_FILES.items():
         path = vendor / relative
         try:
             actual_blob = _git_blob_sha(path.read_bytes())
-        except (FileNotFoundError, OSError) as exc:
+        except OSError as exc:
             issues.append(f"vendored file cannot be read: {relative}: {exc}")
             continue
         if bindings.get(relative) != expected_blob:
             issues.append(f"{relative} provenance blob must be {expected_blob}, got {bindings.get(relative)!r}")
         if actual_blob != expected_blob:
             issues.append(f"{relative} Git blob drift: expected {expected_blob}, got {actual_blob}")
+    return issues
+
+
+def validate_vendor_provenance(root: Path | str) -> list[str]:
+    """Verify the pinned vendor tree is exactly the reviewed inert upstream subset."""
+    vendor = Path(root).resolve() / "third_party" / "loop-engineering"
+    provenance, issues = _load_vendor_provenance(vendor)
+    if provenance is None:
+        return issues
+    issues.extend(_validate_vendor_metadata(provenance))
+    bindings, binding_issues = _vendor_bindings(provenance)
+    issues.extend(binding_issues)
+    issues.extend(_validate_vendor_tree(vendor))
+    issues.extend(_validate_vendor_blobs(vendor, bindings))
     return issues
