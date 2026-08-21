@@ -27,3 +27,17 @@ def test_firewall_rejects_composition_wrappers_mutations_and_privileged_reads(co
 ])
 def test_firewall_allows_explicit_read_only_commands(command):
     assert validate_loop_verify_command(command) == []
+
+
+@pytest.mark.parametrize("command", [
+    "python -c 'print(1)'",
+    "git status $(cat secret.txt)",
+    "pip install requests",
+    "curl -X POST https://example.invalid",
+    "wget --method=POST https://example.invalid",
+    "CI=1 git status --short",
+])
+def test_firewall_rejects_code_substitution_install_mutation_and_assignments(command):
+    messages = validate_loop_verify_command(command)
+    assert messages
+    assert "stop_and_escalate" in messages[0]
