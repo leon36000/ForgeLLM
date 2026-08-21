@@ -1,16 +1,16 @@
 # ForgeLLM Current State
 
-- **State ID:** S-0008
-- **Updated:** 2026-08-20
+- **State ID:** S-0009
+- **Updated:** 2026-08-21
 - **Phase:** P0
 - **Milestone:** P0-M6 — exact speculative-decoding reference verified
-- **Overall status:** P0-T08 / CA-03 is complete; the bounded Rust CPU reference line P0-T11/P0-T12 is complete and merged; P0-T09 / QG-01 remains active after the default-off Task 4B.1 preparation was merged for the accepted ADR-0004 method `ci_based_only`. Verified pre-change evidence anchor: protected `main@26a0a66bbbc3c5e3f6e68ed379e074ca06da47f5` has Automatic Analysis `2a0d79e4-bbb1-4536-b1e6-6351ab2ef56d` with public Quality Gate `OK`, Phase 0 and CodeQL success, and prepared-workflow posture `producer=success`, `scanner=skipped`. This is not a CI scanner submission. Merging this four-file documentation synchronization creates a different protected-main SHA; that merge SHA is not claimed as verified by this snapshot. The diagnosed historical failure remains classified `platform_limitation / subscription_loc_limit_exceeded` with internal task status `FAILED`; the owner-authorized minimal remediation changed only Sonar project visibility for `leon36000_ForgeLLM` from private to public, matching the already-public canonical GitHub repository. Billing & usage after the change shows Free plan, 50,000 private-LOC entitlement, 48,248 private LOC consumed and approximately 1.8k remaining. P0-T04 remains blocked on designation of one owner-authorized host.
+- **Overall status:** P0-T08 / CA-03 is complete; the bounded Rust CPU reference line P0-T11/P0-T12 is complete and merged; P0-T10 is complete and its public receipt is bound to `main@87a1dde`; P0-T09 / QG-01 remains active after the default-off Task 4B.1 preparation was merged for the accepted ADR-0004 method `ci_based_only`. Verified pre-change evidence anchor: protected `main@26a0a66bbbc3c5e3f6e68ed379e074ca06da47f5` has Automatic Analysis `2a0d79e4-bbb1-4536-b1e6-6351ab2ef56d` with public Quality Gate `OK`, Phase 0 and CodeQL success, and prepared-workflow posture `producer=success`, `scanner=skipped`. This is not a CI scanner submission. The diagnosed historical failure remains classified `platform_limitation / subscription_loc_limit_exceeded` with internal task status `FAILED`; the owner-authorized minimal remediation changed only Sonar project visibility for `leon36000_ForgeLLM` from private to public, matching the already-public canonical GitHub repository. Billing & usage after the change shows Free plan, 50,000 private-LOC entitlement, 48,248 private LOC consumed and approximately 1.8k remaining. P0-T04 remains blocked on designation of one owner-authorized host.
 - **Authorized next work:** ADR-0004 is accepted and selects `ci_based_only`. Obtain explicit human review and authorization for the no-overlap migration sequence; do not provision `SONAR_TOKEN`, disable Automatic Analysis, activate CI submission, submit a scan, or design the blocked PR bridge from this documentation increment. If separately authorized, record enabled readback → human disable action → disabled readback, then complete token identity/lifecycle review before any first controlled CI submission. Stop the documentation loop after this final snapshot cycle; resume only after a material activation, evidence, status, or substantive-error change. P0-T04 may proceed independently after host designation.
 - **State anchor:** the Git commit containing this file
 
-## P0-T10 proposed/in-progress status
+## P0-T10 completed status
 
-P0-T10 is in progress from canonical base f8364f12402c3c58796dbc1b56f8c65d378e88de. The proposed ADR-0005 integration adds only an inert pinned vendor subset, a ForgeLLM-owned bounded bridge, and repository-native receipts/validation; P0-T09 and hardware/runtime boundaries remain unchanged.
+P0-T10 is complete at public merge commit 87a1ddeb76d2bca45fe75853b4c3b4c9f19c78b0 from canonical base f8364f12402c3c58796dbc1b56f8c65d378e88de. Its receipt and review input bind to that public commit. The ADR-0005 integration adds only an inert pinned vendor subset, a ForgeLLM-owned bounded bridge, and repository-native receipts/validation; P0-T09 and hardware/runtime boundaries remain unchanged. ADR-0005 remains proposed pending explicit architectural acceptance.
 
 ## Objective
 

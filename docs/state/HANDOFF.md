@@ -1,12 +1,12 @@
 # ForgeLLM Handoff
 
-**From state:** S-0008
+**From state:** S-0009
 **To work:** obtain explicit human review and authorization for the no-overlap P0-T09 migration sequence; stop the documentation loop after this final snapshot; P0-T04 still awaits host designation
-**Generated:** 2026-08-20
+**Generated:** 2026-08-21
 
-## P0-T10 proposed/in-progress handoff
+## P0-T10 completed handoff
 
-P0-T10 is in progress from f8364f12402c3c58796dbc1b56f8c65d378e88de. Review the proposed ADR-0005 and verify the static provenance/catalog gates; do not execute upstream installers, runners, hooks, or any P0-T09, hardware, runtime, or external administrative operation.
+P0-T10 is complete at public merge commit 87a1ddeb76d2bca45fe75853b4c3b4c9f19c78b0 from f8364f12402c3c58796dbc1b56f8c65d378e88de. The receipt is reproducible from protected `main`; do not execute upstream installers, runners, hooks, or any P0-T09, hardware, runtime, or external administrative operation. ADR-0005 remains proposed pending explicit architectural acceptance.
 
 ## Canonical status
 
@@ -15,6 +15,7 @@ P0-T10 is in progress from f8364f12402c3c58796dbc1b56f8c65d378e88de. Review the 
 - P0-T07: complete;
 - P0-T08 / CA-03: complete;
 - P0-T09 / QG-01: owner-authorized and `in_progress`;
+- P0-T10: complete and publicly merged at `main@87a1dde`;
 - P0-T11/P0-T12: bounded Rust CPU reference line complete and merged on `main`;
 - P0-T04: blocked only on owner host designation;
 - P0-T05/P0-T06: blocked behind inventory and workload/SLO gates;
