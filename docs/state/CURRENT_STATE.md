@@ -4,7 +4,7 @@
 - **Updated:** 2026-08-20
 - **Phase:** P0
 - **Milestone:** P0-M6 — exact speculative-decoding reference verified
-- **Overall status:** P0-T08 / CA-03 is complete; the bounded Rust CPU reference line P0-T11/P0-T12 is complete and merged; P0-T09 / QG-01 remains active after the default-off Task 4B.1 preparation was merged for the accepted ADR-0004 method `ci_based_only`. Automatic Analysis remains enabled in SonarQube Cloud, while the committed CI workflow is inactive: current `main@4dec19558d076af03ee2bee45482a3f83a2b6f33` has Automatic Analysis `55533f96-c27b-480a-8e1f-f820bbced2f3` with public Quality Gate `OK`, and the workflow posture is `producer=success`, `scanner=skipped`. This is not a CI scanner submission. The diagnosed historical failure remains classified `platform_limitation / subscription_loc_limit_exceeded` with internal task status `FAILED`; the owner-authorized minimal remediation changed only Sonar project visibility for `leon36000_ForgeLLM` from private to public, matching the already-public canonical GitHub repository. Billing & usage after the change shows Free plan, 50,000 private-LOC entitlement, 48,248 private LOC consumed and approximately 1.8k remaining. The public readback has no open BUGs and no target `python:S5850`/`python:S6395` issue, while 71 unresolved issues remain overall; P0-T04 remains blocked on designation of one owner-authorized host.
+- **Overall status:** P0-T08 / CA-03 is complete; the bounded Rust CPU reference line P0-T11/P0-T12 is complete and merged; P0-T09 / QG-01 remains active after the default-off Task 4B.1 preparation was merged for the accepted ADR-0004 method `ci_based_only`. Automatic Analysis remains enabled in SonarQube Cloud, while the committed CI workflow is inactive: current `main@4dec19558d076af03ee2bee45482a3f83a2b6f33` has Automatic Analysis `55533f96-c27b-480a-8e1f-f820bbced2f3` with public Quality Gate `OK`, and the workflow posture is `producer=success`, `scanner=skipped`. This is not a CI scanner submission. The diagnosed historical failure remains classified `platform_limitation / subscription_loc_limit_exceeded` with internal task status `FAILED`; the owner-authorized minimal remediation changed only Sonar project visibility for `leon36000_ForgeLLM` from private to public, matching the already-public canonical GitHub repository. Billing & usage after the change shows Free plan, 50,000 private-LOC entitlement, 48,248 private LOC consumed and approximately 1.8k remaining. P0-T04 remains blocked on designation of one owner-authorized host.
 - **Authorized next work:** ADR-0004 is accepted and selects `ci_based_only`. Independently review the already-merged inactive Task 4B.1 preparation; do not provision `SONAR_TOKEN`, disable Automatic Analysis, activate CI submission, submit a scan, or design the blocked PR bridge in this increment. The human-only activation sequence is: read back Automatic Analysis enabled, disable it, read back disabled, then separately review token identity/lifecycle before first CI submission. P0-T04 may proceed independently after host designation.
 - **State anchor:** the Git commit containing this file
 
@@ -17,7 +17,7 @@ Preserve the exact speculative-decoding oracle as the correctness reference for 
 - Repository: `leon36000/ForgeLLM`.
 - Default branch: protected `main`.
 - Initial P0-T09 base: `1b1a3621fcdf4129268663c497cdcd53aed48c29`.
-- Latest canonical `main`: `a52a3386309db12449f865159d4330d2e8d0f8bd`.
+- Latest canonical `main`: `4dec19558d076af03ee2bee45482a3f83a2b6f33`.
 - Active task packet: `tasks/open/P0-T09-sonarqube-main-analysis.yaml`.
 - Tracking issue: #26.
 - Owner authorization: `P0-T09 / subagent-driven`, recorded 2026-08-14.
@@ -122,7 +122,7 @@ The historical evidence, owner-authorized visibility remediation, administrative
 
 The prepared `.github/workflows/sonar.yml` and `sonar-project.properties` are intentionally default-off: the scanner requires explicit repository variables, the disabled-Automatic-Analysis gate, and protected `main`. No token is provisioned, no external analysis setting is changed, and no scan is submitted.
 
-The current-main readback is bounded: Automatic Analysis completed with Quality Gate `OK`; `producer=success` and `scanner=skipped` describe the inactive workflow posture and must not be interpreted as a CI scan result. Public issue readback reports no open BUGs and no target `python:S5850`/`python:S6395` issue, but 71 unresolved issues remain overall.
+The current-main readback is bounded: Automatic Analysis completed with Quality Gate `OK`; `producer=success` and `scanner=skipped` describe the inactive workflow posture and must not be interpreted as a CI scan result. This readback does not establish repository-wide zero Sonar issues.
 
 As a bounded Task 4B.1 scope exception, `.gitleaksignore` contains exactly two path/rule/line fingerprints for the required public `sonar.projectKey` identifier; it suppresses no credential finding and does not alter scanner behavior.
 

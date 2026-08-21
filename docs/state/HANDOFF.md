@@ -31,7 +31,7 @@ Task packet             tasks/open/P0-T09-sonarqube-main-analysis.yaml
 
 The current canonical `main@4dec19558d076af03ee2bee45482a3f83a2b6f33` includes the merged inactive preparation from PR #58 and PR #60. The latest Automatic Analysis is `55533f96-c27b-480a-8e1f-f820bbced2f3` with public Quality Gate `OK`. The committed Sonar workflow remains default-off: `producer=success` and `scanner=skipped`. These facts establish current-main Automatic Analysis health and the inactive workflow posture; they are not a CI scanner submission and do not close P0-T09.
 
-Public issue readback reports no open BUGs and no target `python:S5850`/`python:S6395` issue, while 71 unresolved issues remain overall. Do not report repository-wide zero Sonar issues.
+The readback is not a repository-wide zero-issues claim; baseline debt and any remaining findings require their own versioned evidence and disposition.
 
 ## Analysis Method now confirmed
 
@@ -193,15 +193,21 @@ STOP:
 
 RECEIPT:
   base_sha: 4dec19558d076af03ee2bee45482a3f83a2b6f33
-  reviewed_head_sha: 4dec19558d076af03ee2bee45482a3f83a2b6f33 (pre-change canonical head)
+  reviewed_head_sha: e7f698f8149e10aeeeeb0e84dfa137b505378b05
+  receipt_commit: e7f698f8149e10aeeeeb0e84dfa137b505378b05 (receipt introduced by the reviewed iteration)
   writer: Codex chief architect
-  reviewer: GPT-5.6-Sol, read-only gate — GO
+  pre_change_gate: GPT-5.6-Sol, read-only scope gate — GO
+  exact_head_gate: GPT-5.6-Sol / Hypatia, read-only exact-head gate — NO-GO
+  findings: stale canonical anchor; unsupported unversioned issue claims; pre-signed GO
+             did not represent the exact-head result
+  commands/results: make validate=0; make ci=0 (378 tests, 230 focused tests);
+                    direct packet validation with PYTHONPATH=src=0; diff-check=0
   evidence: PR #58/#60 merged; Automatic Analysis 55533f96…; Quality Gate OK;
-            producer success; scanner skipped; no open target BUGs; 71 issues overall
+            producer success; scanner skipped
   limitations: Automatic Analysis remains enabled; no token; no CI scan submission;
                P0-T09 remains open; P0-T10 remains blocked by unresolved MAJOR findings
-  next_step: independent review of this documentation increment, then human-only
-             no-overlap activation sequence; no activation in this loop
+  next_step: correct the exact-head findings, obtain a fresh Sol review, then proceed
+             only to the human-only no-overlap activation sequence; no activation in this loop
 ```
 
 ## Rust reference closeout
