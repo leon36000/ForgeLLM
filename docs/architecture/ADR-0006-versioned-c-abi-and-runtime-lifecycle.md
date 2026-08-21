@@ -7,20 +7,20 @@
 
 ## Context
 
-ForgeLLM's charter places runtime orchestration, lifecycle, scheduling and safe resource abstractions in Rust while permitting CUDA, HIP and portable native backends only behind explicit boundaries. ADR-0001 requires a stable versioned C ABI with opaque handles, explicit ownership and error codes. P0-T11 and P0-T12 now provide a bounded CPU reference nucleus, so the next architecture risk is not another isolated primitive: it is defining the binary boundary before backend and language-binding implementation hardens accidental layouts into compatibility obligations.
+ForgeLLM's charter places runtime orchestration, lifecycle, scheduling and safe resource abstractions in Rust while permitting CUDA, HIP and portable native backends only behind explicit boundaries. ADR-0001 requires a stable versioned C ABI with opaque handles, explicit ownership and error codes. P0-T11 and P0-T12 now provide a bounded CPU reference nucleus, so the next architecture risk is defining the binary boundary before backend and language-binding implementation hardens accidental layouts into compatibility obligations.
 
-A C ABI is necessary but not sufficient. A technically C-compatible function can still be unsafe or unstable when:
+A C-compatible signature is not sufficient when:
 
 - Rust or C++ exceptions unwind across the boundary;
-- a public struct is extended without size/version rules;
+- a public struct changes without size/version rules;
 - one allocator creates memory that another allocator frees;
-- opaque handles outlive parents or are used through a different API version;
-- cancellation races with completion or destruction;
-- thread-local error state is overwritten by async work;
+- opaque handles outlive parents or are used through another API version;
+- cancellation races with completion, release or shutdown;
+- thread-local error state is overwritten by asynchronous work;
 - public declarations expose backend-native streams or vendor structures;
 - a flat exported symbol set grows without a complete compatibility handshake.
 
-The P0-T15 source review compares official Rust 1.97.1 FFI/layout rules, ONNX Runtime's selected C API table, MLIR opaque-handle conventions, CUDA resource-version consistency, Vulkan extensible structures and Wasmtime C ownership. Those projects are evidence sources, not authority over ForgeLLM. The selected rules below are ForgeLLM decisions and remain unproven until executable cross-language tests pass.
+The P0-T15 source review compares official Rust 1.97.1 FFI/layout rules, ONNX Runtime's selected C API table, MLIR opaque-handle conventions, CUDA resource-version consistency, Vulkan extensible structures and Wasmtime C ownership. Those projects are evidence sources, not authority over ForgeLLM. The rules below are ForgeLLM decisions and remain unproven until executable cross-language tests pass.
 
 ## Decision
 
@@ -32,7 +32,7 @@ The canonical C header created by a future implementation task will be the publi
 
 This ADR defines the public core runtime ABI. A backend-plugin ABI is a separate future authority with its own version negotiation, security model and conformance packet. A core ABI version never implicitly versions or authorizes a backend ABI.
 
-No header, exported symbol or FFI implementation is authorized by this design task. Implementation begins only under a separate packet after this ADR is accepted.
+No header, exported symbol or FFI implementation is authorized by P0-T15. Implementation begins only under a separate packet after this ADR is accepted.
 
 ### 2. Bootstrap and API-table versioning
 
@@ -47,14 +47,14 @@ This notation describes behavior only; final C identifiers and numeric values be
 Rules:
 
 1. ABI versions are monotonically increasing positive `uint32_t` values. Version zero is invalid.
-2. The entry point returns a pointer to one immutable, process-lifetime API table for the exact requested version, or null when that complete version is unsupported.
+2. The entry point is thread-safe and returns a pointer to one immutable, process-lifetime API table for the exact requested version, or null when that complete version is unsupported.
 3. There is no nearest-version fallback, partial table, feature-probing mutation or caller-writable table.
 4. Every table begins with `uint32_t struct_size` and `uint32_t abi_version`.
 5. The caller validates both fields before reading a version-specific table tail.
 6. Once released, a version's function order, signatures, status values and type contracts are immutable.
 7. Adding, removing, reordering or changing a function, public enum domain or public structure contract requires a new API-table version.
 8. A library may support multiple historical tables concurrently. Removing a previously shipped table is a documented compatibility break and requires an explicit support-policy decision.
-9. Build/product information is obtained through a function in the selected table; it is informational and never substitutes for ABI negotiation.
+9. Build/product information is obtained through a function in the selected table. Any returned build string is immutable process-lifetime UTF-8 data and is informational; it never substitutes for ABI negotiation.
 10. Function pointers and handles become invalid if the dynamic library is unloaded. The caller must release every handle and cease every call before unloading; v1 provides no safe hot-unload protocol.
 
 ### 3. Calling convention, symbols and language surface
@@ -64,7 +64,7 @@ The future public header must:
 - compile as C11 and C++17;
 - use `extern "C"` in C++;
 - define one explicit export/import macro;
-- select the C calling convention explicitly on platforms where multiple conventions exist; the initial Windows rule is `__cdecl`;
+- select the C calling convention explicitly where multiple conventions exist; the initial Windows rule is `__cdecl`;
 - use no C bitfields, packed structures, flexible array members or compiler-specific anonymous layout in the stable surface;
 - use only standard fixed-width integer types and opaque incomplete types;
 - keep all non-bootstrap implementation symbols hidden by default and verify the exported symbol list.
@@ -91,26 +91,28 @@ ABI v1 recognizes four public stateful object kinds:
 
 They are incomplete C types accessed only through pointers. Callers do not allocate, copy, inspect or embed their representation.
 
-Ownership rules:
+Ownership and pointer rules:
 
 1. A successful constructor returns exactly one owned handle reference through a caller-provided output pointer.
-2. Before work that can fail, constructors initialize the output handle to null after validating that the output pointer itself is writable.
-3. A release function consumes one owned handle reference on success.
-4. `release(NULL)` succeeds and has no effect.
-5. Release functions return a status; destruction failure is never hidden in a `void` function.
-6. Double release, fabricated pointers, use after release and concurrent release of the same owned reference are caller defects outside recoverable guarantees.
-7. Every internal handle records its creating ABI-table version. A function from another table returns `VERSION_MISMATCH` before accessing object state.
-8. A child retains the internal resources it needs from its parent. Releasing the caller's runtime, model or session handle does not invalidate an already-created child.
-9. The implementation must keep the internal retention graph acyclic or explicitly prove every weak edge. Public ownership does not expose internal reference counts.
-10. The caller must not unload the library while any handle or API-table pointer remains live.
+2. A null required output pointer returns `INVALID_ARGUMENT` before object creation.
+3. For every non-null pointer, the caller guarantees a valid, correctly aligned and sufficiently sized readable or writable region according to the parameter contract. A C ABI cannot prove arbitrary non-null pointer validity before access; fabricated, dangling or inaccessible pointers remain caller defects outside recoverable guarantees.
+4. After the required output pointer is checked for null, constructors write a null handle before other fallible work. A later failure therefore returns no owned object.
+5. A release function consumes one owned handle reference only on success.
+6. `release(NULL)` succeeds and has no effect.
+7. Release functions return a status; destruction failure is never hidden in a `void` function.
+8. Double release, fabricated pointers, use after release and concurrent release of the same owned reference are caller defects outside recoverable guarantees.
+9. Every internal handle records its creating ABI-table version. A function from another table returns `VERSION_MISMATCH` for a valid foreign-version handle before accessing object payload, consumes nothing and leaves the handle usable through its creating table.
+10. A child retains the internal resources it needs from its parent. Releasing the caller's runtime, model or session handle does not invalidate an already-created child.
+11. The implementation must keep the internal retention graph acyclic or explicitly prove every weak edge. Public ownership does not expose internal reference counts.
+12. The caller must not unload the library while any handle or API-table pointer remains live.
 
-The initial lifetime graph is:
+The initial retained-dependency graph is:
 
 ```text
 runtime -> model -> session -> request
 ```
 
-This graph describes retained dependencies, not exclusive ownership. Multiple models may share one runtime, multiple sessions may retain one model and multiple requests may retain one session.
+This graph does not imply exclusive ownership. Multiple models may share one runtime, multiple sessions may retain one model and multiple requests may retain one session.
 
 ### 5. Public scalar, string and byte views
 
@@ -121,11 +123,11 @@ ABI-visible values use:
 - `uint64_t` for byte lengths, element counts, dimensions and finite timeout values;
 - `uint8_t` restricted to `0` or `1` only when a dedicated flag bit is not appropriate.
 
-Every `uint64_t` count is checked before conversion to platform `size_t` or Rust `usize`. Overflow returns `INVALID_ARGUMENT` or `RESOURCE_EXHAUSTED` according to whether the requested representation is impossible or merely unavailable; the implementation packet must freeze this mapping in tests.
+Every `uint64_t` count is checked before conversion to platform `size_t` or Rust `usize`. Overflow returns `INVALID_ARGUMENT` or `RESOURCE_EXHAUSTED` according to whether the requested representation is impossible or merely unavailable; the implementation packet freezes this mapping in tests.
 
-Immutable strings and bytes use pointer-plus-length views. Text fields explicitly require UTF-8. No view assumes NUL termination. Null plus zero length is a valid empty optional view; null plus non-zero length is invalid. Non-null data must remain readable and correctly aligned for the documented synchronous call duration.
+Immutable strings and bytes use pointer-plus-length views. Text fields explicitly require UTF-8. No view assumes NUL termination. Null plus zero length is valid only where the parameter is documented optional; null plus non-zero length is invalid. Non-null data must remain valid and correctly aligned for the documented synchronous call duration.
 
-ABI v1 does not retain caller input memory after an asynchronous submission returns success. The implementation must either copy or internally own every byte required by a live request before returning. Zero-copy external buffers, mapped model weights and device memory require a separate accepted ownership/synchronization design.
+ABI v1 does not retain caller input memory after asynchronous submission returns success. The implementation copies or internally owns every byte required by a live request before returning. Zero-copy external buffers, mapped model weights and device memory require a separate accepted ownership/synchronization design.
 
 ### 6. Extensible structures
 
@@ -168,20 +170,21 @@ The initial required semantic categories are:
 - `NUMERICAL_ERROR`;
 - `INTERNAL`.
 
-Final names and values are frozen by the future header-first RED tests, not by illustrative code in this ADR.
+Final names and values are frozen by future header-first RED tests, not by illustrative code in this ADR.
 
 Detailed diagnostics use an optional caller-owned buffer descriptor containing data pointer, capacity, written length and required length, all with fixed-width fields and a size/version prefix where applicable.
 
 Diagnostic rules:
 
 1. A null diagnostic descriptor means no detailed message is requested.
-2. Null data with non-zero capacity is invalid and is detected before a mutating operation begins.
-3. On failure, `required` reports the complete UTF-8 byte count when the descriptor is valid.
-4. If capacity is sufficient, the exact non-NUL-terminated UTF-8 message is written and `written == required`.
-5. If capacity is insufficient, no partial message is written and `written == 0`.
-6. Diagnostic formatting failure never replaces the operation's primary status.
-7. Success clears `written` and `required` to zero.
-8. No thread-local `last_error` and no library-allocated ordinary error string/object is part of v1.
+2. A null data pointer with non-zero capacity is invalid and is detected before a mutating operation begins.
+3. A non-null data pointer is subject to the caller pointer-validity precondition in section 4; the library does not claim to prove writability.
+4. On failure, `required` reports the complete UTF-8 byte count when the descriptor is valid.
+5. If capacity is sufficient, the exact non-NUL-terminated UTF-8 message is written and `written == required`.
+6. If capacity is insufficient, no partial message is written and `written == 0`.
+7. Diagnostic formatting failure never replaces the operation's primary status.
+8. Success clears `written` and `required` to zero.
+9. No thread-local `last_error` and no library-allocated ordinary error string/object is part of v1.
 
 ### 8. Allocation boundary
 
@@ -211,7 +214,7 @@ The ABI does not claim typed recovery from:
 
 Those limits must appear in user-facing binding documentation and fault-injection receipts.
 
-### 10. Request state machine
+### 10. Request state machine and bounded shutdown
 
 A request follows this monotonic state machine:
 
@@ -221,13 +224,14 @@ CREATED -> QUEUED -> RUNNING -> SUCCEEDED
                               -> CANCELLED
 ```
 
-A future implementation may transition directly from `CREATED` or `QUEUED` to a terminal failure/cancellation when validation or scheduling ends the request, but no terminal state transitions to another state.
+A future implementation may transition directly from `CREATED` or `QUEUED` to terminal failure/cancellation when validation or scheduling ends the request, but no terminal state transitions to another state.
 
 Rules:
 
 - submission returns a request only after all retained input has been copied or internally owned;
 - `poll` is non-blocking and returns one snapshot state;
 - `wait` accepts only a finite `uint64_t timeout_ns`; timeout zero is a non-blocking observation and `UINT64_MAX` is rejected in v1 rather than serving as a hidden infinite wait;
+- timeout conversion to every host API is checked; values outside the supported host range return `INVALID_ARGUMENT` without waiting;
 - wait timeout returns `TIMEOUT` without changing request state;
 - `cancel` is thread-safe and idempotent; it records a cancellation request but does not promise instantaneous accelerator preemption;
 - cancellation racing with terminal completion preserves the first terminal state actually committed;
@@ -237,6 +241,8 @@ Rules:
 - release of a non-terminal request returns `INVALID_STATE`, consumes nothing and never blocks;
 - callers must cancel if desired and observe a terminal state before release;
 - no callback, user-data pointer, reentrant completion call or hidden release-time wait exists in v1.
+
+The service/runtime layer above the ABI tracks its live request handles. Bounded shutdown consists of cancellation requests followed by finite waits and terminal releases. If any wait expires, shutdown reports failure and leaves those handles/resources live; v1 never force-frees memory that a worker or backend may still access and never reports successful shutdown while work remains active. Process termination after such a failure is a caller policy, not a successful ABI cleanup claim.
 
 ### 11. Thread-safety contract
 
@@ -270,23 +276,23 @@ A future backend-plugin ADR must separately define discovery, trust, version neg
 
 ## Required implementation sequence
 
-After this ADR is accepted, one separate implementation packet may begin with tests and declarations only in this order:
+After this ADR is accepted, a separate implementation packet may begin with tests and declarations only in this order:
 
-1. canonical C11 header tests that intentionally fail because no header exists;
+1. canonical C11 header tests that fail because no header exists;
 2. C11 and C++17 compile tests on every supported target/compiler;
 3. static assertions for scalar widths, table prefix, structure offsets, alignment and reserved fields;
 4. exported-symbol allowlist proving only the bootstrap symbol is globally visible initially;
-5. exact version-negotiation tests: supported, zero, unknown, old table and complete-table validation;
+5. exact version-negotiation tests: supported, zero, unknown, historical table and complete-table validation;
 6. old-header/new-library and new-header/old-library size/version fixtures;
 7. null, length, alignment, overflow, unknown-flag and malformed-structure negatives;
 8. ownership and parent-release tests with leak, address and thread sanitizers where supported;
 9. wrong-table-version handle tests;
 10. injected Rust unwinding-panic containment tests;
-11. request-state, finite-wait, cancellation and release-race model tests;
+11. request-state, finite-wait, cancellation, shutdown and release-race model tests;
 12. C ABI fuzzing over bootstrap, descriptors and invalid call sequences;
-13. only then the smallest Rust implementation that makes those gates pass.
+13. only then the smallest complete Rust implementation that makes those gates pass.
 
-Tensor/model data-plane descriptors, output-buffer ownership and backend plugin loading are split into later reviewed increments if the first implementation packet cannot define them without widening scope.
+Tensor/model data-plane descriptors, output-buffer ownership and backend plugin loading are split into later reviewed increments when the first implementation packet cannot define them without widening scope. No incomplete header or `UNIMPLEMENTED` public path is merged.
 
 ## Alternatives considered
 
@@ -322,24 +328,30 @@ Rejected for v1. Size/version-tagged structures provide bounded forward compatib
 
 Rejected. They would couple the stable core ABI to backend versions and violate the vendor-independence mitigation for R-009.
 
+### I. Force-destroy or unbounded release of active requests
+
+Rejected. Force-destroy risks use-after-free in worker/backend code; unbounded release hides latency and deadlock inside cleanup. V1 exposes failure to reach terminal state rather than fabricating successful destruction.
+
 ## Consequences
 
 Positive:
 
 - binary compatibility has one exact handshake and a testable table surface;
 - Rust/native ownership and cancellation races are explicit before implementation;
-- language bindings can be thin without inheriting Rust layouts;
+- language bindings can remain thin without inheriting Rust layouts;
 - vendor details remain behind a separately governed backend boundary;
 - no callback or custom-allocator complexity is introduced prematurely;
-- old ABI versions can remain available without mutating their tables.
+- old ABI versions can remain available without mutating their tables;
+- shutdown timeout is visible rather than hidden in release.
 
 Costs:
 
 - maintaining multiple immutable API tables requires adapters inside the Rust core;
 - caller-provided diagnostics are less convenient than allocated error objects;
-- terminal-only request release requires callers to model cancellation and completion honestly;
+- terminal-only request release requires callers to track cancellation and completion honestly;
 - exclusion of zero-copy/native handles may require copies in early implementations;
-- header, layout, cross-compiler, sanitizer and fuzz gates add implementation work before backend progress.
+- header, layout, cross-compiler, sanitizer and fuzz gates add work before backend progress;
+- a backend that cannot terminate may require process-level recovery rather than unsafe force-destruction.
 
 ## Evidence boundary
 
@@ -364,6 +376,6 @@ Reconsider this decision if executable evidence shows that:
 - caller-owned diagnostics cannot express required structured failures;
 - terminal-only request release prevents bounded shutdown under real workloads;
 - callback-free operation cannot support required service-runtime integration;
-- a different boundary materially improves safety/portability without exposing vendor internals;
+- a different boundary materially improves safety or portability without exposing vendor internals;
 - cross-platform layout or calling-convention evidence cannot satisfy the compatibility contract;
 - the core/backend separation cannot prevent version or resource ownership leakage.
