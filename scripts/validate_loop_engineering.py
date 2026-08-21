@@ -12,7 +12,11 @@ from pathlib import Path
 
 import yaml
 
-from forgellm_governance.loop_engineering import validate_loop_declaration, validate_loop_receipt
+from forgellm_governance.loop_engineering import (
+    validate_loop_declaration,
+    validate_loop_receipt,
+    validate_vendor_provenance,
+)
 
 TASK_PACKET_PATH = Path("tasks/open/P0-T10-bounded-loop-engineering.yaml")
 DECLARATION_PREFIX = Path("artifacts/governance/loop-engineering/declarations")
@@ -80,7 +84,9 @@ def _filesystem_path(root: Path, relative: str) -> Path:
     return root / Path(*relative.split("/"))
 
 
-def _load_mapping(root: Path, relative: Path | str, issues: list[str], label: str) -> tuple[Mapping[object, object] | None, bytes | None]:
+def _load_mapping(
+    root: Path, relative: Path | str, issues: list[str], label: str
+) -> tuple[Mapping[object, object] | None, bytes | None]:
     relative_text = relative.as_posix() if isinstance(relative, Path) else relative
     path = _filesystem_path(root, relative_text)
     try:
@@ -162,7 +168,9 @@ def _validate_index_record(
     if not isinstance(run_id, str) or not run_id.strip():
         issues.append(f"{prefix}.run_id must be a non-empty string")
 
-    declaration_path = _indexed_path(record.get("declaration_path"), f"{prefix}.declaration_path", DECLARATION_PREFIX, issues)
+    declaration_path = _indexed_path(
+        record.get("declaration_path"), f"{prefix}.declaration_path", DECLARATION_PREFIX, issues
+    )
     receipt_path = _indexed_path(record.get("receipt_path"), f"{prefix}.receipt_path", RECEIPT_PREFIX, issues)
 
     for field in ("declaration_source_commit", "declaration_source_blob_sha"):
@@ -180,9 +188,7 @@ def _validate_index_record(
         if declaration_bytes is not None and _valid_sha(record.get("declaration_source_blob_sha")):
             actual_blob_sha = _git_blob_sha(declaration_bytes)
             if actual_blob_sha != record.get("declaration_source_blob_sha"):
-                issues.append(
-                    f"{prefix}.declaration_source_blob_sha does not match declaration {declaration_path}"
-                )
+                issues.append(f"{prefix}.declaration_source_blob_sha does not match declaration {declaration_path}")
 
     receipt: Mapping[object, object] | None = None
     if receipt_path is not None:
@@ -195,14 +201,11 @@ def _validate_index_record(
         )
         declared_receipt = _safe_relative_yaml_path(declaration.get("RECEIPT"))
         if receipt_path is not None and declared_receipt != receipt_path:
-            issues.append(
-                f"declaration {declaration_path}: RECEIPT must match indexed receipt_path {receipt_path}"
-            )
+            issues.append(f"declaration {declaration_path}: RECEIPT must match indexed receipt_path {receipt_path}")
 
     if receipt is not None:
         issues.extend(
-            f"receipt {receipt_path}: {message}"
-            for message in validate_loop_receipt(receipt, declaration or {})
+            f"receipt {receipt_path}: {message}" for message in validate_loop_receipt(receipt, declaration or {})
         )
         if receipt.get("schema_version") != record.get("receipt_schema_version"):
             issues.append(f"{prefix}.receipt_schema_version must match receipt {receipt_path}")
@@ -253,9 +256,7 @@ def validate_repository(root: Path) -> list[str]:
         issues.append("receipt index runs must be a list")
         runs = []
     for index_number, record in enumerate(runs):
-        run_id, declaration_path, receipt_path = _validate_index_record(
-            root, record, index_number, task_packet, issues
-        )
+        run_id, declaration_path, receipt_path = _validate_index_record(root, record, index_number, task_packet, issues)
         if run_id is not None:
             if run_id in run_ids:
                 issues.append("run_id values must be unique")
@@ -285,7 +286,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Validate the ForgeLLM P0-T10 loop receipt catalog.")
     parser.add_argument("--root", type=Path, default=Path.cwd())
     args = parser.parse_args()
-    issues = validate_repository(args.root)
+    issues = [*validate_vendor_provenance(args.root), *validate_repository(args.root)]
     for issue in issues:
         print(issue)
     if issues:

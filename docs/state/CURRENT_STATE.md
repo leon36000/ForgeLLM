@@ -8,6 +8,10 @@
 - **Authorized next work:** ADR-0004 is accepted and selects `ci_based_only`. Obtain explicit human review and authorization for the no-overlap migration sequence; do not provision `SONAR_TOKEN`, disable Automatic Analysis, activate CI submission, submit a scan, or design the blocked PR bridge from this documentation increment. If separately authorized, record enabled readback → human disable action → disabled readback, then complete token identity/lifecycle review before any first controlled CI submission. Stop the documentation loop after this final snapshot cycle; resume only after a material activation, evidence, status, or substantive-error change. P0-T04 may proceed independently after host designation.
 - **State anchor:** the Git commit containing this file
 
+## P0-T10 proposed/in-progress status
+
+P0-T10 is in progress from canonical base f8364f12402c3c58796dbc1b56f8c65d378e88de. The proposed ADR-0005 integration adds only an inert pinned vendor subset, a ForgeLLM-owned bounded bridge, and repository-native receipts/validation; P0-T09 and hardware/runtime boundaries remain unchanged.
+
 ## Objective
 
 Preserve the exact speculative-decoding oracle as the correctness reference for later cache-aware, accelerator and runtime implementations while restoring a reproducible and truthful SonarQube Cloud quality signal for protected `main`.

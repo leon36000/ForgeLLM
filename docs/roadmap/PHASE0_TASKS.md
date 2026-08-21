@@ -13,6 +13,11 @@
 | P0-T09 / QG-01 | in progress — Task 4B.1 preparation merged (inactive) | maintain and independently review the accepted `ci_based_only` scanner path without activation or submission | LOC-limit cause classified; inactive preparation merged; current Sonar project remains Automatic Analysis |
 | P0-T11 | complete | bounded Rust CPU reference core: checked tensors, matmul, softmax, RMSNorm, argmax and recoverable allocations | PR #48; 28 Rust tests; independent review; hosted exact-head gates; merge `04342c8` |
 | P0-T12 | complete | bounded decoder tensor primitives: reshape, exact-shape add/multiply and embedding gather | PR #53; 46 Rust tests on the stacked line; independent review; hosted exact-head gates; merge `7962abe6` |
+| P0-T10 | in progress — proposed ADR | bounded, inert Loop Engineering bridge with provenance, task binding, receipts, and fail-closed repository validation | make validate-loop; focused controller tests; ADR-0005 remains proposed |
+
+## P0-T10 proposed status
+
+The P0-T10 static integration is in progress from canonical base f8364f12402c3c58796dbc1b56f8c65d378e88de. It is limited to governance/reference artifacts and does not modify P0-T09, hardware, runtime, backend, or Sonar settings.
 
 ## P0-T09 current gate
 

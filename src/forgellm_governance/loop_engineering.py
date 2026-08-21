@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import hashlib
 import math
 import posixpath
 import re
 import shlex
 from collections.abc import Mapping, Sequence
 from numbers import Real
+from pathlib import Path
 from typing import Any
+
+import yaml
 
 _SHELL_TOKENS = frozenset({";", "&", "|", "<", ">"})
 _WRAPPERS = frozenset({"env", "command", "exec", "xargs", "parallel", "timeout", "nice", "setsid"})
@@ -75,6 +79,37 @@ _STOP_DISPOSITION = {
     "manual_stop": "manual_stop",
 }
 _TEMPLATE_MARKERS = ("template", "replace_with", "<placeholder>", "tbd", "todo")
+EXPECTED_UPSTREAM_REPOSITORY = "https://github.com/lcajigasm/loop-engineering"
+EXPECTED_UPSTREAM_COMMIT = "ae2d610985064bb30c5013261988c813013c09e3"
+EXPECTED_LICENSE_BLOB = "84524f23b209fccb02a8f239165f0444bfd70f3f"
+EXPECTED_VENDOR_FILES = {
+    "LICENSE": EXPECTED_LICENSE_BLOB,
+    "core/METHODOLOGY.md": "c7094ca40c2257d653c4d48f6b87c40cb82b209b",
+    "core/COMMANDS.md": "4de9e981ad89c04f28d94ea4ad5b97e1b513b578",
+    "core/templates/PLAN.template.md": "3477e664b738a46b36e4b015b1b2ef502b5c6dd4",
+    "core/templates/RECEIPT.template.md": "2f5da7d5736067c965b4fed2604982e00a79b024",
+    "core/templates/INTEGRATION.template.md": "2f740b4dbc1f7ee63688abe570c179bd28fc4508",
+    "core/templates/CAPABILITIES.template.md": "da89bdb92b2f61558babc7c699cd2c350904f07a",
+}
+EXPECTED_EXCLUDED_EXECUTABLE_SURFACES = ("install.sh", "core/scripts/", "claude-code/", "codex/")
+EXPECTED_EXCLUDED_SHADOW_TEMPLATES = (
+    "core/templates/GOALS.template.md",
+    "core/templates/STATUS.template.md",
+    "core/templates/PROJECT_BRIEF.template.md",
+    "core/templates/ADR.template.md",
+)
+_PROVENANCE_FIELDS = frozenset(
+    {
+        "schema_version",
+        "upstream_repository",
+        "upstream_commit",
+        "license",
+        "license_blob_sha",
+        "files",
+        "excluded_executable_surfaces",
+        "excluded_shadow_state_templates",
+    }
+)
 
 
 def _split_verify_tokens(command: object) -> list[str] | None:
@@ -503,3 +538,91 @@ def validate_loop_receipt(receipt: Mapping[str, Any], declaration: Mapping[str, 
 def validate_loop_receipt_template(receipt: Mapping[str, Any], declaration: Mapping[str, Any]) -> list[str]:
     """Validate receipt shape while permitting explicit template placeholders."""
     return _validate_receipt_common(receipt, declaration, allow_template=True)
+
+
+def _git_blob_sha(data: bytes) -> str:
+    payload = f"blob {len(data)}\0".encode("ascii") + data
+    return hashlib.sha1(payload, usedforsecurity=False).hexdigest()
+
+
+def validate_vendor_provenance(root: Path | str) -> list[str]:
+    """Verify the pinned vendor tree is exactly the reviewed inert upstream subset."""
+    vendor = Path(root).resolve() / "third_party" / "loop-engineering"
+    provenance_path = vendor / "PROVENANCE.yaml"
+    issues: list[str] = []
+    try:
+        provenance = yaml.safe_load(provenance_path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return [f"vendor provenance file is missing: {provenance_path}"]
+    except (UnicodeDecodeError, yaml.YAMLError) as exc:
+        return [f"vendor provenance file is invalid: {exc}"]
+    if not isinstance(provenance, Mapping):
+        return ["vendor PROVENANCE.yaml root must be a mapping"]
+
+    actual_fields = set(provenance)
+    if actual_fields != _PROVENANCE_FIELDS:
+        issues.append(
+            "vendor provenance requires exact fields; "
+            f"missing={sorted(_PROVENANCE_FIELDS - actual_fields)}, extra={sorted(actual_fields - _PROVENANCE_FIELDS)}"
+        )
+    if provenance.get("schema_version") != "1.0":
+        issues.append("vendor provenance schema_version must be '1.0'")
+    if provenance.get("upstream_repository") != EXPECTED_UPSTREAM_REPOSITORY:
+        issues.append(f"upstream_repository must be {EXPECTED_UPSTREAM_REPOSITORY}")
+    if provenance.get("upstream_commit") != EXPECTED_UPSTREAM_COMMIT:
+        issues.append(f"upstream_commit must be exactly {EXPECTED_UPSTREAM_COMMIT}")
+    if provenance.get("license") != "MIT":
+        issues.append("vendor license must be exactly MIT")
+    if provenance.get("license_blob_sha") != EXPECTED_LICENSE_BLOB:
+        issues.append(f"license_blob_sha must be exactly {EXPECTED_LICENSE_BLOB}")
+    if provenance.get("excluded_executable_surfaces") != list(EXPECTED_EXCLUDED_EXECUTABLE_SURFACES):
+        issues.append("excluded_executable_surfaces must preserve the reviewed executable exclusions")
+    if provenance.get("excluded_shadow_state_templates") != list(EXPECTED_EXCLUDED_SHADOW_TEMPLATES):
+        issues.append("excluded_shadow_state_templates must preserve the reviewed shadow-state exclusions")
+
+    bindings: dict[str, str] = {}
+    raw_files = provenance.get("files")
+    if not isinstance(raw_files, list):
+        issues.append("vendor provenance files must be an array")
+        raw_files = []
+    for item in raw_files:
+        if not isinstance(item, Mapping):
+            issues.append("each vendor provenance file record must be a mapping")
+            continue
+        if set(item) != {"path", "upstream_blob_sha"}:
+            issues.append("each vendor provenance file record requires exactly path and upstream_blob_sha")
+            continue
+        path = item.get("path")
+        blob = item.get("upstream_blob_sha")
+        if not isinstance(path, str) or not isinstance(blob, str):
+            issues.append("each vendor provenance file record requires string path and upstream_blob_sha")
+            continue
+        if path in bindings:
+            issues.append(f"duplicate vendor provenance path: {path}")
+        bindings[path] = blob
+    if bindings != EXPECTED_VENDOR_FILES:
+        issues.append("vendor provenance files must match the exact reviewed static subset and upstream blob SHAs")
+
+    expected_local_files = set(EXPECTED_VENDOR_FILES) | {"PROVENANCE.yaml"}
+    actual_local_files = {path.relative_to(vendor).as_posix() for path in vendor.rglob("*") if path.is_file()}
+    if actual_local_files != expected_local_files:
+        issues.append(
+            "vendored Loop Engineering tree must contain only the reviewed inert subset; "
+            f"expected={sorted(expected_local_files)}, actual={sorted(actual_local_files)}"
+        )
+    symlinks = [path.relative_to(vendor).as_posix() for path in vendor.rglob("*") if path.is_symlink()]
+    if symlinks:
+        issues.append(f"vendored Loop Engineering tree must not contain symlinks: {sorted(symlinks)}")
+
+    for relative, expected_blob in EXPECTED_VENDOR_FILES.items():
+        path = vendor / relative
+        try:
+            actual_blob = _git_blob_sha(path.read_bytes())
+        except (FileNotFoundError, OSError) as exc:
+            issues.append(f"vendored file cannot be read: {relative}: {exc}")
+            continue
+        if bindings.get(relative) != expected_blob:
+            issues.append(f"{relative} provenance blob must be {expected_blob}, got {bindings.get(relative)!r}")
+        if actual_blob != expected_blob:
+            issues.append(f"{relative} Git blob drift: expected {expected_blob}, got {actual_blob}")
+    return issues

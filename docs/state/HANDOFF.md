@@ -4,6 +4,10 @@
 **To work:** obtain explicit human review and authorization for the no-overlap P0-T09 migration sequence; stop the documentation loop after this final snapshot; P0-T04 still awaits host designation
 **Generated:** 2026-08-20
 
+## P0-T10 proposed/in-progress handoff
+
+P0-T10 is in progress from f8364f12402c3c58796dbc1b56f8c65d378e88de. Review the proposed ADR-0005 and verify the static provenance/catalog gates; do not execute upstream installers, runners, hooks, or any P0-T09, hardware, runtime, or external administrative operation.
+
 ## Canonical status
 
 - repository: `leon36000/ForgeLLM`;
