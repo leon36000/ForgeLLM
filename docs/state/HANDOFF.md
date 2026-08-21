@@ -1,6 +1,6 @@
 # ForgeLLM Handoff
 
-**From state:** S-0011
+**From state:** S-0012
 **To work:** continue P0-T09 through the ordered token/lifecycle and no-overlap gates after the merged inactive artifact-boundary checkpoint; P0-T04 still awaits host designation
 **Generated:** 2026-08-21
 
@@ -187,6 +187,14 @@ The official action provenance is recorded in `CURRENT_STATE.md`; no scanner arc
 PR #67 exact head `a58ee2f0a705f73bcc769330547f1b6bb7de6a67` merged as protected `main@83f8ea624bc4382f22e2e168c5444df5304b189a`. PR checks passed for Phase 0 validation, CodeQL, SonarCloud Code Analysis and GitGuardian; Dependency Review was `SKIPPED`. Post-merge runs passed: Phase 0 `32532087564`, CodeQL `32532087569`, and prepared Sonar workflow `32532087558`, whose producer succeeded and scanner was skipped by the default-off/Automatic-Analysis gate.
 
 This is exact-head repository and inactive-workflow evidence, not a Sonar CI submission. No token was provisioned, Automatic Analysis was not changed, and no PR bridge was introduced.
+
+## P0-T09 token identity/lifecycle pre-provisioning checkpoint
+
+`artifacts/governance/P0-T09-token-lifecycle-review.json` records the separate pre-provisioning review as `not_ready_for_provisioning`. The repository-scoped `gh secret list` readback contains no `SONAR_TOKEN`, and `gh variable list` is empty; no secret value was read. Organization- and environment-level secret state remains outside that readback.
+
+The review prefers a Scoped Organization Token when supported by the plan, but the recorded project plan is Free; the documented Free-plan candidate is therefore a Personal Access Token. No issuer, scope or token was selected. A convenience owner/administrator token is rejected. Storage, expiry/rotation, revocation, audit and incident-response controls remain open. The official SonarQube Cloud [Scoped Organization Token](https://docs.sonarsource.com/sonarqube-cloud/administering-sonarcloud/scoped-organization-tokens), [Personal Access Token](https://docs.sonarsource.com/sonarqube-cloud/managing-your-account/managing-tokens), and [GitHub Actions secret](https://docs.github.com/en/actions/concepts/security/secrets) documentation is recorded in the artifact.
+
+No token, Sonar setting, GitHub setting, scanner activation or scan submission was introduced. The next gate remains the ordered enabled-readback → owner-authorized disable action → disabled-readback sequence.
 
 ## Loop Engineering cycle 3/3: final snapshot stop
 

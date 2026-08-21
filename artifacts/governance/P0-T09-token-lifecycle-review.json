@@ -1,0 +1,76 @@
+{
+  "schema_version": "1.0",
+  "task_id": "P0-T09",
+  "review_id": "P0-T09-token-lifecycle-2026-08-21",
+  "review_scope": "pre-provisioning token identity and lifecycle",
+  "review_status": "not_ready_for_provisioning",
+  "captured_at_utc": "2026-08-21T22:45:11Z",
+  "privacy": {
+    "token_value_recorded": false,
+    "private_administrative_payload_recorded": false,
+    "secret_values_read": false,
+    "external_state_mutated": false
+  },
+  "repository_readback": {
+    "repository": "leon36000/ForgeLLM",
+    "protected_main": "a2af0ac86ab7fddbca48ceec5116426d8267a6ea",
+    "repository_secret_listing": {
+      "command": "gh secret list --repo leon36000/ForgeLLM --json name,updatedAt",
+      "sonar_token_name_present": false,
+      "secret_names_recorded": false,
+      "scope": "repository only"
+    },
+    "repository_variable_listing": {
+      "command": "gh variable list --repo leon36000/ForgeLLM --json name,updatedAt",
+      "names": [],
+      "scope": "repository only"
+    },
+    "workflow_boundary": "SONAR_TOKEN is referenced only by the final immutable scanner step; the producer and scanner validation steps are secretless"
+  },
+  "token_type_review": {
+    "preferred_type": "scoped_organization_token",
+    "preferred_type_status": "not_established",
+    "preferred_type_basis": "SonarQube Cloud documents Scoped Organization Tokens as non-user-specific, project-scoped and Execute-analysis-only, but limits the feature to Team and Enterprise plans; the repository's recorded plan is Free",
+    "free_plan_candidate": "personal_access_token",
+    "free_plan_candidate_status": "not_selected",
+    "personal_token_control": "Do not use an owner or administrator personal token for convenience; if the Free-plan path is selected, the issuing identity and project Execute Analysis permission must be explicitly recorded before provisioning"
+  },
+  "controls": {
+    "identity_and_issuer_owner": {
+      "status": "open",
+      "required_evidence": "dedicated least-privilege issuer where supported, otherwise named issuing account and its non-administrator project permission"
+    },
+    "minimum_scope": {
+      "status": "open",
+      "required_evidence": "only Execute Analysis on leon36000_ForgeLLM; no organization or administrative scope"
+    },
+    "storage_boundary": {
+      "status": "open",
+      "required_evidence": "one GitHub Actions secret named SONAR_TOKEN at the narrowest approved repository/environment boundary; no job, container, service, output or state propagation"
+    },
+    "rotation_and_expiry": {
+      "status": "open",
+      "required_evidence": "finite expiry or an explicit documented exception, owner, rotation date, pre-expiry alert and replacement procedure"
+    },
+    "revocation": {
+      "status": "open",
+      "required_evidence": "documented Sonar revoke action, GitHub secret replacement/removal procedure and post-revocation inactive-workflow proof"
+    },
+    "audit_trail": {
+      "status": "open",
+      "required_evidence": "sanitized token metadata, secret update metadata and approval/rotation records without token or private payload"
+    },
+    "incident_response": {
+      "status": "open",
+      "required_evidence": "revoke first, replace the GitHub secret, verify no token-bearing non-scanner step, and preserve the exact incident evidence"
+    }
+  },
+  "next_gate": "Obtain the missing identity, scope, storage, expiry, rotation, revocation, audit and incident-response decisions without generating a token; only then consider the ordered Automatic Analysis enabled-readback, owner-authorized disable action, disabled-readback and separate CI activation gate",
+  "sources": [
+    "https://docs.sonarsource.com/sonarqube-cloud/administering-sonarcloud/scoped-organization-tokens",
+    "https://docs.sonarsource.com/sonarqube-cloud/managing-your-account/managing-tokens",
+    "https://docs.sonarsource.com/sonarqube-cloud/advanced-setup/ci-based-analysis/github-actions-for-sonarcloud",
+    "https://docs.github.com/en/actions/concepts/security/secrets",
+    "https://docs.github.com/en/actions/reference/security/secure-use"
+  ]
+}
