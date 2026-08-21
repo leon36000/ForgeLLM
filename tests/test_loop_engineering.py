@@ -1,4 +1,10 @@
+import copy
+import hashlib
+import importlib
+from pathlib import Path
+
 import pytest
+import yaml
 
 from forgellm_governance.loop_engineering import (
     validate_loop_declaration,
@@ -65,6 +71,54 @@ def _receipt() -> dict:
 
 def _messages(items: list[str]) -> str:
     return "\n".join(items)
+
+
+def _git_blob_sha(data: bytes) -> str:
+    return hashlib.sha1(f"blob {len(data)}\0".encode() + data, usedforsecurity=False).hexdigest()
+
+
+def _catalog_fixture(tmp_path: Path) -> tuple[Path, dict, dict, dict]:
+    root = tmp_path
+    packet_path = root / "tasks/open/P0-T10-bounded-loop-engineering.yaml"
+    declaration_path = root / "artifacts/governance/loop-engineering/declarations/P0-T10-run-01.yaml"
+    receipt_path = root / "artifacts/governance/loop-engineering/receipts/P0-T10-run-01.yaml"
+    index_path = root / "artifacts/governance/loop-engineering/receipt-index.yaml"
+    for path in (packet_path, declaration_path, receipt_path, index_path):
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+    packet = {
+        "task_id": "P0-T10",
+        "allowed_paths": ["src/example.py", "tests/test_example.py"],
+        "verification_commands": [VERIFY_COMMAND],
+    }
+    declaration = _declaration()
+    declaration.update({"task_id": "P0-T10", "RECEIPT": str(receipt_path.relative_to(root))})
+    receipt = _receipt()
+    receipt.update({"task_id": "P0-T10", "verification": {"disposition": "pass"}})
+    declaration_path.write_text(yaml.safe_dump(declaration, sort_keys=False), encoding="utf-8")
+    receipt_path.write_text(yaml.safe_dump(receipt, sort_keys=False), encoding="utf-8")
+    packet_path.write_text(yaml.safe_dump(packet, sort_keys=False), encoding="utf-8")
+    index = {
+        "schema_version": "1.0",
+        "project": "ForgeLLM",
+        "task_id": "P0-T10",
+        "runs": [
+            {
+                "run_id": "P0-T10-run-01",
+                "declaration_path": declaration_path.relative_to(root).as_posix(),
+                "declaration_source_commit": VALID_COMMIT,
+                "declaration_source_blob_sha": _git_blob_sha(declaration_path.read_bytes()),
+                "receipt_path": receipt_path.relative_to(root).as_posix(),
+                "receipt_schema_version": "1.0",
+            }
+        ],
+    }
+    index_path.write_text(yaml.safe_dump(index, sort_keys=False), encoding="utf-8")
+    return root, index, declaration, receipt
+
+
+def _validate_repository():
+    return importlib.import_module("scripts.validate_loop_engineering").validate_repository
 
 
 @pytest.mark.parametrize("command", [
@@ -295,3 +349,72 @@ def test_receipt_template_has_separate_structural_validator():
         }
     )
     assert validate_loop_receipt_template(template, _declaration()) == []
+
+
+def test_repository_catalog_accepts_immutable_declaration_and_receipt(tmp_path):
+    root, _, _, _ = _catalog_fixture(tmp_path)
+    assert _validate_repository()(root) == []
+
+
+def test_repository_catalog_rejects_declaration_blob_drift(tmp_path):
+    root, _, _, _ = _catalog_fixture(tmp_path)
+    path = root / "artifacts/governance/loop-engineering/declarations/P0-T10-run-01.yaml"
+    path.write_text(path.read_text(encoding="utf-8") + "\nGOAL: drift\n", encoding="utf-8")
+    messages = _messages(_validate_repository()(root))
+    assert "declaration_source_blob_sha" in messages
+
+
+def test_repository_catalog_requires_every_final_receipt_to_be_indexed(tmp_path):
+    root, _, _, receipt = _catalog_fixture(tmp_path)
+    extra = root / "artifacts/governance/loop-engineering/receipts/P0-T10-run-02.yaml"
+    receipt["task_id"] = "P0-T10"
+    extra.write_text(yaml.safe_dump(receipt, sort_keys=False), encoding="utf-8")
+    messages = _messages(_validate_repository()(root))
+    assert "every committed final receipt" in messages
+
+
+def test_repository_catalog_requires_every_declaration_to_be_indexed(tmp_path):
+    root, _, declaration, _ = _catalog_fixture(tmp_path)
+    extra = root / "artifacts/governance/loop-engineering/declarations/P0-T10-run-02.yaml"
+    declaration["task_id"] = "P0-T10"
+    extra.write_text(yaml.safe_dump(declaration, sort_keys=False), encoding="utf-8")
+    messages = _messages(_validate_repository()(root))
+    assert "every committed immutable declaration" in messages
+
+
+def test_repository_catalog_rejects_duplicate_run_identity(tmp_path):
+    root, index, _, _ = _catalog_fixture(tmp_path)
+    index["runs"].append(copy.deepcopy(index["runs"][0]))
+    (root / "artifacts/governance/loop-engineering/receipt-index.yaml").write_text(
+        yaml.safe_dump(index, sort_keys=False), encoding="utf-8"
+    )
+    messages = _messages(_validate_repository()(root))
+    assert "run_id values must be unique" in messages
+
+
+def test_repository_catalog_rejects_paths_outside_fixed_prefix(tmp_path):
+    root, index, _, _ = _catalog_fixture(tmp_path)
+    index["runs"][0]["receipt_path"] = "artifacts/other.yaml"
+    (root / "artifacts/governance/loop-engineering/receipt-index.yaml").write_text(
+        yaml.safe_dump(index, sort_keys=False), encoding="utf-8"
+    )
+    messages = _messages(_validate_repository()(root))
+    assert "receipt_path" in messages
+
+
+def test_repository_catalog_rejects_declaration_base_mismatch(tmp_path):
+    root, _, declaration, _ = _catalog_fixture(tmp_path)
+    declaration["base_commit"] = "abcdef0123456789abcdef0123456789abcdef01"
+    path = root / "artifacts/governance/loop-engineering/declarations/P0-T10-run-01.yaml"
+    path.write_text(yaml.safe_dump(declaration, sort_keys=False), encoding="utf-8")
+    messages = _messages(_validate_repository()(root))
+    assert "base_commit" in messages
+
+
+def test_repository_catalog_rejects_stop_disposition_mismatch(tmp_path):
+    root, _, _, receipt = _catalog_fixture(tmp_path)
+    receipt["verification"]["disposition"] = "budget_exhausted"
+    path = root / "artifacts/governance/loop-engineering/receipts/P0-T10-run-01.yaml"
+    path.write_text(yaml.safe_dump(receipt, sort_keys=False), encoding="utf-8")
+    messages = _messages(_validate_repository()(root))
+    assert "disposition" in messages
