@@ -3,7 +3,7 @@ project: ForgeLLM
 task_id: P0-T10
 plan: docs/superpowers/plans/2026-08-21-p0-t10-loop-engineering.md
 base_commit: f8364f12402c3c58796dbc1b56f8c65d378e88de
-final_commit: 169e989a338b33aa88193b39faa6e9ca7b963015
+final_commit: a2377eeea92efc2865a1502954b21df076df89fd
 iterations: 1
 identical_failures_at_stop: 0
 stop_reason: verify_pass
@@ -13,6 +13,10 @@ changed_paths:
   - AGENTS.md
   - CLAUDE.md
   - Makefile
+  - artifacts/governance/loop-engineering/declarations/P0-T10-run-01.yaml
+  - artifacts/governance/loop-engineering/receipt-index.yaml
+  - artifacts/governance/loop-engineering/receipts/P0-T10-run-01.yaml
+  - artifacts/governance/loop-engineering/receipts/TEMPLATE.yaml
   - docs/architecture/ADR-0005-bounded-loop-engineering.md
   - docs/quality/P0-T10-LOOP-ENGINEERING.md
   - docs/roadmap/PHASE0_TASKS.md
@@ -47,5 +51,5 @@ verify_evidence:
 reviewer: independent-verifier
 review:
   agent: gpt-5.6-terra/Nash
-  input_commit: 169e989a338b33aa88193b39faa6e9ca7b963015
+  input_commit: a2377eeea92efc2865a1502954b21df076df89fd
   disposition: ACCEPT
