@@ -10,7 +10,7 @@
 | P0-T06 | blocked on P0-T05 | write P1 baseline implementation plan | reviewed profile specification |
 | P0-T07 | complete | synthetic cache-aware topology and placement simulator | PR #20; 102 tests; PR/post-merge gates |
 | P0-T08 / CA-03 | complete | finite exact speculative-decoding reference semantics | PR #24 + remediation PR #25; 332 complete and 230 focused tests; dual review; PR/post-merge gates |
-| P0-T09 / QG-01 | in progress — Task 4B.1 preparation merged (inactive) | maintain and independently review the accepted `ci_based_only` scanner path without activation or submission | LOC-limit cause classified; inactive preparation merged; current Sonar project remains Automatic Analysis |
+| P0-T09 / QG-01 | in progress — Task 4B.1 artifact boundary merged (inactive) | maintain and independently review the accepted `ci_based_only` scanner path without activation or submission | LOC-limit cause classified; PR #67 merged at `main@83f8ea6`; producer success/scanner skipped; current Sonar project remains Automatic Analysis |
 | P0-T11 | complete | bounded Rust CPU reference core: checked tensors, matmul, softmax, RMSNorm, argmax and recoverable allocations | PR #48; 28 Rust tests; independent review; hosted exact-head gates; merge `04342c8` |
 | P0-T12 | complete | bounded decoder tensor primitives: reshape, exact-shape add/multiply and embedding gather | PR #53; 46 Rust tests on the stacked line; independent review; hosted exact-head gates; merge `7962abe6` |
 | P0-T10 | complete — implementation and closeout merged | bounded, inert Loop Engineering bridge with provenance, task binding, receipts, and fail-closed repository validation | `main@87a1dde`; make validate-loop; 86 focused tests; ADR-0005 remains proposed pending explicit acceptance |
@@ -52,7 +52,7 @@ If separately authorized, complete a separate token identity/lifecycle security 
 Until those gates are satisfied: no `SONAR_TOKEN`, no Sonar or GitHub setting change, no scanner activation, no scan submission, and no PR bridge. P0-T09 remains `in_progress`. After this final snapshot cycle, stop the documentation loop; resume only after a material activation, evidence, status, or substantive-error change.
 Automatic and CI-based methods may not run concurrently for the same project; this increment is preparation-only.
 
-Current local checkpoint: the protected-ref producer now prepares source and Clippy data without credentials and transfers one immutable fixed artifact to the scanner; the validator mechanically requires the event-SHA checkout, fixed upload/download pins and fail-closed symlink rejection. Focused governance evidence is 53 tests passing; P0-T09 remains `in_progress` because token lifecycle, no-overlap activation and exact-head CI evidence are still open.
+Merged checkpoint: the protected-ref producer prepares source and Clippy data without credentials and transfers one immutable fixed artifact to the scanner; the validator mechanically requires the event-SHA checkout, fixed upload/download pins and fail-closed symlink rejection. Focused governance evidence is 53 tests passing; protected `main@83f8ea6` has Phase 0 and CodeQL success plus producer success/scanner skipped. P0-T09 remains `in_progress` because token lifecycle, no-overlap activation and successful Sonar CI evidence are still open.
 
 ## P0-T11 / P0-T12 final evidence
 

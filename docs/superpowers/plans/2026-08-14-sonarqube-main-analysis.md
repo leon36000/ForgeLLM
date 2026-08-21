@@ -132,6 +132,8 @@
 
 Current implementation checkpoint: the protected-ref producer now transfers one fixed, immutable source/report artifact to the scanner. The governance validator requires the event-SHA checkout, exact artifact action pins and inputs, and a secretless scanner validation step that fails closed on symlinks; the final scanner remains default-off and no activation or submission has occurred.
 
+Publication checkpoint: PR #67 merged this inactive preparation at protected `main@83f8ea624bc4382f22e2e168c5444df5304b189a`; post-merge Phase 0 and CodeQL passed, and the prepared Sonar workflow recorded `producer=success`, `scanner=skipped`. This does not close P0-T09.
+
 #### Task 4B.2: Review token identity and lifecycle before provisioning
 
 - [ ] Review identity, issuer/owner, minimum scope, storage boundary, rotation, expiry, revocation, audit trail, and incident response.
