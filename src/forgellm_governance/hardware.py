@@ -168,7 +168,14 @@ def sanitize_inventory(inventory: dict[str, Any]) -> dict[str, Any]:
     """Return a publication-safe copy of a collected inventory."""
 
     published = deepcopy(inventory)
-    probes = published.get("probes", {})
+    probes = published.get("probes")
+    if not isinstance(probes, dict):
+        published["probes"] = {}
+        return published
+
+    for probe in probes.values():
+        if isinstance(probe, dict):
+            probe["stderr"] = ""
 
     network = probes.get("network")
     if isinstance(network, dict):
@@ -193,7 +200,10 @@ def sanitize_inventory(inventory: dict[str, Any]) -> dict[str, Any]:
 
 def _validated_public_output_path(root: Path | str, path: Path | str) -> Path:
     project_root = Path(root).resolve()
-    artifacts_root = (project_root / "artifacts").resolve()
+    artifacts_path = project_root / "artifacts"
+    if artifacts_path.is_symlink():
+        raise ValueError("repository artifacts directory must not be a symlink")
+    artifacts_root = artifacts_path.resolve(strict=False)
     requested = Path(path)
     candidate = requested if requested.is_absolute() else project_root / requested
     resolved = candidate.resolve(strict=False)
