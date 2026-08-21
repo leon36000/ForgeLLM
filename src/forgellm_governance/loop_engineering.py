@@ -60,6 +60,7 @@ _RECEIPT_FIELDS = frozenset(
         "verify_commands",
         "verify_evidence",
         "reviewer",
+        "review",
     }
 )
 _RECEIPT_PREFIX = "artifacts/governance/loop-engineering/receipts"
@@ -78,6 +79,8 @@ _STOP_DISPOSITION = {
     "stop_and_escalate": "stop_and_escalate",
     "manual_stop": "manual_stop",
 }
+_REVIEW_FIELDS = frozenset({"agent", "input_commit", "disposition"})
+_FINAL_REVIEW_DISPOSITION = "ACCEPT"
 _TEMPLATE_MARKERS = ("template", "replace_with", "<placeholder>", "tbd", "todo")
 EXPECTED_UPSTREAM_REPOSITORY = "https://github.com/lcajigasm/loop-engineering"
 EXPECTED_UPSTREAM_COMMIT = "ae2d610985064bb30c5013261988c813013c09e3"
@@ -128,6 +131,8 @@ def _verify_shell_structure_issue(tokens: Sequence[str], command: str) -> str | 
         return "shell composition or redirection is forbidden; stop_and_escalate"
     if "\n" in command or "\r" in command or "`" in command or "$((" in command:
         return "shell evaluation syntax is forbidden; stop_and_escalate"
+    if ">(" in command or "<(" in command:
+        return "process substitution is forbidden; stop_and_escalate"
     if "$(" in command:
         return "command substitution is forbidden; stop_and_escalate"
     return None
@@ -527,6 +532,24 @@ def _validate_receipt_common(
         or "self-assert" in reviewer.casefold()
     ):
         issues.append("reviewer must identify an independent reviewer, not template or self-asserted evidence")
+
+    review = receipt.get("review")
+    if not isinstance(review, Mapping):
+        issues.append("review must bind an independent reviewer, input commit, and ACCEPT disposition")
+    else:
+        issues.extend(_key_set_issue(review, _REVIEW_FIELDS, "review"))
+        agent = review.get("agent")
+        if not isinstance(agent, str) or not agent.strip() or (not allow_template and _looks_like_template(agent)):
+            issues.append("review.agent must identify a non-template independent reviewer")
+        input_commit = review.get("input_commit")
+        _validate_sha(input_commit, "review.input_commit", issues, allow_template=allow_template)
+        if allow_template:
+            if review.get("disposition") != "TEMPLATE: ACCEPT":
+                issues.append("template review disposition must be 'TEMPLATE: ACCEPT'")
+        elif input_commit != receipt.get("final_commit"):
+            issues.append("review.input_commit must equal receipt final_commit")
+        elif review.get("disposition") != _FINAL_REVIEW_DISPOSITION:
+            issues.append("review.disposition must be ACCEPT")
 
     return issues
 

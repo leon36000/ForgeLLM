@@ -25,6 +25,10 @@ The exact selected upstream blob bindings are recorded in third_party/loop-engin
 - make validate retains all existing project and P0-T09 validation commands through a dependency on validate-loop.
 - ADR-0005 remains proposed pending independent architecture/security review.
 
+## Terra gate remediation
+
+The first exact-head review rejected the candidate for process-substitution parsing, synthetic declaration-source commits, receipt path omissions, and unbound reviewer evidence. The bridge now rejects `>(...)`/`<(...)`, verifies that the indexed declaration commit exists and contains the exact non-executable blob, compares receipt `changed_paths` with the Git base-to-final commit range, and binds an independent review record to the final commit and `ACCEPT` disposition. These controls remain local governance validation; they do not authorize runtime, privileged, or external administrative operations.
+
 ## Limitations and non-goals
 
 This increment does not authorize or validate P0-T09 implementation/settings/tokens, GitHub or Sonar administration, hardware probing, model execution, runtime/backend/kernel work, Cargo/Rust changes, chatgpt/mobile-core changes, or closed task packets.

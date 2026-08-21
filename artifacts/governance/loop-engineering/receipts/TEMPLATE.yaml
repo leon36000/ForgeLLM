@@ -18,3 +18,7 @@ verify_commands:
 verify_evidence:
   - 'TEMPLATE: evidence'
 reviewer: 'TEMPLATE: independent verifier'
+review:
+  agent: 'TEMPLATE: independent verifier'
+  input_commit: 'TEMPLATE: final commit'
+  disposition: 'TEMPLATE: ACCEPT'

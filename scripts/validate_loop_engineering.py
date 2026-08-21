@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import posixpath
 import re
+import subprocess
 from collections.abc import Mapping
 from pathlib import Path
 
@@ -78,6 +79,42 @@ def _valid_sha(value: object) -> bool:
 def _git_blob_sha(data: bytes) -> str:
     header = f"blob {len(data)}\0".encode("ascii")
     return hashlib.sha1(header + data, usedforsecurity=False).hexdigest()
+
+
+def _git_read(root: Path, arguments: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", "-C", str(root), *arguments],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def _validate_committed_declaration(
+    root: Path,
+    commit: object,
+    declaration_path: str,
+    expected_blob: object,
+    issues: list[str],
+    prefix: str,
+) -> None:
+    if not isinstance(commit, str) or not _valid_sha(commit) or not isinstance(expected_blob, str):
+        return
+    commit_check = _git_read(root, ["cat-file", "-e", f"{commit}^{{commit}}"])
+    if commit_check.returncode != 0:
+        issues.append(f"{prefix}.declaration_source_commit must exist in the repository")
+        return
+    tree_check = _git_read(root, ["ls-tree", "-r", "--full-tree", commit, "--", declaration_path])
+    records = [line for line in tree_check.stdout.splitlines() if line]
+    if tree_check.returncode != 0 or len(records) != 1:
+        issues.append(f"{prefix}.declaration_source_commit must contain {declaration_path}")
+        return
+    metadata, recorded_path = records[0].split("\t", 1)
+    fields = metadata.split()
+    if len(fields) != 3 or fields[0] != "100644" or fields[1] != "blob" or fields[2] != expected_blob:
+        issues.append(f"{prefix}.declaration_source_commit must bind {declaration_path} to its declared blob")
+    if recorded_path != declaration_path:
+        issues.append(f"{prefix}.declaration_source_commit path binding is not exact")
 
 
 def _filesystem_path(root: Path, relative: str) -> Path:
@@ -189,6 +226,14 @@ def _validate_index_record(
             actual_blob_sha = _git_blob_sha(declaration_bytes)
             if actual_blob_sha != record.get("declaration_source_blob_sha"):
                 issues.append(f"{prefix}.declaration_source_blob_sha does not match declaration {declaration_path}")
+        _validate_committed_declaration(
+            root,
+            record.get("declaration_source_commit"),
+            declaration_path,
+            record.get("declaration_source_blob_sha"),
+            issues,
+            prefix,
+        )
 
     receipt: Mapping[object, object] | None = None
     if receipt_path is not None:
@@ -207,6 +252,7 @@ def _validate_index_record(
         issues.extend(
             f"receipt {receipt_path}: {message}" for message in validate_loop_receipt(receipt, declaration or {})
         )
+        _validate_receipt_changed_paths(root, receipt, issues)
         if receipt.get("schema_version") != record.get("receipt_schema_version"):
             issues.append(f"{prefix}.receipt_schema_version must match receipt {receipt_path}")
 
@@ -224,6 +270,27 @@ def _coverage_issue(indexed: set[str], discovered: set[str], kind: str) -> str |
     if extra:
         details.append(f"unexpected {', '.join(extra)}")
     return f"index must cover every committed {kind} exactly: {'; '.join(details)}"
+
+
+def _validate_receipt_changed_paths(root: Path, receipt: Mapping[object, object], issues: list[str]) -> None:
+    base_commit = receipt.get("base_commit")
+    final_commit = receipt.get("final_commit")
+    if not _valid_sha(base_commit) or not _valid_sha(final_commit):
+        return
+    result = _git_read(
+        root,
+        ["diff", "--name-only", "--diff-filter=ACDMRTUXB", f"{base_commit}..{final_commit}", "--"],
+    )
+    if result.returncode != 0:
+        issues.append("receipt base_commit..final_commit must be a readable Git revision range")
+        return
+    actual = {line for line in result.stdout.splitlines() if line}
+    claimed = {path for path in receipt.get("changed_paths", []) if isinstance(path, str)}
+    if actual != claimed:
+        issues.append(
+            "receipt changed_paths must exactly match Git base_commit..final_commit; "
+            f"missing={sorted(actual - claimed)}, extra={sorted(claimed - actual)}"
+        )
 
 
 def validate_repository(root: Path) -> list[str]:

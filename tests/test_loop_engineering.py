@@ -2,6 +2,7 @@ import copy
 import hashlib
 import importlib
 import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -68,6 +69,11 @@ def _receipt() -> dict:
         "verify_commands": [VERIFY_COMMAND],
         "verify_evidence": ["pytest: 1 passed"],
         "reviewer": "independent-verifier",
+        "review": {
+            "agent": "gpt-5.6-terra/Nash",
+            "input_commit": "89abcdef0123456789abcdef0123456789abcdef",
+            "disposition": "ACCEPT",
+        },
     }
 
 
@@ -88,18 +94,60 @@ def _catalog_fixture(tmp_path: Path) -> tuple[Path, dict, dict, dict]:
     for path in (packet_path, declaration_path, receipt_path, index_path):
         path.parent.mkdir(parents=True, exist_ok=True)
 
+    subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+    subprocess.run(["git", "config", "user.email", "fixture@example.invalid"], cwd=root, check=True)
+    subprocess.run(["git", "config", "user.name", "Fixture"], cwd=root, check=True)
+    base_marker = root / "base.txt"
+    base_marker.write_text("base\n", encoding="utf-8")
+    subprocess.run(["git", "add", "base.txt"], cwd=root, check=True)
+    subprocess.run(["git", "commit", "-qm", "base"], cwd=root, check=True)
+    base_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
+
     packet = {
         "task_id": "P0-T10",
-        "allowed_paths": ["src/example.py", "tests/test_example.py"],
+        "allowed_paths": [
+            packet_path.relative_to(root).as_posix(),
+            declaration_path.relative_to(root).as_posix(),
+            receipt_path.relative_to(root).as_posix(),
+        ],
         "verification_commands": [VERIFY_COMMAND],
     }
     declaration = _declaration()
-    declaration.update({"task_id": "P0-T10", "RECEIPT": str(receipt_path.relative_to(root))})
+    declaration.update(
+        {
+            "task_id": "P0-T10",
+            "base_commit": base_commit,
+            "SCOPE": packet["allowed_paths"],
+            "RECEIPT": str(receipt_path.relative_to(root)),
+        }
+    )
     receipt = _receipt()
-    receipt.update({"task_id": "P0-T10", "verification": {"disposition": "pass"}})
+    receipt.update(
+        {
+            "task_id": "P0-T10",
+            "base_commit": base_commit,
+            "changed_paths": packet["allowed_paths"],
+        }
+    )
     declaration_path.write_text(yaml.safe_dump(declaration, sort_keys=False), encoding="utf-8")
     receipt_path.write_text(yaml.safe_dump(receipt, sort_keys=False), encoding="utf-8")
     packet_path.write_text(yaml.safe_dump(packet, sort_keys=False), encoding="utf-8")
+    subprocess.run(
+        [
+            "git",
+            "add",
+            str(packet_path.relative_to(root)),
+            str(declaration_path.relative_to(root)),
+            str(receipt_path.relative_to(root)),
+        ],
+        cwd=root,
+        check=True,
+    )
+    subprocess.run(["git", "commit", "-qm", "final"], cwd=root, check=True)
+    final_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
+    receipt["final_commit"] = final_commit
+    receipt["review"]["input_commit"] = final_commit
+    receipt_path.write_text(yaml.safe_dump(receipt, sort_keys=False), encoding="utf-8")
     index = {
         "schema_version": "1.0",
         "project": "ForgeLLM",
@@ -108,7 +156,7 @@ def _catalog_fixture(tmp_path: Path) -> tuple[Path, dict, dict, dict]:
             {
                 "run_id": "P0-T10-run-01",
                 "declaration_path": declaration_path.relative_to(root).as_posix(),
-                "declaration_source_commit": VALID_COMMIT,
+                "declaration_source_commit": final_commit,
                 "declaration_source_blob_sha": _git_blob_sha(declaration_path.read_bytes()),
                 "receipt_path": receipt_path.relative_to(root).as_posix(),
                 "receipt_schema_version": "1.0",
@@ -129,6 +177,8 @@ def _validate_repository():
         "make ci && git push origin main",
         "make ci; gh pr merge 37",
         "make ci > /tmp/result.log",
+        "git show >(git push origin main)",
+        "git show <(git push origin main)",
         "env git push origin main",
         "command git status",
         "git add README.md",
@@ -265,7 +315,8 @@ def test_valid_loop_receipt_passes():
 
 
 @pytest.mark.parametrize(
-    "missing", ["base_commit", "final_commit", "scope_check", "verification", "verify_evidence", "reviewer"]
+    "missing",
+    ["base_commit", "final_commit", "scope_check", "verification", "verify_evidence", "reviewer", "review"],
 )
 def test_receipt_requires_reproducible_evidence_fields(missing):
     receipt = _receipt()
@@ -357,6 +408,11 @@ def test_receipt_template_has_separate_structural_validator():
             "verification": {"disposition": "template"},
             "verify_evidence": ["TEMPLATE: evidence"],
             "reviewer": "TEMPLATE: independent verifier",
+            "review": {
+                "agent": "TEMPLATE: independent verifier",
+                "input_commit": "TEMPLATE: final commit",
+                "disposition": "TEMPLATE: ACCEPT",
+            },
         }
     )
     assert validate_loop_receipt_template(template, _declaration()) == []
