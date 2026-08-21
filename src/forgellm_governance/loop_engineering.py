@@ -181,6 +181,7 @@ def _is_allowed_make(tokens: Sequence[str]) -> bool:
             "lint",
             "test",
             "validate",
+            "validate-loop",
             "verify",
             "verify-speculative",
         }
