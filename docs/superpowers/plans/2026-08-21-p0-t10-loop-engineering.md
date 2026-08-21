@@ -187,7 +187,25 @@ Run: `python -m pytest -q tests/test_loop_engineering.py`
 
 Expected: all unit and repository-catalog tests pass; each mutation fixture fails for the intended reason.
 
-- [ ] **Step 5: Commit the receipt-integrity slice**
+- [ ] **Step 5: Commit the immutable declaration and final receipt before indexing**
+
+Commit the declaration and final receipt first so the declaration has a real containing commit. The index is intentionally absent for this intermediate commit; the next step records that commit and its Git blob SHA instead of creating a circular self-reference.
+
+```bash
+git add scripts/validate_loop_engineering.py tests/test_loop_engineering.py artifacts/governance/loop-engineering/declarations/P0-T10-run-01.yaml artifacts/governance/loop-engineering/receipts/P0-T10-run-01.yaml artifacts/governance/loop-engineering/receipts/TEMPLATE.yaml
+git commit -m "feat(p0-t10): add immutable loop declaration and receipt"
+```
+
+- [ ] **Step 6: Write the receipt index from the committed declaration**
+
+Run `git rev-parse HEAD` and `git hash-object artifacts/governance/loop-engineering/declarations/P0-T10-run-01.yaml`; write those exact values into `receipt-index.yaml`, run the catalog tests and repository validator, then commit the index.
+
+```bash
+git add artifacts/governance/loop-engineering/receipt-index.yaml
+git commit -m "test(p0-t10): index immutable loop evidence"
+```
+
+- [ ] **Step 7: Commit the receipt-integrity slice**
 
 ```bash
 git add scripts/validate_loop_engineering.py tests/test_loop_engineering.py artifacts/governance/loop-engineering
