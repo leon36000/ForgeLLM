@@ -20,6 +20,8 @@ Scoring uses probability and impact from 1 to 5; exposure is their product.
 | R-014 | An external RAG or app silently becomes a conflicting source of truth. | 3 | 4 | 12 | governance owner | Git-only authority, derived indexes, source commit/path, rebuild tests | tool output contradicts accepted Git state |
 | R-015 | Third-party apps or skills receive excessive permissions or retain data unexpectedly. | 3 | 5 | 15 | security owner | bounded tasks, least privilege, data classification, permission review | new integration or access expansion |
 
+| R-016 | Pinned vendor content or loop artifacts drift into executable or shadow-state authority. | 2 | 5 | 10 | governance owner | exact provenance/file-set validation, inert subset, task-packet binding, proposed ADR-0005 review | extra vendor file, provenance mismatch, or scope/receipt drift |
+
 ## Review cadence
 
 Review on every phase transition, architecture ADR, repository-visibility change, external integration, new backend, new runner or benchmark-method change. Close a risk only with evidence, not optimism.

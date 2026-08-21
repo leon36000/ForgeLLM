@@ -10,6 +10,8 @@ SPECULATIVE_FORMAT_FILES := \
 	src/forgellm_governance/speculative_greedy.py \
 	src/forgellm_governance/speculative_state.py \
 	src/forgellm_governance/speculative_trace.py \
+	src/forgellm_governance/loop_engineering.py \
+	scripts/validate_loop_engineering.py \
 	tests/test_exact_distribution.py \
 	tests/test_speculative_sampling.py \
 	tests/test_speculative_round.py \
@@ -20,9 +22,9 @@ SPECULATIVE_FORMAT_FILES := \
 	tests/test_speculative_trace.py \
 	tests/test_speculative_adversarial.py
 
-.PHONY: validate test lint verify verify-speculative ci mobile-hashes simulate-cache-draft inventory snapshot clean
+.PHONY: validate validate-loop test lint verify verify-speculative ci mobile-hashes simulate-cache-draft inventory snapshot clean
 
-validate:
+validate: validate-loop
 	$(PYTHON) scripts/validate_project_state.py --root .
 	$(PYTHON) scripts/validate_research_catalog.py --root .
 	$(PYTHON) scripts/validate_benchmark.py examples/benchmarks/valid-example.json --root .
@@ -38,6 +40,10 @@ validate:
 	$(PYTHON) scripts/validate_component_profile.py examples/simulations/synthetic-cache-draft-components.json --root .
 	$(PYTHON) scripts/hash_mobile_context.py --root .
 	bash -n scripts/bootstrap_core_ubuntu.sh
+
+validate-loop:
+	$(PYTHON) scripts/validate_task_packet.py tasks/open/P0-T10-bounded-loop-engineering.yaml --root .
+	$(PYTHON) scripts/validate_loop_engineering.py --root .
 
 test:
 	$(PYTHON) -m pytest -q

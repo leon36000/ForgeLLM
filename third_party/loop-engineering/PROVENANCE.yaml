@@ -1,0 +1,30 @@
+schema_version: '1.0'
+upstream_repository: https://github.com/lcajigasm/loop-engineering
+upstream_commit: ae2d610985064bb30c5013261988c813013c09e3
+license: MIT
+license_blob_sha: 84524f23b209fccb02a8f239165f0444bfd70f3f
+files:
+  - path: LICENSE
+    upstream_blob_sha: 84524f23b209fccb02a8f239165f0444bfd70f3f
+  - path: core/METHODOLOGY.md
+    upstream_blob_sha: c7094ca40c2257d653c4d48f6b87c40cb82b209b
+  - path: core/COMMANDS.md
+    upstream_blob_sha: 4de9e981ad89c04f28d94ea4ad5b97e1b513b578
+  - path: core/templates/PLAN.template.md
+    upstream_blob_sha: 3477e664b738a46b36e4b015b1b2ef502b5c6dd4
+  - path: core/templates/RECEIPT.template.md
+    upstream_blob_sha: 2f5da7d5736067c965b4fed2604982e00a79b024
+  - path: core/templates/INTEGRATION.template.md
+    upstream_blob_sha: 2f740b4dbc1f7ee63688abe570c179bd28fc4508
+  - path: core/templates/CAPABILITIES.template.md
+    upstream_blob_sha: da89bdb92b2f61558babc7c699cd2c350904f07a
+excluded_executable_surfaces:
+  - install.sh
+  - core/scripts/
+  - claude-code/
+  - codex/
+excluded_shadow_state_templates:
+  - core/templates/GOALS.template.md
+  - core/templates/STATUS.template.md
+  - core/templates/PROJECT_BRIEF.template.md
+  - core/templates/ADR.template.md

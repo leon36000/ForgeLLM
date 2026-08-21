@@ -1,0 +1,88 @@
+schema_version: '1.0'
+task_id: P0-T10
+title: Adopt bounded Loop Engineering orchestration
+phase: P0
+status: in_progress
+charter_goals:
+  - Preserve Git and accepted ADRs as ForgeLLM source of truth.
+  - Make long-running agent work bounded, reproducible, interruptible, and independently verifiable.
+  - Improve agent productivity without expanding privilege or weakening correctness gates.
+goal: Adopt a pinned inert Loop Engineering reference subset and ForgeLLM-owned bounded validation bridge without changing runtime, hardware, Sonar, or P0-T09 authority.
+non_goals:
+  - Replace ForgeLLM task packets, CURRENT_STATE, accepted ADRs, plans, or handoffs with upstream GOALS or STATUS files.
+  - Run model inference, hardware probing, CUDA, ROCm, backend, kernel, benchmark, or distributed-runtime work.
+  - Activate Sonar CI, provision SONAR_TOKEN, alter Sonar settings, or modify the P0-T09 implementation or settings.
+  - Install upstream Loop Engineering globally or execute its unmodified installer, runner, hooks, adapters, or shadow-state templates.
+  - Grant loops authority over GitHub administration, Sonar administration, secrets, accounts, privileged hosts, runners, billing, or production machines.
+inputs:
+  - Owner-approved Task 5 static integration design recorded in the P0-T10 design and implementation plan.
+  - Canonical ForgeLLM base f8364f12402c3c58796dbc1b56f8c65d378e88de.
+  - Upstream lcajigasm/loop-engineering commit ae2d610985064bb30c5013261988c813013c09e3.
+  - Upstream MIT license blob 84524f23b209fccb02a8f239165f0444bfd70f3f.
+  - Existing ForgeLLM loop declaration, receipt, and catalog APIs.
+outputs:
+  - Exact inert vendor subset with provenance, license, and upstream Git blob hashes.
+  - ForgeLLM-local bounded bridge skills and authority markers.
+  - Proposed ADR-0005 and P0-T10 quality evidence documentation.
+  - Schema-valid P0-T10 declaration, receipt, template, and indexed catalog entry.
+  - Repository validation gate wired into make validate without removing existing P0-T09 gates.
+allowed_paths:
+  - tasks/open/P0-T10-bounded-loop-engineering.yaml
+  - third_party/loop-engineering/
+  - src/forgellm_governance/loop_engineering.py
+  - scripts/validate_loop_engineering.py
+  - .agents/skills/forgellm-loop-engineering/
+  - .claude/skills/forgellm-loop-engineering/
+  - AGENTS.md
+  - CLAUDE.md
+  - docs/architecture/ADR-0005-bounded-loop-engineering.md
+  - docs/quality/P0-T10-LOOP-ENGINEERING.md
+  - artifacts/governance/loop-engineering/
+  - docs/roadmap/PHASE0_TASKS.md
+  - docs/state/CURRENT_STATE.md
+  - docs/state/HANDOFF.md
+  - docs/state/RISKS.md
+  - docs/superpowers/plans/2026-08-21-p0-t10-loop-engineering.md
+  - docs/superpowers/specs/2026-08-21-p0-t10-loop-engineering-design.md
+  - tests/test_loop_engineering.py
+  - Makefile
+forbidden_actions:
+  - Push directly to main or bypass normal pull-request review and exact-head gates.
+  - Run upstream install.sh, shell/eval runners, Stop hooks, adapters, or generated agent integrations.
+  - Create or treat docs/GOALS.md, docs/STATUS.md, docs/PROJECT_BRIEF.md, or upstream ADR numbering as ForgeLLM authority.
+  - Execute an unbounded loop, daemon, watcher, or retry process without declared BUDGET and STOP conditions.
+  - Allow a loop declaration to widen allowed_paths, verification commands, owner authorization, or external privileges from this task packet.
+  - Permit a loop to create, read, print, transmit, rotate, or mutate secrets, tokens, credentials, account settings, billing, Sonar administration, GitHub administration, Tailscale state, or privileged host configuration.
+  - Execute vendored third-party scripts merely because they are present.
+  - Modify P0-T09 implementation/settings/tokens, .github, Sonar, Cargo/Rust, chatgpt/mobile-core, or closed task packets.
+acceptance_criteria:
+  - Vendored content exactly matches the reviewed static subset from upstream commit ae2d610985064bb30c5013261988c813013c09e3 with MIT license and recorded Git blob hashes.
+  - The integration contains no installer, executable script, adapter, hook, eval runner, or shadow-state template.
+  - validate_vendor_provenance rejects provenance drift, blob drift, symlinks, and extra files.
+  - Loop declarations remain subordinate to this packet and existing accepted ADR authority.
+  - Declaration and receipt artifacts validate with real base/final commits and coherent stop_reason/verification.disposition.
+  - make validate depends on validate-loop and preserves all existing P0-T09 validation gates.
+  - ADR-0005 remains proposed until independent architecture/security review.
+verification_commands:
+  - PYTHONPATH=src python3 -m pytest -q tests/test_loop_engineering.py
+  - python3 scripts/validate_task_packet.py tasks/open/P0-T10-bounded-loop-engineering.yaml --root .
+  - make validate-loop
+  - make lint
+  - make validate
+  - python3 -m ruff check src scripts tests
+  - python3 -m ruff format --check src/forgellm_governance/loop_engineering.py scripts/validate_loop_engineering.py
+  - git diff --check
+evidence_requirements:
+  - Record canonical base, implementation commits, declaration source commit, declaration blob SHA, receipt paths, and final validation outputs.
+  - Record upstream repository, exact commit, MIT license blob, every vendored source path, and upstream blob SHA.
+  - Preserve the negative boundary for the upstream installer, eval runner, adapters, Stop hooks, and shadow-state templates.
+  - Record focused test, task-packet, Loop validator, Ruff, format, and diff-check results.
+dependencies: []
+owner_role: Project owner and chief architect delegate
+reviewer_role: Independent architecture and security reviewer
+risk_ids:
+  - R-006
+  - R-007
+  - R-014
+  - R-015
+  - R-016

@@ -1,0 +1,24 @@
+schema_version: '1.0'
+project: ForgeLLM
+task_id: P0-T10
+plan: 'TEMPLATE: plan'
+base_commit: REPLACE_WITH_BASE_COMMIT
+final_commit: REPLACE_WITH_FINAL_COMMIT
+iterations: 0
+identical_failures_at_stop: 0
+stop_reason: template
+changed_paths: []
+scope_check: pass
+verification:
+  disposition: template
+verify_commands:
+  - make validate-loop
+  - make lint
+  - git diff --check
+verify_evidence:
+  - 'TEMPLATE: evidence'
+reviewer: 'TEMPLATE: independent verifier'
+review:
+  agent: 'TEMPLATE: independent verifier'
+  input_commit: 'TEMPLATE: final commit'
+  disposition: 'TEMPLATE: ACCEPT'
