@@ -1,0 +1,80 @@
+schema_version: "1.0"
+task_id: P0-T15
+title: Design the stable versioned C ABI and runtime lifecycle
+phase: P0
+status: in_progress
+charter_goals:
+  - Preserve a stable versioned C ABI between the Rust runtime core and heterogeneous backends.
+  - Make ownership, lifecycle, errors, cancellation and thread-safety explicit before FFI implementation.
+  - Keep backend-native implementation details out of the portable public runtime contract.
+goal: Produce a source-backed proposed ADR and executable implementation plan for a C11-compatible, version-negotiated ForgeLLM ABI without adding production ABI symbols or placeholder code.
+non_goals:
+  - Add a C header, exported symbol, Rust FFI crate, dynamic loader, backend plugin or accelerator implementation.
+  - Commit a model, tensor serialization or backend wire format beyond the minimum lifecycle descriptors needed to reason about ABI compatibility.
+  - Add callbacks to ABI v1 without a separate reentrancy and lifetime proof.
+  - Claim binary compatibility, production readiness or language binding support before executable compatibility tests exist.
+  - Add TODOs, stubs, mock production paths, empty function tables or opaque handles without specified behavior.
+inputs:
+  - Accepted project charter and ADR-0001 Rust/native-backend architecture.
+  - Completed P0-T11 and P0-T12 CPU reference-core tasks.
+  - Engine orchestration plan sequencing ABI/lifecycle design before backend implementation.
+  - Official Rust 1.97.1 FFI, layout, panic and unwinding documentation.
+  - Exact ONNX Runtime, LLVM/MLIR and Vulkan source revisions plus versioned CUDA documentation reviewed on 2026-08-21.
+outputs:
+  - Proposed ADR-0006 defining public ABI versioning, object lifecycle and failure semantics.
+  - Primary-source research record with exact revisions, claims, limitations and rejected pattern transfers.
+  - Bounded future implementation plan with test-first compatibility, layout, symbol, ownership, panic and concurrency gates.
+  - Blind independent architecture/security review packet and exact-head verification receipt.
+allowed_paths:
+  - tasks/open/P0-T15-versioned-c-abi-design.yaml
+  - tasks/closed/P0-T15-versioned-c-abi-design.yaml
+  - docs/architecture/ADR-0006-versioned-c-abi-and-runtime-lifecycle.md
+  - docs/research/P0-T15-C-ABI-PRIMARY-SOURCES.md
+  - docs/superpowers/plans/2026-08-21-versioned-c-abi-design.md
+  - docs/reviews/P0-T15-C-ABI-DESIGN-REVIEW.md
+forbidden_actions:
+  - Add an ABI header, FFI implementation, public symbol, build target, crate, dependency or generated binding.
+  - Expose Rust, C++ standard-library, backend-native, CUDA, HIP, CuTe, CUTLASS or portable-DSL structures in the public core ABI.
+  - Use layout-dependent enums, C bool, size_t-dependent public integers, borrowed Rust references or cross-boundary ownership without an explicit release operation.
+  - Allow unwind across an exported C boundary or represent process abort and unrecoverable allocator failure as typed recovery.
+  - Add callbacks, custom allocators, external streams or user-data pointers to ABI v1 without a separate accepted decision.
+  - Add a stub, TODO, placeholder declaration, dead API or implementation-looking pseudocode that can be mistaken for shipped capability.
+  - Modify engine semantics, project state, roadmap, P0-T09, P0-T13, P0-T14 or any external system.
+acceptance_criteria:
+  - The ADR selects one explicit API-version negotiation mechanism and defines unsupported-version behavior without partial fallback.
+  - Every public object kind has opaque-handle ownership, nullability, release, parent-child retention and invalid-use rules.
+  - ABI-visible scalars use fixed-width C integer types and ABI-visible strings/bytes use pointer-plus-length views with explicit encoding and lifetime.
+  - Extensible input and output structures define size, ABI-version, reserved-zero and append-only compatibility rules.
+  - Status codes are fixed-width, stable and never renumbered; detailed errors use an allocation-neutral caller-provided buffer contract.
+  - No allocation is freed across a different allocator boundary; library-owned memory has an API release operation and caller-owned buffers stay caller-owned.
+  - Every exported operation is no-unwind and the panic, abort and OOM evidence boundary is stated precisely.
+  - Runtime, model, session and request lifecycles include thread-safety, cancellation, wait, poll, destruction-race and parent-child semantics.
+  - Public runtime ABI and future backend-plugin ABI are separate authorities with independent versions.
+  - ABI v1 excludes callbacks and native backend handles; rejected alternatives and future decision triggers are explicit.
+  - The future implementation plan starts with executable C11/C++17 header, layout, symbol, version-handshake, malformed-input, ownership, panic, cancellation-race, sanitizer and fuzz tests before implementation.
+  - The normal repository validation and make ci gates pass on the exact design head.
+  - Blind GPT-5.6 Sol architecture/security review records ACCEPT with no unresolved BLOCKER or MAJOR before merge.
+verification_commands:
+  - python scripts/validate_task_packet.py tasks/open/P0-T15-versioned-c-abi-design.yaml --root .
+  - python scripts/validate_project.py --root .
+  - python -m ruff check src scripts tests
+  - python -m ruff format --check src scripts tests
+  - make ci
+  - git diff --check
+  - git status --short
+evidence_requirements:
+  - Record canonical base, exact final design head and merge commit.
+  - Record every primary source by official URL, access date and immutable revision or version when available.
+  - Separate observed source facts, ForgeLLM inferences, selected rules, rejected alternatives and unresolved implementation evidence.
+  - Preserve the blind-review model identity, exact reviewed head, verdict, findings and residual limits.
+  - State explicitly that no ABI code, header, symbol, backend, binding or binary-compatibility proof exists yet.
+  - Identify the exact next implementation task and its required RED gates without authorizing that task automatically.
+dependencies:
+  - P0-T11
+  - P0-T12
+owner_role: Project owner and architecture authority
+reviewer_role: Independent ABI, FFI and security reviewer
+risk_ids:
+  - R-003
+  - R-006
+  - R-009
