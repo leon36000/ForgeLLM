@@ -1,7 +1,7 @@
 # ForgeLLM Handoff
 
 **From state:** S-0008
-**To work:** independently review the merged, inactive P0-T09 Task 4B.1 preparation for accepted ADR-0004 `ci_based_only`; P0-T04 still awaits host designation
+**To work:** obtain explicit human review and authorization for the no-overlap P0-T09 migration sequence; P0-T04 still awaits host designation
 **Generated:** 2026-08-20
 
 ## Canonical status
@@ -22,14 +22,16 @@
 Owner command           autorise P0-T09 / subagent-driven
 Recorded date           2026-08-14
 Initial base            1b1a3621fcdf4129268663c497cdcd53aed48c29
-Latest canonical main   4dec19558d076af03ee2bee45482a3f83a2b6f33
+Latest canonical main   2339a8daa1c26aa13c043ef1739fa647352b60a5
 Tracking issue          #26
 Task packet             tasks/open/P0-T09-sonarqube-main-analysis.yaml
 ```
 
 ## Post-merge main readback
 
-The current canonical `main@4dec19558d076af03ee2bee45482a3f83a2b6f33` includes the merged inactive preparation from PR #58 and PR #60. The latest Automatic Analysis is `55533f96-c27b-480a-8e1f-f820bbced2f3` with public Quality Gate `OK`. The committed Sonar workflow remains default-off: `producer=success` and `scanner=skipped`. These facts establish current-main Automatic Analysis health and the inactive workflow posture; they are not a CI scanner submission and do not close P0-T09.
+The pre-merge canonical `main@4dec19558d076af03ee2bee45482a3f83a2b6f33` included the merged inactive preparation from PR #58 and PR #60. Its Automatic Analysis was `55533f96-c27b-480a-8e1f-f820bbced2f3` with public Quality Gate `OK`; the committed Sonar workflow was default-off with `producer=success` and `scanner=skipped`.
+
+After PR #61, current canonical `main@2339a8daa1c26aa13c043ef1739fa647352b60a5` has Automatic Analysis `8b20603d-12a6-4d13-9d55-663d2c295384` with Quality Gate `OK`. Phase 0 run `32437158659` and CodeQL run `32437158653` succeeded; prepared workflow run `32437158674` completed with `producer=success` and `scanner=skipped`. These facts establish current-main Automatic Analysis health and inactive workflow posture; they are not a CI scanner submission and do not close P0-T09.
 
 The readback is not a repository-wide zero-issues claim; baseline debt and any remaining findings require their own versioned evidence and disposition.
 
@@ -153,13 +155,17 @@ private LOC consumed           48248
 remaining                      approximately 1.8k
 ```
 
-The organization is therefore back below the private-LOC limit. The historical final readback also records binding `leon36000/ForgeLLM`, New Code `previous_version`, no custom analysis-scope or issue-ignore values, Automatic Analysis/Autoscan, no CI method selected at that time, and the default `Sonar way` Quality Gate. Post-remediation Automatic Analysis later succeeded on exact `main@86f32319847a011fb4d48c98f0c467282fcfbe49` with `ncloc=6939`; current canonical `main@4dec19558d076af03ee2bee45482a3f83a2b6f33` now has a subsequent successful Automatic Analysis readback recorded above. The accepted ADR-0004 governs the merged repository preparation; no artificial probe commit or external activation is authorized in this increment.
+The organization is therefore back below the private-LOC limit. The historical final readback also records binding `leon36000/ForgeLLM`, New Code `previous_version`, no custom analysis-scope or issue-ignore values, Automatic Analysis/Autoscan, no CI method selected at that time, and the default `Sonar way` Quality Gate. Post-remediation Automatic Analysis later succeeded on exact `main@86f32319847a011fb4d48c98f0c467282fcfbe49` with `ncloc=6939`; the pre-merge `main@4dec19558d076af03ee2bee45482a3f83a2b6f33` and post-merge `main@2339a8daa1c26aa13c043ef1739fa647352b60a5` readbacks are recorded above. The accepted ADR-0004 governs the merged repository preparation; no artificial probe commit or external activation is authorized in this increment.
 
 ## Decision gate after readback
 
 The organization LOC blocker has been remediated by the smallest evidence-supported action: align ForgeLLM Sonar visibility with its already-public canonical repository. No source exclusion, project deletion, subscription purchase or analysis-method change was needed.
 
-The current immediate next gate is the in-repo prepared inactive CI path for Task 4B.1 while Automatic Analysis remains active. Do not provision `SONAR_TOKEN`, do not activate CI submission, and do not submit Sonar analyses from this increment until the non-overlap activation gate is reviewed and executed.
+Next gate (not executed or authorized by this documentation increment): obtain explicit human review and authorization for the no-overlap migration sequence. Automatic Analysis remains enabled and the prepared CI scanner remains inactive.
+
+If separately authorized, capture the sequence in order: fresh Automatic Analysis enabled readback; human disable action; Automatic Analysis disabled readback. Complete a separate token identity/lifecycle security review before provisioning `SONAR_TOKEN`, and require another explicit gate before CI activation or the first controlled submission.
+
+Until those gates are satisfied: no `SONAR_TOKEN`, no Sonar or GitHub setting change, no scanner activation, no scan submission, and no PR bridge. P0-T09 remains `in_progress`.
 
 ADR-0004 is accepted and selects exactly `ci_based_only`. Task 4B.1 prepares the protected-ref scanner path only; the workflow remains default-off while Automatic Analysis is active. CI-based analysis does not bypass the subscription entitlement, and the two methods may never run concurrently. Token identity/lifecycle review, the ordered Automatic Analysis disable/readback, first CI submission, and successful exact-head evidence remain human-only follow-up gates.
 
