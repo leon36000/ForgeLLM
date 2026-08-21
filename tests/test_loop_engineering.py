@@ -11,6 +11,7 @@ from forgellm_governance.loop_engineering import (
     validate_loop_receipt,
     validate_loop_receipt_template,
     validate_loop_verify_command,
+    validate_vendor_provenance,
 )
 
 VALID_COMMIT = "0123456789abcdef0123456789abcdef01234567"
@@ -121,40 +122,49 @@ def _validate_repository():
     return importlib.import_module("scripts.validate_loop_engineering").validate_repository
 
 
-@pytest.mark.parametrize("command", [
-    "make ci && git push origin main",
-    "make ci; gh pr merge 37",
-    "make ci > /tmp/result.log",
-    "env git push origin main",
-    "command git status",
-    "git add README.md",
-    "git branch -D review-head",
-    "gh workflow run release.yml",
-    "kubectl get secret sonar-token",
-])
+@pytest.mark.parametrize(
+    "command",
+    [
+        "make ci && git push origin main",
+        "make ci; gh pr merge 37",
+        "make ci > /tmp/result.log",
+        "env git push origin main",
+        "command git status",
+        "git add README.md",
+        "git branch -D review-head",
+        "gh workflow run release.yml",
+        "kubectl get secret sonar-token",
+    ],
+)
 def test_firewall_rejects_composition_wrappers_mutations_and_privileged_reads(command):
     messages = validate_loop_verify_command(command)
     assert messages
     assert "stop_and_escalate" in messages[0]
 
 
-@pytest.mark.parametrize("command", [
-    "git status --short",
-    "git diff --check",
-    "gh pr view 37 --json state",
-])
+@pytest.mark.parametrize(
+    "command",
+    [
+        "git status --short",
+        "git diff --check",
+        "gh pr view 37 --json state",
+    ],
+)
 def test_firewall_allows_explicit_read_only_commands(command):
     assert validate_loop_verify_command(command) == []
 
 
-@pytest.mark.parametrize("command", [
-    "python -c 'print(1)'",
-    "git status $(cat secret.txt)",
-    "pip install requests",
-    "curl -X POST https://example.invalid",
-    "wget --method=POST https://example.invalid",
-    "CI=1 git status --short",
-])
+@pytest.mark.parametrize(
+    "command",
+    [
+        "python -c 'print(1)'",
+        "git status $(cat secret.txt)",
+        "pip install requests",
+        "curl -X POST https://example.invalid",
+        "wget --method=POST https://example.invalid",
+        "CI=1 git status --short",
+    ],
+)
 def test_firewall_rejects_code_substitution_install_mutation_and_assignments(command):
     messages = validate_loop_verify_command(command)
     assert messages
@@ -418,3 +428,66 @@ def test_repository_catalog_rejects_stop_disposition_mismatch(tmp_path):
     path.write_text(yaml.safe_dump(receipt, sort_keys=False), encoding="utf-8")
     messages = _messages(_validate_repository()(root))
     assert "disposition" in messages
+
+
+ROOT = Path(__file__).resolve().parents[1]
+LOOP_SKILL_PATHS = (
+    ROOT / ".agents/skills/forgellm-loop-engineering/SKILL.md",
+    ROOT / ".claude/skills/forgellm-loop-engineering/SKILL.md",
+)
+LOOP_AGREEMENT_BEGIN = "<!-- forgellm-loop-engineering:begin -->"
+LOOP_AGREEMENT_END = "<!-- forgellm-loop-engineering:end -->"
+
+
+def test_vendor_provenance_accepts_exact_static_subset():
+    assert validate_vendor_provenance(ROOT) == []
+
+
+def test_vendor_snapshot_contains_no_shell_scripts():
+    assert list((ROOT / "third_party/loop-engineering").rglob("*.sh")) == []
+
+
+def test_project_local_loop_agent_skills_exist_and_match():
+    assert all(path.is_file() for path in LOOP_SKILL_PATHS)
+    texts = [path.read_text(encoding="utf-8") for path in LOOP_SKILL_PATHS]
+    assert texts[0] == texts[1]
+
+
+def test_project_local_loop_skills_preserve_bounded_authority():
+    for path in LOOP_SKILL_PATHS:
+        text = path.read_text(encoding="utf-8")
+        lowered = text.lower()
+        for marker in ("GOAL", "SCOPE", "VERIFY", "BUDGET", "STOP", "RECEIPT"):
+            assert marker in text
+        for marker in (
+            "task packet",
+            "accepted adr",
+            "stop_and_escalate",
+            "independent",
+            "isolated",
+            "worktree",
+            "never execute vendored scripts",
+        ):
+            assert marker in lowered
+        for forbidden in (".claude/hooks", ".codex/hooks", "stop-verify.sh", "./install.sh"):
+            assert forbidden not in text
+
+
+def test_agent_working_agreements_preserve_loop_precedence():
+    for relative in ("AGENTS.md", "CLAUDE.md"):
+        text = (ROOT / relative).read_text(encoding="utf-8")
+        assert text.count(LOOP_AGREEMENT_BEGIN) == 1
+        assert text.count(LOOP_AGREEMENT_END) == 1
+        bounded = text.split(LOOP_AGREEMENT_BEGIN, 1)[1].split(LOOP_AGREEMENT_END, 1)[0]
+        assert "task packets and accepted ADRs remain authoritative" in bounded
+        assert "may narrow but never widen SCOPE/VERIFY/privilege" in bounded
+        assert "No upstream installer, eval runner, Stop hook" in bounded
+
+
+def test_makefile_wires_bounded_loop_gate_without_dropping_p0_t09():
+    text = (ROOT / "Makefile").read_text(encoding="utf-8")
+    assert "validate-loop" in text
+    assert "validate: validate-loop" in text
+    assert "P0-T10-bounded-loop-engineering.yaml" in text
+    assert "scripts/validate_loop_engineering.py" in text
+    assert "P0-T09-sonarqube-main-analysis.yaml" in text
