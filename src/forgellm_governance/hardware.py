@@ -174,8 +174,11 @@ def sanitize_inventory(inventory: dict[str, Any]) -> dict[str, Any]:
         return published
 
     for probe in probes.values():
-        if isinstance(probe, dict):
-            probe["stderr"] = ""
+        if not isinstance(probe, dict):
+            continue
+        probe["stderr"] = ""
+        if probe.get("status") != "ok":
+            probe["data"] = None
 
     network = probes.get("network")
     if isinstance(network, dict):
