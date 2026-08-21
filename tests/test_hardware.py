@@ -104,21 +104,23 @@ def test_published_inventory_fails_closed_on_unparsed_structured_probes() -> Non
     assert "REMOVE-ME" not in json.dumps(inventory)
 
 
-def test_published_inventory_removes_stderr_from_every_probe() -> None:
+def test_published_inventory_discards_output_from_failed_probes() -> None:
     raw = {
         "probes": {
             "cpu": {
                 "status": "error",
                 "returncode": 1,
-                "data": "",
-                "stderr": "/home/private-user/REMOVE-ME",
+                "data": "/home/private-user/REMOVE-DATA",
+                "stderr": "/home/private-user/REMOVE-ERROR",
             }
         }
     }
 
     inventory = sanitize_inventory(raw)
-    assert inventory["probes"]["cpu"]["stderr"] == ""
-    assert "REMOVE-ME" not in json.dumps(inventory)
+    probe = inventory["probes"]["cpu"]
+    assert probe["data"] is None
+    assert probe["stderr"] == ""
+    assert "REMOVE-" not in json.dumps(inventory)
 
 
 def test_script_inventory_routes_through_canonical_public_writer(
