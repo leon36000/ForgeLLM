@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from forgellm_governance.hardware import sanitize_inventory, write_public_hardware_inventory
+from forgellm_governance.hardware import write_public_hardware_inventory
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
 

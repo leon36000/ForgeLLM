@@ -8,9 +8,12 @@ from pathlib import Path
 import pytest
 
 from forgellm_governance import cli, hardware
-from forgellm_governance.hardware import CommandResult, collect_hardware_inventory
+from forgellm_governance.hardware import (
+    CommandResult,
+    collect_hardware_inventory,
+    sanitize_inventory,
+)
 from scripts import hardware_inventory as publication
-from scripts.hardware_inventory import sanitize_inventory
 
 
 def fake_runner(command: Sequence[str], timeout: float) -> CommandResult:
