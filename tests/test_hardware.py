@@ -101,15 +101,25 @@ def test_published_inventory_fails_closed_on_unparsed_structured_probes() -> Non
     assert "REMOVE-ME" not in json.dumps(inventory)
 
 
-def test_inventory_output_cannot_escape_artifacts(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(publication, "_PROJECT_ROOT", tmp_path)
-    monkeypatch.setattr(publication, "_ARTIFACTS_ROOT", (tmp_path / "artifacts").resolve())
-    monkeypatch.setattr(publication, "collect_hardware_inventory", lambda: {"probes": {}})
+def test_script_inventory_routes_through_canonical_public_writer(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[Path, Path]] = []
 
-    outside = tmp_path / "outside.json"
-    with pytest.raises(ValueError, match="artifacts"):
-        publication.write_sanitized_inventory(outside)
-    assert not outside.exists()
+    def safe_writer(root: Path, output: Path) -> Path:
+        calls.append((root, output))
+        destination = (root / output).resolve()
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text("{}\n", encoding="utf-8")
+        return destination
+
+    monkeypatch.setattr(publication, "_PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(publication, "write_public_hardware_inventory", safe_writer, raising=False)
+
+    output = publication.write_sanitized_inventory(Path("artifacts/script.json"))
+    assert calls == [(tmp_path, Path("artifacts/script.json"))]
+    assert output == (tmp_path / "artifacts/script.json").resolve()
 
 
 def test_canonical_public_inventory_writer_sanitizes_and_confines_output(tmp_path: Path) -> None:
