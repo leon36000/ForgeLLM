@@ -431,6 +431,17 @@ def test_repository_catalog_rejects_declaration_blob_drift(tmp_path):
     assert "declaration_source_blob_sha" in messages
 
 
+def test_repository_catalog_rejects_tree_object_as_receipt_commit(tmp_path):
+    root, _, _, receipt = _catalog_fixture(tmp_path)
+    tree = subprocess.check_output(["git", "rev-parse", "HEAD^{tree}"], cwd=root, text=True).strip()
+    receipt["final_commit"] = tree
+    receipt["review"]["input_commit"] = tree
+    path = root / "artifacts/governance/loop-engineering/receipts/P0-T10-run-01.yaml"
+    path.write_text(yaml.safe_dump(receipt, sort_keys=False), encoding="utf-8")
+    messages = _messages(_validate_repository()(root))
+    assert "must resolve to Git commits" in messages
+
+
 def test_repository_catalog_requires_every_final_receipt_to_be_indexed(tmp_path):
     root, _, _, receipt = _catalog_fixture(tmp_path)
     extra = root / "artifacts/governance/loop-engineering/receipts/P0-T10-run-02.yaml"

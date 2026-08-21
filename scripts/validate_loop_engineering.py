@@ -107,6 +107,11 @@ def _ensure_revision(root: Path, revision: str) -> bool:
     return _git_read(root, ["cat-file", "-e", f"{revision}^{{commit}}"]).returncode == 0
 
 
+def _is_ancestor(root: Path, base_commit: str, final_commit: str) -> bool:
+    result = _git_read(root, ["merge-base", "--is-ancestor", base_commit, final_commit])
+    return result.returncode == 0
+
+
 def _validate_committed_declaration(
     root: Path,
     commit: object,
@@ -332,6 +337,12 @@ def _validate_receipt_changed_paths(root: Path, receipt: Mapping[object, object]
     base_commit = receipt.get("base_commit")
     final_commit = receipt.get("final_commit")
     if not _valid_sha(base_commit) or not _valid_sha(final_commit):
+        return
+    if not _ensure_revision(root, base_commit) or not _ensure_revision(root, final_commit):
+        issues.append("receipt base_commit and final_commit must resolve to Git commits")
+        return
+    if not _is_ancestor(root, base_commit, final_commit):
+        issues.append("receipt base_commit must be an ancestor of final_commit")
         return
     result = _git_read(
         root,

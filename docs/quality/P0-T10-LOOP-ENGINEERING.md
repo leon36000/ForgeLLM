@@ -13,7 +13,7 @@ The bridge validates the six semantic fields GOAL, SCOPE, VERIFY, BUDGET, STOP, 
 
 The repository gate also supports GitHub's shallow checkout safely: when a fixed, full SHA required by an indexed declaration or receipt is absent locally, it fetches only that exact ForgeLLM revision from the configured `origin`, then verifies the commit/blob or diff. It never fetches a floating branch or interprets an untrusted shell command.
 
-The validator keeps the subprocess boundary explicit (`shell=False`), rejects control characters before invoking Git, and uses only fixed subcommands plus validated revision/path tokens. The hosted quality gate's complexity findings are addressed by keeping declaration, index, and reviewer checks in small single-purpose helpers.
+The validator keeps the subprocess boundary explicit (`shell=False`), rejects control characters before invoking Git, and uses only fixed subcommands plus validated revision/path tokens. It also requires receipt `base_commit` and `final_commit` to be real Git commits with an ancestor relationship. The receipt's `final_commit` identifies the reviewed implementation head; later catalog-only receipt binding does not change that implementation evidence. The hosted quality gate's complexity findings are addressed by keeping declaration, index, and reviewer checks in small single-purpose helpers.
 
 ## Upstream provenance
 
