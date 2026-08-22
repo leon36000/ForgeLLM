@@ -2,7 +2,7 @@
 
 **From state:** S-0012
 **To work:** continue P0-T09 through the ordered token/lifecycle and no-overlap gates after the merged inactive artifact-boundary checkpoint; P0-T04 still awaits host designation
-**Generated:** 2026-08-21
+**Generated:** 2026-08-22
 
 ## P0-T10 completed handoff
 
@@ -170,15 +170,15 @@ The organization LOC blocker has been remediated by the smallest evidence-suppor
 
 Next gate (not executed or authorized by this documentation increment): obtain explicit independent review and authorization for the no-overlap migration sequence. Automatic Analysis remains enabled and the prepared CI scanner remains inactive.
 
-If separately authorized, complete the separate token identity/lifecycle security review without provisioning `SONAR_TOKEN`; then capture the sequence in order: fresh Automatic Analysis enabled readback; owner-authorized disable action; Automatic Analysis disabled readback. Require another explicit gate before CI activation or the first controlled submission.
+If separately authorized, complete the separate token identity/lifecycle security review without reading or rotating `SONAR_TOKEN`; then capture the sequence in order: fresh Automatic Analysis enabled readback; owner-authorized disable action; Automatic Analysis disabled readback. Require another explicit gate before CI activation or the first controlled submission.
 
-Until those gates are satisfied: no `SONAR_TOKEN`, no Sonar or GitHub setting change, no scanner activation, no scan submission, and no PR bridge. P0-T09 remains `in_progress`.
+Until those gates are satisfied: the repository secret may exist, but no token value is read or used, no Sonar or GitHub setting is changed, no scanner is activated, no scan is submitted, and no PR bridge is introduced. P0-T09 remains `in_progress`.
 
 ## P0-T09 local checkpoint: secretless artifact boundary
 
 The prepared protected-ref path now has a concrete same-run data boundary. The producer uses the immutable checkout pin with `repository: ${{ github.repository }}` and `ref: ${{ github.sha }}`, non-persistent credentials, and the pinned Rust 1.97.1 toolchain. It copies only `src` and `crates`, generates the Clippy JSON report without `SONAR_TOKEN`, and uploads exactly `forgellm-sonar-input` with the reviewed upload-artifact pin.
 
-The scanner downloads that fixed artifact first, validates the fixed source/report paths, rejects symlinks, and then invokes the final immutable Sonar action. The governance validator and 53 focused Sonar tests reject missing or mutable transfer pins, wrong artifact paths/names, checkout ref/repository overrides, and removal of the symlink guard. This is still default-off preparation: no secret is provisioned, no Sonar/GitHub setting is changed, no scan is submitted, and no PR bridge is designed or activated.
+The scanner downloads that fixed artifact first, validates the fixed source/report paths, rejects symlinks, and then invokes the final immutable Sonar action. The governance validator and 53 focused Sonar tests reject missing or mutable transfer pins, wrong artifact paths/names, checkout ref/repository overrides, and removal of the symlink guard. This is still default-off preparation: the repository secret name is present but its value is not read or used, no Sonar/GitHub setting is changed, no scan is submitted, and no PR bridge is designed or activated.
 
 The official action provenance is recorded in `CURRENT_STATE.md`; no scanner archive digest is claimed.
 
@@ -188,13 +188,13 @@ PR #67 exact head `a58ee2f0a705f73bcc769330547f1b6bb7de6a67` merged as protected
 
 This is exact-head repository and inactive-workflow evidence, not a Sonar CI submission. No token was provisioned, Automatic Analysis was not changed, and no PR bridge was introduced.
 
-## P0-T09 token identity/lifecycle pre-provisioning checkpoint
+## P0-T09 token identity/lifecycle pre-activation checkpoint
 
-`artifacts/governance/P0-T09-token-lifecycle-review.json` records the separate pre-provisioning review as `not_ready_for_provisioning`. The repository-scoped `gh secret list` readback contains no `SONAR_TOKEN`, and `gh variable list` is empty; no secret value was read. Organization- and environment-level secret state remains outside that readback.
+`artifacts/governance/P0-T09-token-lifecycle-review.json` records the fresh pre-activation review as `not_ready_for_activation`. The repository-scoped `gh secret list` readback confirms the `SONAR_TOKEN` secret name and update metadata `2026-08-22T08:08:16Z`; `gh variable list` is empty, and no secret value was read. This repository-level readback does not establish token validity, issuer, scope, lifecycle controls, or organization- and environment-level secret state.
 
-The review prefers a Scoped Organization Token when supported by the plan, but the recorded project plan is Free; the documented Free-plan candidate is therefore a Personal Access Token. No issuer, scope or token was selected. A convenience owner/administrator token is rejected. Storage, expiry/rotation, revocation, audit and incident-response controls remain open. The official SonarQube Cloud [Scoped Organization Token](https://docs.sonarsource.com/sonarqube-cloud/administering-sonarcloud/scoped-organization-tokens), [Personal Access Token](https://docs.sonarsource.com/sonarqube-cloud/managing-your-account/managing-tokens), and [GitHub Actions secret](https://docs.github.com/en/actions/concepts/security/secrets) documentation is recorded in the artifact.
+The review prefers a Scoped Organization Token when supported by the plan, but the recorded project plan is Free; the documented Free-plan candidate is therefore a Personal Access Token. Issuer, non-administrator permission, minimum scope, storage approval, expiry/rotation, revocation, audit and incident-response controls remain open. The secret’s presence alone does not authorize activation. The official SonarQube Cloud [Scoped Organization Token](https://docs.sonarsource.com/sonarqube-cloud/administering-sonarcloud/scoped-organization-tokens), [Personal Access Token](https://docs.sonarsource.com/sonarqube-cloud/managing-your-account/managing-tokens), and [GitHub Actions secret](https://docs.github.com/en/actions/concepts/security/secrets) documentation is recorded in the artifact.
 
-No token, Sonar setting, GitHub setting, scanner activation or scan submission was introduced. The next gate remains the ordered enabled-readback → owner-authorized disable action → disabled-readback sequence.
+No token value was read or recorded, and no Sonar setting, GitHub setting, scanner activation or scan submission was performed by this checkpoint. The next gate remains the ordered enabled-readback → owner-authorized disable action → disabled-readback sequence.
 
 ## Loop Engineering cycle 3/3: final snapshot stop
 
@@ -229,7 +229,7 @@ RECEIPT:
   next_step: independent no-overlap review and authorization; no fourth sync
 ```
 
-ADR-0004 is accepted and selects exactly `ci_based_only`. Task 4B.1 prepares the protected-ref scanner path only; the workflow remains default-off while Automatic Analysis is active. CI-based analysis does not bypass the subscription entitlement, and the two methods may never run concurrently. Token identity/lifecycle review without provisioning, the ordered Automatic Analysis disable/readback, first CI submission, and successful exact-head evidence remain independent follow-up gates.
+ADR-0004 is accepted and selects exactly `ci_based_only`. Task 4B.1 prepares the protected-ref scanner path only; the workflow remains default-off while Automatic Analysis is active. CI-based analysis does not bypass the subscription entitlement, and the two methods may never run concurrently. The pre-activation token identity/lifecycle review, the ordered Automatic Analysis disable/readback, first CI submission, and successful exact-head evidence remain independent follow-up gates.
 
 As a bounded Task 4B.1 scope exception, `.gitleaksignore` contains exactly two path/rule/line fingerprints for the required public `sonar.projectKey` identifier; it suppresses no credential finding and does not alter scanner behavior.
 
