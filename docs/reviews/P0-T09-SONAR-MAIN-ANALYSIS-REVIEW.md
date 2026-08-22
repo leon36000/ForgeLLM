@@ -40,13 +40,13 @@ Hosted protected-main evidence:
 - CodeQL run `32532087569`: success;
 - prepared Sonar run `32532087558`: success, with `producer=success` and `scanner=skipped`.
 
-## Pre-provisioning token lifecycle checkpoint
+## Pre-activation token lifecycle checkpoint
 
-The separate token review is recorded in [`P0-T09-token-lifecycle-review.json`](../../artifacts/governance/P0-T09-token-lifecycle-review.json). It is explicitly `not_ready_for_provisioning`: the repository-level GitHub secret listing contains no `SONAR_TOKEN`, the repository variable listing is empty, and neither command reads secret values. Those readbacks are repository-scoped and do not claim organization- or environment-level state.
+The separate token review is recorded in [`P0-T09-token-lifecycle-review.json`](../../artifacts/governance/P0-T09-token-lifecycle-review.json). It is explicitly `not_ready_for_activation`: the repository-level GitHub secret listing confirms the `SONAR_TOKEN` secret name with update metadata `2026-08-22T08:08:16Z`, the repository variable listing is empty, and neither command reads secret values. Those readbacks are repository-scoped and do not establish token validity, issuer, scope, lifecycle controls, or organization- and environment-level state.
 
-The official SonarQube Cloud documentation recommends a Scoped Organization Token where the plan supports it because it is non-user-specific, project-scoped and can be limited to Execute Analysis. The recorded project plan is Free, so the documented Free-plan candidate is a Personal Access Token; that candidate remains unselected until the issuing identity, non-administrator project permission, storage boundary, expiry/rotation, revocation, audit and incident-response controls are recorded. A personal owner/administrator token chosen for convenience is rejected. See the [Scoped Organization Token documentation](https://docs.sonarsource.com/sonarqube-cloud/administering-sonarcloud/scoped-organization-tokens), [Personal Access Token documentation](https://docs.sonarsource.com/sonarqube-cloud/managing-your-account/managing-tokens), and [GitHub Actions secret guidance](https://docs.github.com/en/actions/concepts/security/secrets).
+The official SonarQube Cloud documentation recommends a Scoped Organization Token where the plan supports it because it is non-user-specific, project-scoped and can be limited to Execute Analysis. The recorded project plan is Free, so the documented Free-plan candidate is a Personal Access Token. Issuing identity, non-administrator project permission, minimum scope, storage approval, expiry/rotation, revocation, audit and incident-response controls remain open; secret presence alone does not authorize activation. A personal owner/administrator token chosen for convenience is rejected. See the [Scoped Organization Token documentation](https://docs.sonarsource.com/sonarqube-cloud/administering-sonarcloud/scoped-organization-tokens), [Personal Access Token documentation](https://docs.sonarsource.com/sonarqube-cloud/managing-your-account/managing-tokens), and [GitHub Actions secret guidance](https://docs.github.com/en/actions/concepts/security/secrets).
 
-This checkpoint performs no provisioning, external setting mutation, Automatic Analysis change, scanner activation or scan submission.
+This checkpoint reads only sanitized GitHub secret metadata; it does not read or record the token value, mutate Sonar/GitHub settings, change Automatic Analysis, activate the scanner or submit an analysis.
 
 ## Explicit limitations
 

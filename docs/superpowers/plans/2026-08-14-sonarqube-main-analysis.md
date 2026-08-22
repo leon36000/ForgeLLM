@@ -140,7 +140,7 @@ Publication checkpoint: PR #67 merged this inactive preparation at protected `ma
 - [ ] Reject an owner/admin personal token chosen merely for convenience; prefer a dedicated least-privilege identity where supported.
 - [ ] Only after review, store the value as `SONAR_TOKEN`; never record the value or private payload.
 
-Pre-provisioning checkpoint 2026-08-21: [`artifacts/governance/P0-T09-token-lifecycle-review.json`](../../artifacts/governance/P0-T09-token-lifecycle-review.json) records the official token-type and GitHub secret-boundary review as `not_ready_for_provisioning`. The repository-scoped readback found no `SONAR_TOKEN` secret and no repository variables; no secret value was read. The recorded Free plan makes a Personal Access Token the documented candidate, but no issuing identity, scope or lifecycle decision is selected. All identity, scope, storage, expiry/rotation, revocation, audit and incident-response controls remain open. No token or external setting was changed.
+Pre-activation checkpoint 2026-08-22: [`artifacts/governance/P0-T09-token-lifecycle-review.json`](../../artifacts/governance/P0-T09-token-lifecycle-review.json) records `not_ready_for_activation`. The repository-scoped readback at protected `main@901667fe0dc5b20e5b97ef883c6659198202a2ae` confirms the `SONAR_TOKEN` secret name with update metadata `2026-08-22T08:08:16Z`; repository variables remain empty and no secret value was read. The recorded Free plan makes a Personal Access Token the documented candidate, but issuer, non-administrator permission, minimum scope, storage approval, expiry/rotation, revocation, audit and incident-response controls remain open. Secret presence alone is not activation approval; no Sonar setting, scanner activation or scan submission was performed by this checkpoint.
 
 #### Task 4B.3: Separately design and review any PR trusted-data bridge
 
@@ -240,4 +240,4 @@ The final report records:
 9. rollback evidence;
 10. explicit non-claims and next task.
 
-Until implementation evidence exists, state explicitly that no scanner configuration, token provisioning, Automatic Analysis disablement, trusted-data bridge, CI activation, or scanner submission exists. List the exact scanner archive digest as unresolved unless independently proven; do not conflate it with the action SHA or scanner version/GPG verification.
+Until implementation evidence exists, state explicitly whether scanner configuration, token provisioning, Automatic Analysis disablement, trusted-data bridge, CI activation, or scanner submission exists. If a secret is added before the lifecycle gate is complete, record only sanitized presence metadata and keep activation blocked. List the exact scanner archive digest as unresolved unless independently proven; do not conflate it with the action SHA or scanner version/GPG verification.
