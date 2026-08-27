@@ -24,3 +24,17 @@
 The fix round adds the requested real regressions in `tests/test_hardware.py`: nested `address` data under a dropped network structure is asserted absent, and the storage unexpected value is parameterized for both mapping and list values. The amended focused suite passes at the pre-fix implementation head, so no production change is required by these findings. The task report is being corrected to identify the full reconstruction base, scoped review base, pre-fix head, fix-round final head, and exact path scopes.
 
 These findings are addressed pending scoped re-review. This record does not claim a post-fix `ACCEPT`; the controller must obtain and record the scoped re-review against the fix-round final head before merge.
+
+## Sol round-2 NO-GO and resolution
+
+- Gate outcome: `NO-GO` from the Sol round-2 review.
+- Exact pre-fix head: `28640bf4864a251cdb40ef9697e32861d85e930d`.
+- Blocking finding: `_sanitize_storage_data` accepted mapping-shaped values for the root `blockdevices` field and a device `children` field, recursed into those mappings as if they were device records, and left the storage probe `status` as `ok`. This violated the P0-T13 requirement that malformed structured storage output fail closed.
+
+### Test-first resolution
+
+Two real regressions were added in `tests/test_hardware.py` and committed first as `3776204` (`test(security): reject mapping-shaped storage containers`): root `data.blockdevices` as a mapping and a device `children` value as a mapping. The focused suite was run before production edits and produced the expected RED result: `2 failed, 32 passed in 1.25s`, with both failures asserting that status incorrectly remained `ok`.
+
+The minimal production fix was committed as `bd37b16` (`fix(security): reject mapping-shaped storage containers`): `blockdevices` and `children` must be lists before recursive sanitization. Focused GREEN then passed with `34 passed in 1.08s`, preserving valid list fixtures, recursive mountpoint omission, unknown-field rejection, and existing behavior.
+
+The round-2 blocking finding is resolved in code pending a new exact-head independent review. The post-fix review target is implementation head `bd37b16` (with the subsequent receipt-only commit recorded separately); this receipt does not claim final acceptance.
