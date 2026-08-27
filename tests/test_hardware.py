@@ -145,6 +145,44 @@ def test_published_inventory_rejects_unexpected_nested_storage_values(unexpected
     assert "REMOVE-" not in json.dumps(inventory)
 
 
+def test_published_inventory_rejects_mapping_shaped_storage_blockdevices() -> None:
+    raw = {
+        "probes": {
+            "storage": {
+                "status": "ok",
+                "data": {"blockdevices": {"name": "disk0"}},
+                "stderr": "REMOVE-ERROR",
+            }
+        }
+    }
+
+    inventory = sanitize_inventory(raw)
+    storage = inventory["probes"]["storage"]
+    assert storage["status"] == "error"
+    assert storage["data"] is None
+    assert storage["stderr"] == ""
+    assert "REMOVE-" not in json.dumps(inventory)
+
+
+def test_published_inventory_rejects_mapping_shaped_storage_children() -> None:
+    raw = {
+        "probes": {
+            "storage": {
+                "status": "ok",
+                "data": {"blockdevices": [{"name": "disk0", "children": {"name": "part0"}}]},
+                "stderr": "REMOVE-ERROR",
+            }
+        }
+    }
+
+    inventory = sanitize_inventory(raw)
+    storage = inventory["probes"]["storage"]
+    assert storage["status"] == "error"
+    assert storage["data"] is None
+    assert storage["stderr"] == ""
+    assert "REMOVE-" not in json.dumps(inventory)
+
+
 def test_published_inventory_removes_storage_mount_fields_recursively() -> None:
     inventory = sanitize_inventory(collect_hardware_inventory(runner=privacy_runner))
     serialized = json.dumps(inventory["probes"]["storage"]["data"]).casefold()
