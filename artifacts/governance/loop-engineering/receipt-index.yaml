@@ -4,7 +4,7 @@ task_id: P0-T10
 runs:
   - run_id: P0-T10-run-01
     declaration_path: artifacts/governance/loop-engineering/declarations/P0-T10-run-01.yaml
-    declaration_source_commit: a2377eeea92efc2865a1502954b21df076df89fd
+    declaration_source_commit: 87a1ddeb76d2bca45fe75853b4c3b4c9f19c78b0
     declaration_source_blob_sha: 4de53b7f6f8dd00e0c44ad6c61f72636ee4afdd4
     receipt_path: artifacts/governance/loop-engineering/receipts/P0-T10-run-01.yaml
     receipt_schema_version: '1.0'
