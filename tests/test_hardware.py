@@ -80,6 +80,52 @@ def test_published_inventory_keeps_only_allowed_network_fields() -> None:
     assert network == [{"ifname": "eth0", "mtu": 1500, "operstate": "UP"}]
 
 
+@pytest.mark.parametrize("malformed_value", [{"nested": "REMOVE-ME"}, ["REMOVE-ME"]])
+def test_published_inventory_rejects_nested_network_allowlisted_values(malformed_value: object) -> None:
+    raw = {
+        "probes": {
+            "network": {
+                "status": "ok",
+                "data": [{"ifname": "eth0", "mtu": malformed_value}],
+                "stderr": "REMOVE-ERROR",
+            }
+        }
+    }
+
+    inventory = sanitize_inventory(raw)
+    network = inventory["probes"]["network"]
+    assert network["status"] == "error"
+    assert network["data"] is None
+    assert network["stderr"] == ""
+    assert "REMOVE-" not in json.dumps(inventory)
+
+
+def test_published_inventory_rejects_unexpected_nested_storage_values() -> None:
+    raw = {
+        "probes": {
+            "storage": {
+                "status": "ok",
+                "data": {
+                    "blockdevices": [
+                        {
+                            "name": "disk0",
+                            "children": [{"name": "part0", "unexpected": {"leak": "REMOVE-ME"}}],
+                        }
+                    ]
+                },
+                "stderr": "REMOVE-ERROR",
+            }
+        }
+    }
+
+    inventory = sanitize_inventory(raw)
+    storage = inventory["probes"]["storage"]
+    assert storage["status"] == "error"
+    assert storage["data"] is None
+    assert storage["stderr"] == ""
+    assert "REMOVE-" not in json.dumps(inventory)
+
+
 def test_published_inventory_removes_storage_mount_fields_recursively() -> None:
     inventory = sanitize_inventory(collect_hardware_inventory(runner=privacy_runner))
     serialized = json.dumps(inventory["probes"]["storage"]["data"]).casefold()

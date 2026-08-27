@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -12,6 +13,30 @@ def _write_canonical_state(root: Path) -> None:
     state_dir.mkdir(parents=True)
     for name in ("CURRENT_STATE.md", "DECISIONS.md", "RISKS.md", "OPEN_QUESTIONS.md", "HANDOFF.md"):
         (state_dir / name).write_text(f"# {name}\n", encoding="utf-8")
+
+
+def test_git_is_unavailable_when_git_executable_is_missing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def missing_git(*args: object, **kwargs: object) -> None:
+        raise FileNotFoundError("git")
+
+    monkeypatch.setattr(snapshot.subprocess, "run", missing_git)
+
+    assert snapshot._git(tmp_path, "status", "--short") == "unavailable"
+
+
+def test_git_is_unavailable_when_git_command_times_out(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def timed_out_git(*args: object, **kwargs: object) -> None:
+        raise subprocess.TimeoutExpired(["git"], timeout=5)
+
+    monkeypatch.setattr(snapshot.subprocess, "run", timed_out_git)
+
+    assert snapshot._git(tmp_path, "status", "--short") == "unavailable"
 
 
 def test_session_snapshot_does_not_serialize_absolute_repository_path(
