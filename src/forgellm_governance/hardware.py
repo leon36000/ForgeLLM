@@ -180,6 +180,8 @@ def _sanitize_storage_data(value: Any, *, root: bool = True) -> tuple[bool, Any]
         if normalized_key not in allowed_fields:
             return False, None
         if normalized_key in {"blockdevices", "children"}:
+            if not isinstance(item, list):
+                return False, None
             valid, cleaned = _sanitize_storage_data(item, root=False)
             if not valid:
                 return False, None
