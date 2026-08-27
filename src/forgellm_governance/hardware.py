@@ -39,6 +39,8 @@ _NETWORK_PUBLIC_FIELDS = frozenset(
         "link_type",
     }
 )
+_STORAGE_PUBLIC_FIELDS = frozenset({"children", "name", "type", "size", "rota", "tran", "fstype"})
+_STORAGE_ROOT_FIELDS = frozenset({"blockdevices"})
 _STORAGE_OMIT_FIELDS = frozenset({"mountpoint", "mountpoints"})
 
 
@@ -142,16 +144,53 @@ def collect_hardware_inventory(*, runner: Runner = run_command) -> dict[str, Any
     }
 
 
-def _remove_fields(value: Any, omitted: frozenset[str]) -> Any:
+def _sanitize_network_data(data: Any) -> list[dict[str, Any]] | None:
+    if not isinstance(data, list):
+        return None
+    sanitized: list[dict[str, Any]] = []
+    for item in data:
+        if not isinstance(item, dict):
+            return None
+        if any(key in _NETWORK_PUBLIC_FIELDS and isinstance(value, (dict, list)) for key, value in item.items()):
+            return None
+        sanitized.append({key: value for key, value in item.items() if key in _NETWORK_PUBLIC_FIELDS})
+    return sanitized
+
+
+def _sanitize_storage_data(value: Any, *, root: bool = True) -> tuple[bool, Any]:
     if isinstance(value, list):
-        return [_remove_fields(item, omitted) for item in value]
-    if isinstance(value, dict):
-        return {
-            key: _remove_fields(item, omitted)
-            for key, item in value.items()
-            if str(key).casefold() not in omitted
-        }
-    return value
+        sanitized: list[dict[str, Any]] = []
+        for item in value:
+            if not isinstance(item, dict):
+                return False, None
+            valid, cleaned = _sanitize_storage_data(item, root=False)
+            if not valid:
+                return False, None
+            sanitized.append(cleaned)
+        return True, sanitized
+    if not isinstance(value, dict):
+        return False, None
+
+    sanitized_dict: dict[str, Any] = {}
+    allowed_fields = _STORAGE_ROOT_FIELDS if root else _STORAGE_PUBLIC_FIELDS
+    for key, item in value.items():
+        normalized_key = str(key).casefold()
+        if normalized_key in _STORAGE_OMIT_FIELDS:
+            continue
+        if normalized_key not in allowed_fields:
+            return False, None
+        if normalized_key in {"blockdevices", "children"}:
+            valid, cleaned = _sanitize_storage_data(item, root=False)
+            if not valid:
+                return False, None
+            sanitized_dict[key] = cleaned
+        elif isinstance(item, (dict, list)):
+            return False, None
+        else:
+            sanitized_dict[key] = item
+    if root and "blockdevices" not in {str(key).casefold() for key in sanitized_dict}:
+        return False, None
+    return True, sanitized_dict
 
 
 def _sanitize_json_probe(probe: dict[str, Any], *, expected_type: type) -> None:
@@ -185,18 +224,24 @@ def sanitize_inventory(inventory: dict[str, Any]) -> dict[str, Any]:
         _sanitize_json_probe(network, expected_type=list)
         data = network.get("data")
         if isinstance(data, list):
-            network["data"] = [
-                {key: value for key, value in item.items() if key in _NETWORK_PUBLIC_FIELDS}
-                for item in data
-                if isinstance(item, dict)
-            ]
+            sanitized = _sanitize_network_data(data)
+            if sanitized is None:
+                network["data"] = None
+                network["status"] = "error"
+            else:
+                network["data"] = sanitized
 
     storage = probes.get("storage")
     if isinstance(storage, dict):
         _sanitize_json_probe(storage, expected_type=dict)
         data = storage.get("data")
         if isinstance(data, dict):
-            storage["data"] = _remove_fields(data, _STORAGE_OMIT_FIELDS)
+            valid, sanitized = _sanitize_storage_data(data)
+            if not valid:
+                storage["data"] = None
+                storage["status"] = "error"
+            else:
+                storage["data"] = sanitized
 
     return published
 

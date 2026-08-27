@@ -9,7 +9,16 @@ from pathlib import Path
 
 
 def _git(root: Path, *args: str) -> str:
-    completed = subprocess.run(["git", "-C", str(root), *args], check=False, capture_output=True, text=True, timeout=5)
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(root), *args],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return "unavailable"
     if completed.returncode != 0:
         return "unavailable"
     return completed.stdout.strip() or "empty"
