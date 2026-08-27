@@ -157,42 +157,58 @@ def _sanitize_network_data(data: Any) -> list[dict[str, Any]] | None:
     return sanitized
 
 
-def _sanitize_storage_data(value: Any, *, root: bool = True) -> tuple[bool, Any]:
-    if isinstance(value, list):
-        sanitized: list[dict[str, Any]] = []
-        for item in value:
-            if not isinstance(item, dict):
-                return False, None
-            valid, cleaned = _sanitize_storage_data(item, root=False)
-            if not valid:
-                return False, None
-            sanitized.append(cleaned)
-        return True, sanitized
+def _sanitize_storage_list(value: Any) -> tuple[bool, Any]:
+    if not isinstance(value, list):
+        return False, None
+    sanitized: list[dict[str, Any]] = []
+    for item in value:
+        if not isinstance(item, dict):
+            return False, None
+        valid, cleaned = _sanitize_storage_record(item, root=False)
+        if not valid:
+            return False, None
+        sanitized.append(cleaned)
+    return True, sanitized
+
+
+def _sanitize_storage_field(key: Any, value: Any, *, root: bool) -> tuple[bool, bool, Any]:
+    normalized_key = str(key).casefold()
+    if normalized_key in _STORAGE_OMIT_FIELDS:
+        return True, False, None
+
+    allowed_fields = _STORAGE_ROOT_FIELDS if root else _STORAGE_PUBLIC_FIELDS
+    if normalized_key not in allowed_fields:
+        return False, False, None
+    if normalized_key in {"blockdevices", "children"}:
+        valid, cleaned = _sanitize_storage_list(value)
+        return valid, True, cleaned
+    if isinstance(value, (dict, list)):
+        return False, False, None
+    return True, True, value
+
+
+def _sanitize_storage_record(value: Any, *, root: bool) -> tuple[bool, Any]:
     if not isinstance(value, dict):
         return False, None
 
-    sanitized_dict: dict[str, Any] = {}
-    allowed_fields = _STORAGE_ROOT_FIELDS if root else _STORAGE_PUBLIC_FIELDS
+    sanitized: dict[str, Any] = {}
     for key, item in value.items():
-        normalized_key = str(key).casefold()
-        if normalized_key in _STORAGE_OMIT_FIELDS:
-            continue
-        if normalized_key not in allowed_fields:
+        valid, include, cleaned = _sanitize_storage_field(key, item, root=root)
+        if not valid:
             return False, None
-        if normalized_key in {"blockdevices", "children"}:
-            if not isinstance(item, list):
-                return False, None
-            valid, cleaned = _sanitize_storage_data(item, root=False)
-            if not valid:
-                return False, None
-            sanitized_dict[key] = cleaned
-        elif isinstance(item, (dict, list)):
-            return False, None
-        else:
-            sanitized_dict[key] = item
-    if root and "blockdevices" not in {str(key).casefold() for key in sanitized_dict}:
+        if include:
+            sanitized[key] = cleaned
+    if root and "blockdevices" not in {str(key).casefold() for key in sanitized}:
         return False, None
-    return True, sanitized_dict
+    return True, sanitized
+
+
+def _sanitize_storage_data(value: Any, *, root: bool = True) -> tuple[bool, Any]:
+    if isinstance(value, list):
+        return _sanitize_storage_list(value)
+    if isinstance(value, dict):
+        return _sanitize_storage_record(value, root=root)
+    return False, None
 
 
 def _sanitize_json_probe(probe: dict[str, Any], *, expected_type: type) -> None:
@@ -205,6 +221,54 @@ def _sanitize_json_probe(probe: dict[str, Any], *, expected_type: type) -> None:
         probe["status"] = "error"
 
 
+def _sanitize_probe_metadata(probe: Any) -> None:
+    if not isinstance(probe, dict):
+        return
+    probe["stderr"] = ""
+    if probe.get("status") != "ok":
+        probe["data"] = None
+
+
+def _mark_probe_error(probe: dict[str, Any]) -> None:
+    probe["data"] = None
+    probe["status"] = "error"
+
+
+def _sanitize_network_probe(probe: Any) -> None:
+    if not isinstance(probe, dict):
+        return
+    _sanitize_json_probe(probe, expected_type=list)
+    data = probe.get("data")
+    if not isinstance(data, list):
+        return
+    sanitized = _sanitize_network_data(data)
+    if sanitized is None:
+        _mark_probe_error(probe)
+    else:
+        probe["data"] = sanitized
+
+
+def _sanitize_storage_probe(probe: Any) -> None:
+    if not isinstance(probe, dict):
+        return
+    _sanitize_json_probe(probe, expected_type=dict)
+    data = probe.get("data")
+    if not isinstance(data, dict):
+        return
+    valid, sanitized = _sanitize_storage_data(data)
+    if not valid:
+        _mark_probe_error(probe)
+    else:
+        probe["data"] = sanitized
+
+
+def _sanitize_probe_collection(probes: dict[str, Any]) -> None:
+    for probe in probes.values():
+        _sanitize_probe_metadata(probe)
+    _sanitize_network_probe(probes.get("network"))
+    _sanitize_storage_probe(probes.get("storage"))
+
+
 def sanitize_inventory(inventory: dict[str, Any]) -> dict[str, Any]:
     """Return a publication-safe copy of a collected inventory."""
 
@@ -213,38 +277,7 @@ def sanitize_inventory(inventory: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(probes, dict):
         published["probes"] = {}
         return published
-
-    for probe in probes.values():
-        if not isinstance(probe, dict):
-            continue
-        probe["stderr"] = ""
-        if probe.get("status") != "ok":
-            probe["data"] = None
-
-    network = probes.get("network")
-    if isinstance(network, dict):
-        _sanitize_json_probe(network, expected_type=list)
-        data = network.get("data")
-        if isinstance(data, list):
-            sanitized = _sanitize_network_data(data)
-            if sanitized is None:
-                network["data"] = None
-                network["status"] = "error"
-            else:
-                network["data"] = sanitized
-
-    storage = probes.get("storage")
-    if isinstance(storage, dict):
-        _sanitize_json_probe(storage, expected_type=dict)
-        data = storage.get("data")
-        if isinstance(data, dict):
-            valid, sanitized = _sanitize_storage_data(data)
-            if not valid:
-                storage["data"] = None
-                storage["status"] = "error"
-            else:
-                storage["data"] = sanitized
-
+    _sanitize_probe_collection(probes)
     return published
 
 
