@@ -100,7 +100,26 @@ def test_published_inventory_rejects_nested_network_allowlisted_values(malformed
     assert "REMOVE-" not in json.dumps(inventory)
 
 
-def test_published_inventory_rejects_unexpected_nested_storage_values() -> None:
+def test_published_inventory_drops_nested_forbidden_network_fields() -> None:
+    raw = {
+        "probes": {
+            "network": {
+                "status": "ok",
+                "data": [{"ifname": "eth0", "metadata": {"address": "REMOVE-ME"}}],
+                "stderr": "REMOVE-ERROR",
+            }
+        }
+    }
+
+    inventory = sanitize_inventory(raw)
+    network = inventory["probes"]["network"]
+    assert network["data"] == [{"ifname": "eth0"}]
+    assert "address" not in json.dumps(network["data"])
+    assert "REMOVE-" not in json.dumps(inventory)
+
+
+@pytest.mark.parametrize("unexpected_value", [{"leak": "REMOVE-ME"}, ["REMOVE-ME"]])
+def test_published_inventory_rejects_unexpected_nested_storage_values(unexpected_value: object) -> None:
     raw = {
         "probes": {
             "storage": {
@@ -109,7 +128,7 @@ def test_published_inventory_rejects_unexpected_nested_storage_values() -> None:
                     "blockdevices": [
                         {
                             "name": "disk0",
-                            "children": [{"name": "part0", "unexpected": {"leak": "REMOVE-ME"}}],
+                            "children": [{"name": "part0", "unexpected": unexpected_value}],
                         }
                     ]
                 },
