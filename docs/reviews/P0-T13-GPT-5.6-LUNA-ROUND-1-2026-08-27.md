@@ -51,3 +51,14 @@ The round-2 blocking finding is resolved in code pending a new exact-head indepe
 - Spec Compliance: `Approved`.
 - Task quality: `Approved`.
 - Final independent review disposition: `ACCEPT` for the scoped re-review. This binds the final independent acceptance without changing production or test files in this documentation-only step. The controller must still revalidate exact head `f481200b38ed1a093806433ba02e3050effe0907`; no additional post-controller acceptance is claimed here.
+
+## Fix-round 3 — Sonar S3776 refactor
+
+- Finding source: live Sonar annotations on PR `#78`, exact annotated head `1f0e2ca2afd5e9b41310afa0ed4812fc023fff1b`.
+- Findings: `_sanitize_storage_data` at `src/forgellm_governance/hardware.py:160` had cognitive complexity `28` with `15` allowed; `sanitize_inventory` at `src/forgellm_governance/hardware.py:208` had cognitive complexity `20` with `15` allowed.
+- Behavior-preserving resolution: production commit `446d46c66f875c3d3c40e1bc9b3460e8a43a587d` split storage dispatch/list/record/field validation and probe metadata/network/storage collection into small helpers. The refactor retains fail-closed malformed network values, malformed storage root/device container mappings, unknown-field rejection, recursive mountpoint omission, failed-probe nulling, canonical writer, path confinement, CLI/script routing, snapshot behavior, and generic task validation. No test or contract file changed in this round; no complexity suppression or Sonar configuration change was used.
+- Fresh exact-head green baseline before edits: at `1f0e2ca2afd5e9b41310afa0ed4812fc023fff1b`, `PYTHONPATH=src python3 -m pytest -q tests/test_hardware.py tests/test_snapshot.py tests/test_validation.py` exited `0` with `34 passed in 1.05s`.
+- Focused GREEN after the refactor: the same command exited `0` with `34 passed in 1.01s`.
+- Exact packet Ruff command exited `0` with `All checks passed!`; P0-T13 packet validation exited `0` with `OK: tasks/open/P0-T13-public-artifact-privacy-hardening.yaml`.
+- `make ci` exited `0`: full suite `487 passed in 10.20s`, speculative suite `230 passed in 0.74s`; repository validation, formatting, simulation, and hash checks passed. `git diff --check` passed and the generated out-of-scope simulation JSON was removed.
+- Review disposition: the S3776 refactor is pending fresh exact-head independent review and hosted checks. This receipt does not claim final acceptance or merge readiness.
