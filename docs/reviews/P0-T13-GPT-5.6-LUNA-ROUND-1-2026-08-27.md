@@ -38,3 +38,16 @@ Two real regressions were added in `tests/test_hardware.py` and committed first 
 The minimal production fix was committed as `bd37b16` (`fix(security): reject mapping-shaped storage containers`): `blockdevices` and `children` must be lists before recursive sanitization. Focused GREEN then passed with `34 passed in 1.08s`, preserving valid list fixtures, recursive mountpoint omission, unknown-field rejection, and existing behavior.
 
 The round-2 blocking finding is resolved in code pending a new exact-head independent review. The post-fix review target is implementation head `bd37b16` (with the subsequent receipt-only commit recorded separately); this receipt does not claim final acceptance.
+
+## Final scoped re-review — Sol round 2 resolution
+
+- Reviewer model: `gpt-5.6-luna`.
+- Review package base: `28640bf4864a251cdb40ef9697e32861d85e930d`.
+- Exact reviewed head: `f481200b38ed1a093806433ba02e3050effe0907`.
+- Prior Sol round-2 `NO-GO` finding: `_sanitize_storage_data` accepted mapping-shaped values for root `blockdevices` and device `children`, recursed into them as device records, and left malformed storage output with status `ok`.
+- Resolution reviewed: `3776204` added real RED regressions for both mapping shapes, `bd37b16` added the minimal list guards before recursion, and `f481200` recorded the round-2 receipt; valid list fixtures, mountpoint omission, unknown-field rejection, and existing behavior remained intact.
+- Re-review verdict: `ADDRESSED`.
+- New findings: `none`.
+- Spec Compliance: `Approved`.
+- Task quality: `Approved`.
+- Final independent review disposition: `ACCEPT` for the scoped re-review. This binds the final independent acceptance without changing production or test files in this documentation-only step. The controller must still revalidate exact head `f481200b38ed1a093806433ba02e3050effe0907`; no additional post-controller acceptance is claimed here.
