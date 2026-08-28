@@ -28,9 +28,11 @@ The `[ -f Cargo.toml ]` guard keeps `make ci` usable in a hypothetical future ch
   - `cargo fmt --all --check`: pass (no diff).
   - `cargo clippy --workspace --all-targets --locked -- -D warnings`: pass (0 warnings).
   - `cargo test --workspace --all-targets --locked`: **46/46 passed** (2 unit in `allocation_tests.rs`, 3 `numerical_contract.rs`, 17 `decoder_primitives.rs`, 24 `reference_ops.rs`) — matches the count already documented in `docs/roadmap/PHASE0_TASKS.md`.
-  - Python side unchanged and still green: 471 full `pytest` tests, 230 focused speculative-decoding tests, cache-placement simulation hash checks all pass.
+  - Python side unchanged and still green: 487 full `pytest` tests, 230 focused speculative-decoding tests, cache-placement simulation hash checks all pass.
 - Before this change: `git stash` the Makefile edit and re-run `make ci` — completes with **zero** `cargo` invocations anywhere in the output (confirmed by `grep -c cargo` on the captured log: 0 before, 3 after).
 - `git diff --check`: clean. `git status --short`: only this task's files.
+
+**Correction:** an earlier version of this document and the original PR description stated 471 pytest tests. That count was captured in this same clone before it was rebased onto the current base (`ad079c0…`, which includes PR #78's P0-T13 test additions) and was never re-verified after the rebase before being written down — a process lapse, not a fabricated number. An independent reviewer flagged the discrepancy against the real hosted CI log; re-running `python3 -m pytest -q` fresh (new venv, this exact head) confirms **487** is the correct, reproducible count on both this PR's base and head. Corrected here and in the PR description.
 
 ## Non-claims
 
