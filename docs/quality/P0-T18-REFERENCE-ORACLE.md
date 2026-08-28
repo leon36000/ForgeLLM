@@ -49,7 +49,7 @@
 - `cargo fmt --all --check`: clean. `cargo clippy --workspace --all-targets --locked -- -D warnings`: 0 warnings.
 - Full `make ci`: **exit 0** — 544 pytest (up from 503 at this task's base, +41 from
   `test_reference_oracle.py`), 230 focused speculative tests, cache-placement simulation hashes,
-  the new fixture `--check` + `sha256sum -c` steps, and all 69 Rust tests.
+  the new fixture `--check` + `sha256sum -c` steps, and all 72 Rust tests.
 - `crates/forgellm-reference/src/lib.rs` and every pre-existing test file: byte-identical to
   base (no production or existing-test change).
 - No dependency added to `Cargo.toml`, `Cargo.lock`, or `pyproject.toml` (checked by direct diff).
@@ -58,7 +58,9 @@
 ## Bugs found and fixed during this task's own development (recorded per project rule: negative results are evidence)
 
 Writing and actually running the test suite — rather than trusting the design on paper — caught
-three real defects before any Rust code was written against the oracle:
+four real defects, three before any Rust code was written against the oracle and one from a
+direct line-by-line comparison against the real `src/lib.rs` source after tests were already
+green:
 
 1. **`rms_norm_oracle` originally returned one fixed global tolerance** (`4 * F64_EPSILON +
    F32_CAST_HALF_ULP`, i.e. correct only near output magnitude 1). A randomized test comparing
@@ -85,7 +87,21 @@ three real defects before any Rust code was written against the oracle:
    holds even at 1,000,000 levels of adversarial nesting (`nesting_beyond_the_limit_is_a_clean_error_not_a_crash`).
    The fixture is generator-controlled, not untrusted external input, so this is robustness
    hardening rather than a claimed security fix for an actual attack surface.
-4. **The initial `decimal_transcendental_with_escape`/`softmax_oracle`/`rms_norm_oracle` design
+4. **`rms_norm_oracle`'s error-budget derivation understated the real Rust implementation's
+   rounding-step count.** Found by re-reading `src/lib.rs::rms_norm` line by line after the
+   oracle's tests were already green: the real code computes `inverse_rms = 1.0 / sqrt(...)`
+   once and then `value * inverse_rms * weight` (two correctly-rounded operations for the
+   "divide by scale" step: reciprocal, then multiply), while this oracle computes
+   `value / scale` directly (one operation). The two are not always bit-identical. The oracle
+   deliberately keeps the direct-division form (introducing an f64-rounded reciprocal here would
+   add an f64 rounding step into what is otherwise an exact/high-precision pipeline), and instead
+   the derivation comment and the relative-error coefficient (`n/2 + 4` -> `n/2 + 5`) were
+   corrected to honestly account for the extra rounding step rather than silently assume the two
+   computation orders are equivalent. Re-verified with 10,000+ randomized trials (n up to 64,
+   magnitudes 1e-3 to 1e4, epsilons spanning 1e-8 to 1.0): zero tolerance violations both before
+   and after this correction, confirming the gap was always well within margin -- this fix is
+   about the derivation being honest, not about a real observed failure.
+5. **The initial `decimal_transcendental_with_escape`/`softmax_oracle`/`rms_norm_oracle` design
    converted its Fraction input to a Python `float` before building the `Decimal`**
    (`Decimal(str(float(value))).exp()`), which is exactly the double-rounding failure mode this
    module's own docstring says it avoids. Caught during implementation, before any test ran

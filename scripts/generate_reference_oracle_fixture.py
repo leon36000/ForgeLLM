@@ -184,10 +184,12 @@ def _build_cases() -> list[dict]:
                 "mode": "abs_tolerance_hex_per_element",
                 "tolerance_hex": [_fraction_bits_hex(t) for t in tolerances],
                 "tolerance_derivation": (
-                    "(n/2 + 4) * 2**-53 * |result| + half_ulp_at(result); the "
-                    "relative term is provable from sqrt/div correct rounding, "
-                    "the half-ULP term scales with each result's own magnitude "
-                    "rather than assuming magnitude ~1."
+                    "(n/2 + 5) * 2**-53 * |result| + half_ulp_at(result); the "
+                    "relative term is provable from sqrt/div correct rounding "
+                    "plus a conservative +2u for Rust's reciprocal-then-multiply "
+                    "vs. this oracle's direct division (see rms_norm_oracle's "
+                    "docstring); the half-ULP term scales with each result's "
+                    "own magnitude rather than assuming magnitude ~1."
                 ),
             },
         }

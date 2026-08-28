@@ -182,7 +182,7 @@
       "case_id": "rms_norm_basic",
       "comparison": {
         "mode": "abs_tolerance_hex_per_element",
-        "tolerance_derivation": "(n/2 + 4) * 2**-53 * |result| + half_ulp_at(result); the relative term is provable from sqrt/div correct rounding, the half-ULP term scales with each result's own magnitude rather than assuming magnitude ~1.",
+        "tolerance_derivation": "(n/2 + 5) * 2**-53 * |result| + half_ulp_at(result); the relative term is provable from sqrt/div correct rounding plus a conservative +2u for Rust's reciprocal-then-multiply vs. this oracle's direct division (see rms_norm_oracle's docstring); the half-ULP term scales with each result's own magnitude rather than assuming magnitude ~1.",
         "tolerance_hex": [
           "33000000",
           "33800000",
@@ -232,7 +232,7 @@
       "case_id": "rms_norm_large_magnitude",
       "comparison": {
         "mode": "abs_tolerance_hex_per_element",
-        "tolerance_derivation": "(n/2 + 4) * 2**-53 * |result| + half_ulp_at(result); the relative term is provable from sqrt/div correct rounding, the half-ULP term scales with each result's own magnitude rather than assuming magnitude ~1.",
+        "tolerance_derivation": "(n/2 + 5) * 2**-53 * |result| + half_ulp_at(result); the relative term is provable from sqrt/div correct rounding plus a conservative +2u for Rust's reciprocal-then-multiply vs. this oracle's direct division (see rms_norm_oracle's docstring); the half-ULP term scales with each result's own magnitude rather than assuming magnitude ~1.",
         "tolerance_hex": [
           "33800000",
           "33800000",
