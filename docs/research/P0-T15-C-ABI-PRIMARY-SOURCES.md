@@ -91,8 +91,9 @@ Each source statement below is classified as:
 ### SRC-07 — Wasmtime C API
 
 - **Official source:** <https://docs.wasmtime.dev/c-api/>
+- **Pinned source revision:** Wasmtime `v48.0.1`, commit `7bac2c2775808aaec5d4aa5627a5e447b51102cf` (<https://github.com/bytecodealliance/wasmtime/tree/7bac2c2775808aaec5d4aa5627a5e447b51102cf/crates/c-api>)
 - **Accessed:** 2026-08-21
-- **Observed source facts:** Wasmtime exposes C ownership and error/trap results through explicit C API object types and destruction functions rather than leaking Rust implementation types.
+- **Observed source facts:** Wasmtime `v48.0.1` exposes C ownership and error/trap results through explicit C API object types and destruction functions rather than leaking Rust implementation types.
 - **ForgeLLM inference:** distinct result categories are useful, but ABI v1 should avoid multiple library-allocated diagnostic object families until a concrete need outweighs allocator and lifecycle complexity.
 - **Selected rule:** v1 uses stable status codes plus a caller-owned diagnostic buffer; no library-allocated error object is required for ordinary failure reporting.
 - **Limitation:** this selection must be re-evaluated if structured nested diagnostics become a real binding requirement.
@@ -104,11 +105,10 @@ Each source statement below is classified as:
 **Selected rule:** export a minimal stable bootstrap surface conceptually equivalent to:
 
 ```text
-get_api(requested_version, out_table)
-get_version_string(out_view)
+get_api(requested_version)
 ```
 
-This is a contract sketch, not a shipped declaration. `get_api` succeeds only when the complete requested immutable table is supported. Version `0`, unknown versions and undersized output descriptors fail without returning callable partial state.
+This is a contract sketch, not a shipped declaration. `get_api` is the one bootstrap entry point and succeeds only when the complete requested immutable table is supported. Version `0` and unknown versions return no callable table; the selected immutable table carries its own version, byte size and build-identification view. There is no second bootstrap version-string entry point.
 
 API-table versions are monotonically increasing positive 32-bit integers. Existing tables are immutable once released. Adding, removing, reordering or changing any function pointer requires a new table version. A table includes its own version and byte size so a caller can validate the result before invocation.
 
@@ -152,6 +152,9 @@ Every ABI-visible options or result structure begins with:
 Rules:
 
 - the library reads no byte beyond `min(struct_size, supported_size)`;
+- in ABI v1, `abi_version` equals the exact API-table version selected by bootstrap; it is not an independent structure revision;
+- a structure must include the mandatory `struct_size` and `abi_version` prefix and must match the selected table's `abi_version`, otherwise the call returns `VERSION_MISMATCH` before reading optional fields;
+- an explicitly supported shorter prefix is a same-table-version compatibility case, not an implicit older-table fallback; `struct_size` never infers a new structure revision;
 - fields absent from a smaller valid structure receive documented defaults;
 - a larger structure is accepted only when the known prefix is valid and all currently reserved fields in the known prefix are zero;
 - fields are appended only; no field is reordered, resized, repurposed or removed within one structure version;
@@ -203,7 +206,7 @@ CREATED -> QUEUED -> RUNNING -> {SUCCEEDED | FAILED | CANCELLED}
 - `wait(timeout_ns)` uses an unsigned 64-bit timeout; one reserved maximum value may later represent infinite wait only if the header contract names it explicitly;
 - request result access is valid only in `SUCCEEDED`;
 - request diagnostics are valid in `FAILED` and may be empty for cancellation;
-- releasing a non-terminal request requests cancellation and waits only according to a separately specified bounded destruction policy; v1 implementation must not hide unbounded blocking in release;
+- releasing a non-terminal request returns `INVALID_STATE`, consumes nothing and never blocks; callers must request cancellation and observe a terminal state before release;
 - public v1 has no completion callback, user-data pointer or reentrant invocation path.
 
 Thread-safety proposal:

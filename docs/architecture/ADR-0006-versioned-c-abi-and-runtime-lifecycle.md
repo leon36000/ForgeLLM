@@ -141,8 +141,10 @@ Every public options, input-descriptor or output-descriptor structure begins wit
 Compatibility rules:
 
 - the API table version fixes the semantic contract for every structure it accepts;
+- in ABI v1, `abi_version` equals the exact API-table version selected by bootstrap; it is not an independent structure revision;
+- a structure must include the mandatory `struct_size` and `abi_version` prefix and must match the selected table's `abi_version`, otherwise the call returns `VERSION_MISMATCH` before reading optional fields;
 - a released structure never changes within one table version;
-- a newer table may deliberately accept an older structure prefix, but that compatibility is explicit in the newer table's tests and documentation;
+- a newer table may deliberately accept an older structure prefix only as an explicit same-table-version compatibility rule in the newer table's tests and documentation; this is not an implicit older-table fallback and `struct_size` never infers a new structure revision;
 - the library reads no byte beyond `min(struct_size, size_known_by_that_table)`;
 - `struct_size` smaller than the mandatory prefix is invalid;
 - missing optional tail fields receive documented defaults only when that table explicitly accepts the older size;

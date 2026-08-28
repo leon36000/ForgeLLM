@@ -55,10 +55,9 @@ acceptance_criteria:
   - The normal repository validation and make ci gates pass on the exact design head.
   - Blind GPT-5.6 Sol architecture/security review records ACCEPT with no unresolved BLOCKER or MAJOR before merge.
 verification_commands:
-  - python scripts/validate_task_packet.py tasks/open/P0-T15-versioned-c-abi-design.yaml --root .
-  - python scripts/validate_project.py --root .
-  - python -m ruff check src scripts tests
-  - python -m ruff format --check src scripts tests
+  - PYTHONPATH=src python3 scripts/validate_task_packet.py tasks/open/P0-T15-versioned-c-abi-design.yaml --root .
+  - PYTHONPATH=src python3 scripts/validate_project_state.py --root .
+  - python3 -m ruff check src scripts tests
   - make ci
   - git diff --check
   - git status --short
