@@ -44,6 +44,8 @@ The initial hosted SonarCloud run reported a passing Quality Gate but still crea
 
 The shallow-checkout fix was committed as `b7ee96e`; the Sonar remediation refactor is `3a75f78`. The fresh local `make ci` on `13dce624da6f0cf27962ad06796696953b6e3bd2` passed with **501** full tests and **230** reference tests. The matching hosted checks are: Validate and test `98742841471`, analyze-python `98742841262`, CodeQL `98742957759`, SonarCloud `98742924616` with **0 annotations**, and GitGuardian `98742840150`; dependency review `98742863210` was skipped by the existing workflow policy. The hosted remediation head is therefore green and requires only the final critical Sol gate before merge.
 
+The final GPT-5.6 Luna review on `bf95b16b8fd4ca7a7131b9a51875375f4630d46e` returned `VERDICT=ACCEPT`. Its only LOW observation was that the packet's standalone `validate_task_packet.py` command relied on the Makefile's exported `PYTHONPATH`; the command is now explicitly prefixed with `PYTHONPATH=src` in the packet. No functional scope or gate was changed.
+
 The status inventory is deterministic: P0-T03, P0-T07, P0-T08, P0-T11, P0-T12, P0-T13 and P0-T14 are closed/complete; P0-T04 is open/blocked; P0-T09 is open/in_progress; P0-T10 is open/review; and P0-T15 is open/in_progress. ADR-0005 and ADR-0006 remain proposed.
 
 ## Independent review round 1
