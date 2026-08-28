@@ -5,9 +5,9 @@
 - **Base:** `9932a5a496df53e812d9f47c6bb95ae94b3a4a2f`
 - **Implementation head:** `51aa42cbff06d3a79df9a485ad6045b74148f522`
 - **Lifecycle packet head:** `29560d4e7ac9592e151f3fea75a4721d2cf845a1`
-- **Candidate head before this report:** `4ed80f473e107b149c69a7b76496c5791a8ff781`
+- **Candidate head reviewed in round 2:** `b8706238aff8cffbbf66e9ee9aec8bcb6a30ebf2`
 - **Evidence boundary:** repository governance and deterministic projections only
-- **Status:** remediation after independent review round 1
+- **Status:** accepted on the reviewed candidate; final receipt head requires exact-head re-review
 
 ## Scope
 
@@ -45,8 +45,14 @@ GPT-5.6 Luna reviewed candidate `4ed80f473e107b149c69a7b76496c5791a8ff781` in a 
 
 Both findings are addressed by this report and by adding the deleted open P0-T03 path to the P0-T14 allowed-path declaration. A new exact-head independent review is required before publication.
 
+## Independent review round 2
+
+GPT-5.6 Luna reviewed the corrected candidate `b8706238aff8cffbbf66e9ee9aec8bcb6a30ebf2` in a separate read-only context. It reran the RED replay, focused tests, packet/lifecycle/project validators, `make ci` in a temporary clone, manifest/tree comparison and the allowed-path audit. It found no Critical, High or Medium issue; the two round-1 findings were confirmed resolved. The review recorded **500 passing Python tests**, **230 passing reference tests**, successful Ruff/validation/simulation/hash gates, a clean worktree and no external mutation.
+
+**Round-2 verdict:** `ACCEPT` for the reviewed candidate. This report update is evidence-only; the resulting final head must receive an exact-head receipt review before publication.
+
 ## Safety and evidence boundaries
 
 No secret was read or written. No GitHub/Sonar setting or issue was mutated. No hardware probe, model inference, runtime/backend/ABI/kernel/CUDA/ROCm operation or benchmark was run. Historical implementation merges do not accept ADR-0005 or ADR-0006; P0-T10 remains `review` and P0-T15 remains design-only `in_progress`.
 
-**Final verdict:** pending remediation review.
+**Final verdict:** pending exact-head receipt review.
