@@ -2,7 +2,8 @@
 
 - **Task:** P0-T15 / issue #74
 - **Review date:** 2026-08-21
-- **Canonical ForgeLLM base:** `main@901667fe0dc5b20e5b97ef883c6659198202a2ae`
+- **Canonical ForgeLLM base:** `main@ad079c0bf6f86b044f1d1d819cb105e3afe5a65f`
+- **Original proposal base:** `main@901667fe0dc5b20e5b97ef883c6659198202a2ae`
 - **Evidence class:** architecture research; no ABI implementation or compatibility measurement
 - **Method:** official language/vendor documentation and exact public source revisions only
 

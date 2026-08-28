@@ -2,9 +2,10 @@
 
 > **Status:** design/review plan only. It does not authorize ABI implementation.
 
-**Task:** P0-T15 / issue #74  
-**Base:** `main@901667fe0dc5b20e5b97ef883c6659198202a2ae`  
-**Deliverable:** proposed ADR-0006, primary-source record and a no-stub future implementation sequence  
+**Task:** P0-T15 / issue #74
+**Base:** `main@ad079c0bf6f86b044f1d1d819cb105e3afe5a65f`
+**Original proposal base:** `main@901667fe0dc5b20e5b97ef883c6659198202a2ae`
+**Deliverable:** proposed ADR-0006, primary-source record and a no-stub future implementation sequence
 **Non-goal:** no C header, Rust FFI crate, exported symbol, backend plugin or binding in this task
 
 ## 1. Why this plan exists
