@@ -62,3 +62,16 @@ The round-2 blocking finding is resolved in code pending a new exact-head indepe
 - Exact packet Ruff command exited `0` with `All checks passed!`; P0-T13 packet validation exited `0` with `OK: tasks/open/P0-T13-public-artifact-privacy-hardening.yaml`.
 - `make ci` exited `0`: full suite `487 passed in 10.20s`, speculative suite `230 passed in 0.74s`; repository validation, formatting, simulation, and hash checks passed. `git diff --check` passed and the generated out-of-scope simulation JSON was removed.
 - Review disposition: the S3776 refactor is pending fresh exact-head independent review and hosted checks. This receipt does not claim final acceptance or merge readiness.
+
+## Final scoped re-review — fix-round 3
+
+- Reviewer model: `gpt-5.6-luna`.
+- Review package base: `1f0e2ca2afd5e9b41310afa0ed4812fc023fff1b`.
+- Exact reviewed head: `20c6b3c48103d5f5bb4a461949d0fdc550c110cf`.
+- Refactor commit reviewed: `446d46c66f875c3d3c40e1bc9b3460e8a43a587d`.
+- Prior Sonar S3776 finding: `_sanitize_storage_data` and `sanitize_inventory` exceeded the cognitive-complexity threshold. The reviewer confirmed that the helper extraction addresses the finding without suppression, Sonar configuration changes, contract drift, caller changes, or loss of the P0-T13 fail-closed privacy semantics.
+- Additional evidence: focused tests (`34 passed`), exact Ruff, packet validation, and `git diff --check` passed; a read-only randomized comparison matched base/head sanitizer behavior across `10,000` cases and inputs remained unchanged.
+- Findings: `none`.
+- Implementation verdict: `ACCEPT`.
+- Task-quality verdict: `ACCEPT`.
+- Final independent review disposition: `ACCEPT` for the exact fix-round-3 head. Hosted Sonar and hosted checks remain controller gates; this receipt makes no hosted-green claim.
