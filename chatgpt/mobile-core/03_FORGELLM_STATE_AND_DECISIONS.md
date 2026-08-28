@@ -1,12 +1,12 @@
 # ForgeLLM — état, décisions et continuité
 
 **Mise à jour :** 2026-08-27
-**Version d’état :** S-0014
-**Canonical state ID:** S-0014
-**Canonical source commit:** `c1fd91536031fd9b2fbc24b71095bd4a0c8d0e66`
+**Version d’état :** S-0015
+**Canonical state ID:** S-0015
+**Canonical source commit:** `55d08c76b7fcdc3b6c256d35a4d74b275652964c`
 **Derived manifest:** `chatgpt/mobile-core/DERIVED-MANIFEST.yaml`
 **Phase :** P0 — gouvernance, simulation et laboratoire de preuve  
-**Statut global :** P0-T07, P0-T08/CA-03, P0-T11/P0-T12, P0-T13 et P0-T14 sont terminés; P0-T10 reste en `review` avec ADR-0005 `proposed`; P0-T15 reste `in_progress` comme tâche de conception uniquement avec ADR-0006 `proposed`; P0-T09/QG-01 reste actif mais inactif côté scanner; P0-T04 attend la désignation d’un hôte autorisé.
+**Statut global :** P0-T07, P0-T08/CA-03, P0-T11/P0-T12, P0-T13 et P0-T14 sont terminés; P0-T16 est `in_progress` comme tranche CPU de référence bornée; P0-T10 reste en `review` avec ADR-0005 `proposed`; P0-T15 reste `in_progress` comme tâche de conception uniquement avec ADR-0006 `proposed`; P0-T09/QG-01 reste actif mais inactif côté scanner; P0-T04 attend la désignation d’un hôte autorisé.
 
 Le dépôt Git est la source canonique. Ce fichier est une projection mobile dérivée et reconstruisible; son manifest porte les empreintes des sources canoniques et ne peut pas remplacer `docs/state/CURRENT_STATE.md`.
 
@@ -18,7 +18,7 @@ Concevoir et construire un moteur d’inférence LLM hétérogène dont correcti
 
 - dépôt : `leon36000/ForgeLLM`;
 - branche par défaut : `main` protégée par `FLLM`;
-- dernier `main` protégé : `c1fd91536031fd9b2fbc24b71095bd4a0c8d0e66` (PR #80, réconciliation lifecycle/state);
+- dernier `main` protégé : `55d08c76b7fcdc3b6c256d35a4d74b275652964c` (PR #81, réparation de l’ancre lifecycle/state);
 - issue de réconciliation : #73;
 - paquet Sonar actif : `tasks/open/P0-T09-sonarqube-main-analysis.yaml`.
 
@@ -28,6 +28,7 @@ Concevoir et construire un moteur d’inférence LLM hétérogène dont correcti
 - P0-T10 reste dans `tasks/open` avec `review`; ADR-0005 est `proposed` et aucune acceptation architecturale n’est inférée de la fusion d’implémentation;
 - P0-T13 est fermé et `complete` après le merge protégé `ad079c0`;
 - P0-T14 est fermé et `complete` pour la validation du cycle de vie et des projections; son ancrage post-squash est `c1fd915…`;
+- P0-T16 est ouvert avec `in_progress` pour une composition CPU dense à un token, entièrement en mémoire et sans runtime;
 - P0-T15 reste dans `tasks/open` avec `in_progress`; ADR-0006 est `proposed` et aucun ABI, binding, backend ou runtime n’est livré;
 - les validateurs refusent les inversions de statut, doublons d’identifiants, dépendances non résolues et successeurs ADR incomplets.
 

@@ -1,15 +1,15 @@
 # ForgeLLM Current State
 
-- **State ID:** S-0014
+- **State ID:** S-0015
 - **Updated:** 2026-08-27
-- **Canonical source commit:** `c1fd91536031fd9b2fbc24b71095bd4a0c8d0e66`
+- **Canonical source commit:** `55d08c76b7fcdc3b6c256d35a4d74b275652964c`
 - **Phase:** P0
 - **Milestone:** P0-M7 — lifecycle/state semantics reconciled
-- **Overall status:** P0-T07, P0-T08/CA-03, P0-T11/P0-T12 and P0-T13 are complete; P0-T14 lifecycle validation is complete; P0-T10 remains in `review` because ADR-0005 is still `proposed`; P0-T15 remains `in_progress` as a design-only task with ADR-0006 `proposed`; P0-T09/QG-01 remains active and its scanner is inactive. The current protected-main evidence for the latest merged checkpoints is recorded below. P0-T04 remains blocked on designation of one owner-authorized host.
-- **Authorized next work:** Execute only the next bounded CPU reference data-plane task after resolving its free task ID from live Git. Do not accept ADR-0005 or ADR-0006 from merged design/integration evidence alone. P0-T09 remains under its independent no-overlap/token lifecycle gates; do not read `SONAR_TOKEN`, change Sonar/GitHub settings, activate CI, submit a scan, or run hardware/model/runtime work.
+- **Overall status:** P0-T07, P0-T08/CA-03, P0-T11/P0-T12, P0-T13 and P0-T14 are complete; P0-T16 is `in_progress` as a bounded CPU reference slice; P0-T10 remains in `review` because ADR-0005 is still `proposed`; P0-T15 remains `in_progress` as a design-only task with ADR-0006 `proposed`; P0-T09/QG-01 remains active and its scanner is inactive. The current protected-main evidence for the latest merged checkpoints is recorded below. P0-T04 remains blocked on designation of one owner-authorized host.
+- **Authorized next work:** Complete only the bounded P0-T16 CPU reference data-plane slice currently in progress. Do not accept ADR-0005 or ADR-0006 from merged design/integration evidence alone. P0-T09 remains under its independent no-overlap/token lifecycle gates; do not read `SONAR_TOKEN`, change Sonar/GitHub settings, activate CI, submit a scan, or run hardware/model/runtime work.
 - **State anchor:** the Git commit containing this file
 
-- **Latest protected-main checkpoint:** `main@c1fd91536031fd9b2fbc24b71095bd4a0c8d0e66`, PR #80 lifecycle/state semantics squash merge; P0-T14 is complete, P0-T15/ADR-0006 remain proposed and no ABI implementation is present
+- **Latest protected-main checkpoint:** `main@55d08c76b7fcdc3b6c256d35a4d74b275652964c`, PR #81 post-merge state-anchor repair; P0-T14 is complete, P0-T16 is the active bounded CPU reference slice, P0-T15/ADR-0006 remain proposed and no ABI implementation is present
 
 `Canonical source commit` identifies the protected-main snapshot read when this state projection was reconciled. The validator requires that snapshot to be present and ancestral, so a squash merge cannot leave a branch-only source commit in the projection. The derived mobile manifest below hashes the exact canonical source files used for the projection and is non-authoritative.
 
@@ -19,6 +19,7 @@
 - P0-T10 remains under `tasks/open` with status `review`. ADR-0005 remains `proposed`; the final Sol gate found that explicit architectural acceptance evidence is still missing. The implementation merge at `main@87a1dde` is not treated as ADR acceptance.
 - P0-T13 is under `tasks/closed` with status `complete`, backed by protected merge `ad079c0bf6f86b044f1d1d819cb105e3afe5a65f` and its post-merge validation.
 - P0-T14 is under `tasks/closed` with status `complete` at the reconciled protected snapshot `c1fd91536031fd9b2fbc24b71095bd4a0c8d0e66`; the post-merge source-anchor repair is recorded in its review.
+- P0-T16 is under `tasks/open` with status `in_progress`; it is limited to one in-memory CPU dense decoder token composed from the existing checked reference operations.
 - P0-T15 remains under `tasks/open` with status `in_progress`; ADR-0006 remains `proposed` and the merged increment contains no ABI header, symbol, FFI, backend or runtime implementation.
 - The validator rejects directory/status inversions, duplicate IDs, unresolved dependencies and unresolved ADR successors; it also validates the README block, mobile manifest and exact tracked-path tree.
 

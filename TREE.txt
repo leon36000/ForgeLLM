@@ -62,6 +62,7 @@ crates/forgellm-reference/Cargo.toml
 crates/forgellm-reference/src/allocation_tests.rs
 crates/forgellm-reference/src/lib.rs
 crates/forgellm-reference/tests/decoder_primitives.rs
+crates/forgellm-reference/tests/dense_decoder.rs
 crates/forgellm-reference/tests/numerical_contract.rs
 crates/forgellm-reference/tests/reference_ops.rs
 docs/agents/AGENT_ROLES.md
@@ -213,6 +214,7 @@ tasks/open/P0-T04-first-hardware-inventory.yaml
 tasks/open/P0-T09-sonarqube-main-analysis.yaml
 tasks/open/P0-T10-bounded-loop-engineering.yaml
 tasks/open/P0-T15-versioned-c-abi-design.yaml
+tasks/open/P0-T16-dense-decoder-reference.yaml
 tests/fixtures/components/duplicate-implementation.json
 tests/fixtures/components/missing-fallback.json
 tests/fixtures/components/valid-cache-draft.json

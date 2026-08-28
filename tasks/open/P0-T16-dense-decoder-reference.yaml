@@ -71,7 +71,7 @@ evidence_requirements:
   - Preserve exact Rust test counts and typed error results for invalid token, shape, finite-input and epsilon cases.
   - Record that the oracle uses only in-memory synthetic tensors and no model or hardware execution.
   - Record no dependency change, unsafe code, ABI/runtime/backend/GPU action or performance claim.
-  - Record residual limitations: no real-model conformance, tokenization, model format, attention, KV cache or production decoder behavior.
+  - "Record residual limitations: no real-model conformance, tokenization, model format, attention, KV cache or production decoder behavior."
 dependencies:
   - P0-T11
   - P0-T12
