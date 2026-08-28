@@ -15,12 +15,19 @@ for ``exp``. This module treats the resulting two regimes differently:
 * **Exact-`Fraction` ops** (`matmul`, `elementwise_add`, `elementwise_mul`,
   `embedding_gather`): every f32 input is an exact dyadic rational, and `+`/`*`
   on dyadic rationals stay dyadic, so the mathematically exact result is
-  representable and comparable at *zero* tolerance -- provided every
-  intermediate f64 accumulation step (the accumulation order Rust actually
-  uses) stays within 53 bits of precision. The fixture generator checks this
-  mechanically for every case (see `assert_f64_exact_accumulation`) rather
-  than assuming it; fixture magnitudes are kept small specifically so this
-  precondition is trivially satisfied.
+  representable and comparable at *zero* tolerance. `matmul` accumulates its
+  inner-product sum in `f64` before a single final cast to `f32` (the
+  fixture generator mechanically checks every such accumulation stays within
+  53 bits of precision -- see `assert_f64_exact_accumulation` -- rather than
+  assuming it; fixture magnitudes are kept small specifically so this
+  precondition is trivially satisfied). `elementwise_add`/`elementwise_mul`
+  are actually single `f32`-native operations in the real implementation (no
+  `f64` promotion at all) -- this makes no difference to the zero-tolerance
+  comparison here, since exact-then-round-to-`f32` and direct `f32` arithmetic
+  necessarily agree for a lone correctly-rounded add/multiply (Figueroa's
+  double-rounding-safety bound: `f64`'s 53 bits comfortably exceed the
+  `2*24+2=50`-bit threshold below which routing a single `f32` op through a
+  wider intermediate format could ever change the result).
 
 * **`sqrt`-based ops** (`rms_norm`): IEEE 754 mandates correct rounding for
   `sqrt` and division, so the error budget is *provably* tight: propagating
