@@ -2,7 +2,7 @@ schema_version: "1.0"
 task_id: P0-T17
 title: Wire the Rust reference-core suite into the required repository gate
 phase: P0
-status: in_progress
+status: complete
 charter_goals:
   - Correction and reproducibility precede performance.
   - Reference CPU execution path.
@@ -14,7 +14,7 @@ non_goals:
   - Change the Python Phase 0 gate's own checks, thresholds, or scope.
   - Touch any path frozen by open PR #72 or PR #75.
 inputs:
-  - Canonical ForgeLLM base cb59f457b19c74a9c9339764154c583bd57cb0b0 (protected main).
+  - Canonical ForgeLLM base 0458f765ee91f482ce64d9c72fe357335129343e (protected main before this checkpoint).
   - "tools/repository-policy.yaml's required_checks currently lists only 'Validate and test'; reference-core is absent from both the required and candidate-required lists."
   - ".github/workflows/rust-reference.yml already exists and runs cargo test/fmt/clippy plus a todo!/unimplemented!/unsafe grep gate, but it is path-filtered to crates/**, Cargo.*, rust-toolchain.toml, is not a required check, and does not run on every PR."
   - "The Makefile's ci target currently runs lint plus verify (validate and pytest) plus verify-speculative plus simulate-cache-draft; it contains zero cargo invocations."
@@ -58,7 +58,7 @@ verification_commands:
   - make ci
   - make validate
   - git diff --check
-  - python3 scripts/validate_task_packet.py tasks/open/P0-T17-rust-reference-ci-gate.yaml --root .
+  - python3 scripts/validate_task_packet.py tasks/closed/P0-T17-rust-reference-ci-gate.yaml --root .
 evidence_requirements:
   - Record the exact Makefile diff (append-only, line count).
   - Record a make ci run before this change (Rust untested) and after (Rust tested), both with
