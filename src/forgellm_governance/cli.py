@@ -6,7 +6,7 @@ import argparse
 from pathlib import Path
 
 from .components import ComponentValidationError, load_component_document
-from .hardware import write_hardware_inventory
+from .hardware import write_public_hardware_inventory
 from .planner import PlacementPlanningError
 from .simulation import SimulationError, run_simulation
 from .snapshot import create_session_snapshot
@@ -110,7 +110,7 @@ def main() -> int:
         print(output)
         return 0
     if args.command == "inventory":
-        print(write_hardware_inventory(args.output))
+        print(write_public_hardware_inventory(Path.cwd(), args.output))
         return 0
     if args.command == "snapshot":
         print(create_session_snapshot(args.root, args.output))

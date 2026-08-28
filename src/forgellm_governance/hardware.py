@@ -7,6 +7,7 @@ import os
 import platform
 import subprocess
 from collections.abc import Callable, Sequence
+from copy import deepcopy
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -24,6 +25,24 @@ class CommandResult:
 
 Runner = Callable[[Sequence[str], float], CommandResult]
 
+_NETWORK_PUBLIC_FIELDS = frozenset(
+    {
+        "ifindex",
+        "ifname",
+        "flags",
+        "mtu",
+        "qdisc",
+        "operstate",
+        "linkmode",
+        "group",
+        "txqlen",
+        "link_type",
+    }
+)
+_STORAGE_PUBLIC_FIELDS = frozenset({"children", "name", "type", "size", "rota", "tran", "fstype"})
+_STORAGE_ROOT_FIELDS = frozenset({"blockdevices"})
+_STORAGE_OMIT_FIELDS = frozenset({"mountpoint", "mountpoints"})
+
 
 def run_command(command: Sequence[str], timeout: float = 5.0) -> CommandResult:
     argv = list(command)
@@ -36,7 +55,13 @@ def run_command(command: Sequence[str], timeout: float = 5.0) -> CommandResult:
             timeout=timeout,
             env={**os.environ, "LC_ALL": "C"},
         )
-        return CommandResult(argv, "ok" if completed.returncode == 0 else "error", completed.returncode, completed.stdout, completed.stderr)
+        return CommandResult(
+            argv,
+            "ok" if completed.returncode == 0 else "error",
+            completed.returncode,
+            completed.stdout,
+            completed.stderr,
+        )
     except FileNotFoundError:
         return CommandResult(argv, "unavailable", None, "", "command not found")
     except subprocess.TimeoutExpired as exc:
@@ -90,7 +115,11 @@ def collect_hardware_inventory(*, runner: Runner = run_command) -> dict[str, Any
             ],
             timeout=10.0,
         ),
-        "amd": _probe(runner, ["rocm-smi", "--showproductname", "--showmeminfo", "vram", "--showdriverversion", "--json"], timeout=10.0),
+        "amd": _probe(
+            runner,
+            ["rocm-smi", "--showproductname", "--showmeminfo", "vram", "--showdriverversion", "--json"],
+            timeout=10.0,
+        ),
         "network": _probe(runner, ["ip", "-j", "link"]),
         "storage": _probe(runner, ["lsblk", "-J", "-o", "NAME,TYPE,SIZE,ROTA,TRAN,FSTYPE,MOUNTPOINTS"]),
         "numa": _probe(runner, ["numactl", "--hardware"]),
@@ -115,8 +144,167 @@ def collect_hardware_inventory(*, runner: Runner = run_command) -> dict[str, Any
     }
 
 
-def write_hardware_inventory(path: Path | str, *, runner: Runner = run_command) -> Path:
-    output = Path(path)
+def _sanitize_network_data(data: Any) -> list[dict[str, Any]] | None:
+    if not isinstance(data, list):
+        return None
+    sanitized: list[dict[str, Any]] = []
+    for item in data:
+        if not isinstance(item, dict):
+            return None
+        if any(key in _NETWORK_PUBLIC_FIELDS and isinstance(value, (dict, list)) for key, value in item.items()):
+            return None
+        sanitized.append({key: value for key, value in item.items() if key in _NETWORK_PUBLIC_FIELDS})
+    return sanitized
+
+
+def _sanitize_storage_list(value: Any) -> tuple[bool, Any]:
+    if not isinstance(value, list):
+        return False, None
+    sanitized: list[dict[str, Any]] = []
+    for item in value:
+        if not isinstance(item, dict):
+            return False, None
+        valid, cleaned = _sanitize_storage_record(item, root=False)
+        if not valid:
+            return False, None
+        sanitized.append(cleaned)
+    return True, sanitized
+
+
+def _sanitize_storage_field(key: Any, value: Any, *, root: bool) -> tuple[bool, bool, Any]:
+    normalized_key = str(key).casefold()
+    if normalized_key in _STORAGE_OMIT_FIELDS:
+        return True, False, None
+
+    allowed_fields = _STORAGE_ROOT_FIELDS if root else _STORAGE_PUBLIC_FIELDS
+    if normalized_key not in allowed_fields:
+        return False, False, None
+    if normalized_key in {"blockdevices", "children"}:
+        valid, cleaned = _sanitize_storage_list(value)
+        return valid, True, cleaned
+    if isinstance(value, (dict, list)):
+        return False, False, None
+    return True, True, value
+
+
+def _sanitize_storage_record(value: Any, *, root: bool) -> tuple[bool, Any]:
+    if not isinstance(value, dict):
+        return False, None
+
+    sanitized: dict[str, Any] = {}
+    for key, item in value.items():
+        valid, include, cleaned = _sanitize_storage_field(key, item, root=root)
+        if not valid:
+            return False, None
+        if include:
+            sanitized[key] = cleaned
+    if root and "blockdevices" not in {str(key).casefold() for key in sanitized}:
+        return False, None
+    return True, sanitized
+
+
+def _sanitize_storage_data(value: Any, *, root: bool = True) -> tuple[bool, Any]:
+    if isinstance(value, list):
+        return _sanitize_storage_list(value)
+    if isinstance(value, dict):
+        return _sanitize_storage_record(value, root=root)
+    return False, None
+
+
+def _sanitize_json_probe(probe: dict[str, Any], *, expected_type: type) -> None:
+    if isinstance(probe.get("data"), expected_type):
+        probe["stderr"] = ""
+        return
+    probe["data"] = None
+    probe["stderr"] = ""
+    if probe.get("status") == "ok":
+        probe["status"] = "error"
+
+
+def _sanitize_probe_metadata(probe: Any) -> None:
+    if not isinstance(probe, dict):
+        return
+    probe["stderr"] = ""
+    if probe.get("status") != "ok":
+        probe["data"] = None
+
+
+def _mark_probe_error(probe: dict[str, Any]) -> None:
+    probe["data"] = None
+    probe["status"] = "error"
+
+
+def _sanitize_network_probe(probe: Any) -> None:
+    if not isinstance(probe, dict):
+        return
+    _sanitize_json_probe(probe, expected_type=list)
+    data = probe.get("data")
+    if not isinstance(data, list):
+        return
+    sanitized = _sanitize_network_data(data)
+    if sanitized is None:
+        _mark_probe_error(probe)
+    else:
+        probe["data"] = sanitized
+
+
+def _sanitize_storage_probe(probe: Any) -> None:
+    if not isinstance(probe, dict):
+        return
+    _sanitize_json_probe(probe, expected_type=dict)
+    data = probe.get("data")
+    if not isinstance(data, dict):
+        return
+    valid, sanitized = _sanitize_storage_data(data)
+    if not valid:
+        _mark_probe_error(probe)
+    else:
+        probe["data"] = sanitized
+
+
+def _sanitize_probe_collection(probes: dict[str, Any]) -> None:
+    for probe in probes.values():
+        _sanitize_probe_metadata(probe)
+    _sanitize_network_probe(probes.get("network"))
+    _sanitize_storage_probe(probes.get("storage"))
+
+
+def sanitize_inventory(inventory: dict[str, Any]) -> dict[str, Any]:
+    """Return a publication-safe copy of a collected inventory."""
+
+    published = deepcopy(inventory)
+    probes = published.get("probes")
+    if not isinstance(probes, dict):
+        published["probes"] = {}
+        return published
+    _sanitize_probe_collection(probes)
+    return published
+
+
+def _validated_public_output_path(root: Path | str, path: Path | str) -> Path:
+    project_root = Path(root).resolve()
+    artifacts_path = project_root / "artifacts"
+    if artifacts_path.is_symlink():
+        raise ValueError("repository artifacts directory must not be a symlink")
+    artifacts_root = artifacts_path.resolve(strict=False)
+    requested = Path(path)
+    candidate = requested if requested.is_absolute() else project_root / requested
+    resolved = candidate.resolve(strict=False)
+    if artifacts_root not in resolved.parents:
+        raise ValueError("inventory output must be a file inside the repository artifacts directory")
+    return resolved
+
+
+def write_public_hardware_inventory(
+    root: Path | str,
+    path: Path | str,
+    *,
+    runner: Runner = run_command,
+) -> Path:
+    """Collect, sanitize and write one publication-safe inventory under root/artifacts."""
+
+    output = _validated_public_output_path(root, path)
+    inventory = sanitize_inventory(collect_hardware_inventory(runner=runner))
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps(collect_hardware_inventory(runner=runner), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    output.write_text(json.dumps(inventory, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return output

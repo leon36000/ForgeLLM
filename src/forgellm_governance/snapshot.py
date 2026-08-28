@@ -9,10 +9,26 @@ from pathlib import Path
 
 
 def _git(root: Path, *args: str) -> str:
-    completed = subprocess.run(["git", "-C", str(root), *args], check=False, capture_output=True, text=True, timeout=5)
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(root), *args],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return "unavailable"
     if completed.returncode != 0:
         return "unavailable"
     return completed.stdout.strip() or "empty"
+
+
+def _worktree_state(root: Path) -> str:
+    status = _git(root, "status", "--short")
+    if status == "unavailable":
+        return "unavailable"
+    return "clean" if status == "empty" else "dirty"
 
 
 def _sha256(path: Path) -> str:
@@ -39,10 +55,10 @@ def create_session_snapshot(root: Path | str, output: Path | str) -> Path:
         "# ForgeLLM Session Continuity Snapshot",
         "",
         f"Generated: `{generated}`",
-        f"Repository: `{root}`",
+        "Repository: `ForgeLLM`",
         f"Branch: `{_git(root, 'branch', '--show-current')}`",
         f"Commit: `{_git(root, 'rev-parse', 'HEAD')}`",
-        f"Dirty status: `{_git(root, 'status', '--short')}`",
+        f"Dirty status: `{_worktree_state(root)}`",
         "",
         "## Canonical state files",
         "",

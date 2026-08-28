@@ -1,0 +1,83 @@
+schema_version: "1.0"
+task_id: P0-T13
+title: Harden public artifact privacy boundaries
+phase: P0
+status: in_progress
+charter_goals:
+  - Preserve privacy and reproducibility in the public ForgeLLM repository.
+  - Keep operational tooling fail-closed and independently verifiable.
+  - Reduce security risk without expanding engine or infrastructure scope.
+goal: Make every public hardware inventory path use one canonical sanitizer and remove local filesystem disclosures from session-continuity snapshots.
+non_goals:
+  - Collect or publish an actual hardware inventory.
+  - Modify drivers, toolkits, runners, accounts, secrets, Sonar settings, models, backends or benchmarks.
+  - Add compatibility stubs, duplicate sanitizers, placeholder APIs or deferred implementation debt.
+inputs:
+  - Owner authorization for autonomous rigorous remediation on 2026-08-21.
+  - Full-repository audit finding that the inventory CLI bypasses the publication sanitizer.
+  - Full-repository audit finding that session snapshots serialize the absolute local repository path.
+  - Adversarial review findings that raw dirty-worktree filenames and failed-probe diagnostics are local operational data.
+  - Public repository policy and risk R-013.
+outputs:
+  - One canonical publication sanitizer and safe hardware inventory writer in the governance package.
+  - CLI and script paths that use the same safe writer.
+  - Session snapshots that identify ForgeLLM without exposing an absolute local path or dirty-file names.
+  - Generic hosted validation of every open and closed task packet.
+  - Focused RED-to-GREEN regression tests and exact-head verification evidence.
+allowed_paths:
+  - tasks/open/P0-T13-public-artifact-privacy-hardening.yaml
+  - tasks/closed/P0-T13-public-artifact-privacy-hardening.yaml
+  - src/forgellm_governance/hardware.py
+  - src/forgellm_governance/cli.py
+  - src/forgellm_governance/snapshot.py
+  - scripts/hardware_inventory.py
+  - tests/test_hardware.py
+  - tests/test_snapshot.py
+  - tests/test_validation.py
+  - docs/roadmap/PHASE0_TASKS.md
+  - docs/state/CURRENT_STATE.md
+  - docs/state/HANDOFF.md
+  - docs/state/RISKS.md
+  - docs/reviews/
+forbidden_actions:
+  - Probe a real owner host or publish real hardware data under this task.
+  - Permit inventory output outside the selected repository artifacts directory or through a symlinked artifacts root.
+  - Preserve a raw public writer that bypasses sanitization.
+  - Serialize local usernames, absolute repository paths, dirty-worktree filenames, network addresses, MAC addresses, permanent addresses, broadcast fields, mount points, diagnostic stdout or stderr from failed probes, or stable device identifiers.
+  - Add a dependency, unsafe code, TODO, stub, placeholder result or skipped regression test.
+  - Modify engine semantics, P0-T09 activation, GitHub settings or any external system.
+acceptance_criteria:
+  - Network probe publication keeps only the reviewed allowlist and removes address, broadcast and permanent-address fields recursively.
+  - Storage probe publication removes mountpoint and mountpoints fields recursively.
+  - Diagnostic stderr is removed from every published probe.
+  - Failed, unavailable and timed-out probes publish data as null instead of raw stdout.
+  - Malformed structured network or storage output fails closed without retaining raw stdout or stderr.
+  - The canonical hardware writer sanitizes before serialization and rejects output outside root/artifacts.
+  - A symlinked repository artifacts root is rejected before collection or write.
+  - Both the package CLI and scripts/hardware_inventory.py call the canonical safe writer rather than a raw collector writer.
+  - Session snapshots contain no absolute local repository path and use a stable ForgeLLM repository identifier.
+  - Session snapshots reduce worktree state to clean, dirty or unavailable and never serialize dirty-file names.
+  - Every YAML task packet under tasks/open and tasks/closed is schema-validated by the normal hosted pytest gate.
+  - Focused tests demonstrate the pre-fix failures and pass after the minimal implementation.
+  - Ruff, focused tests, make ci and git diff --check pass on the exact final head.
+  - An independent blind review records ACCEPT with no unresolved BLOCKER or MAJOR finding before merge.
+verification_commands:
+  - PYTHONPATH=src python -m pytest -q tests/test_hardware.py tests/test_snapshot.py tests/test_validation.py
+  - ruff check src/forgellm_governance/hardware.py src/forgellm_governance/cli.py src/forgellm_governance/snapshot.py scripts/hardware_inventory.py tests/test_hardware.py tests/test_snapshot.py tests/test_validation.py
+  - make ci
+  - git diff --check
+  - git status --short
+evidence_requirements:
+  - Record exact canonical base, RED commits, final implementation head and merge commit.
+  - Preserve the expected RED failure messages for sanitizer bypass, absolute-path leakage, dirty filename disclosure, diagnostic stderr, failed-probe stdout and symlinked artifacts root.
+  - Record focused and full test counts and exact command outcomes.
+  - Record that no real host was probed and no inventory artifact was published.
+  - Record the independent blind-review model, exact reviewed head, verdict and residual limitations.
+  - State any unverified external or platform gate without representing it as success.
+dependencies:
+  - P0-T03
+owner_role: Project owner and chief architect
+reviewer_role: Independent security and correctness reviewer
+risk_ids:
+  - R-007
+  - R-013
