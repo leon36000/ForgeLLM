@@ -92,6 +92,23 @@ fn dense_decoder_propagates_invalid_token_id() {
 }
 
 #[test]
+fn dense_decoder_propagates_non_finite_embedding_input() {
+    let embedding_table = Tensor::new(vec![1, 2], vec![1.0, f32::NAN]).unwrap();
+    let projection = Tensor::new(vec![2, 2], vec![1.0; 4]).unwrap();
+
+    let error = dense_decode_single_token(&embedding_table, 0, &[1.0, 1.0], 1.0e-6, &projection)
+        .unwrap_err();
+
+    assert_eq!(
+        error,
+        ReferenceError::NonFiniteInput {
+            operation: "embedding_gather",
+            index: 1,
+        }
+    );
+}
+
+#[test]
 fn dense_decoder_propagates_projection_width_error() {
     let embedding_table = Tensor::new(vec![2, 2], vec![1.0; 4]).unwrap();
     let projection = Tensor::new(vec![3, 2], vec![1.0; 6]).unwrap();
@@ -105,6 +122,23 @@ fn dense_decoder_propagates_projection_width_error() {
             operation: "matmul",
             left: 2,
             right: 3,
+        }
+    );
+}
+
+#[test]
+fn dense_decoder_propagates_non_finite_projection_input() {
+    let embedding_table = Tensor::new(vec![1, 2], vec![1.0, 2.0]).unwrap();
+    let projection = Tensor::new(vec![2, 2], vec![1.0, f32::NAN, 1.0, 1.0]).unwrap();
+
+    let error = dense_decode_single_token(&embedding_table, 0, &[1.0, 1.0], 1.0e-6, &projection)
+        .unwrap_err();
+
+    assert_eq!(
+        error,
+        ReferenceError::NonFiniteInput {
+            operation: "matmul",
+            index: 1,
         }
     );
 }
