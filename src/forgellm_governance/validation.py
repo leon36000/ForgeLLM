@@ -473,6 +473,11 @@ def _git_check(root: Path, *arguments: str) -> bool:
     return result.returncode == 0
 
 
+def _git_is_shallow(root: Path) -> bool:
+    value = _git_text(root, "rev-parse", "--is-shallow-repository")
+    return value is not None and value.strip() == "true"
+
+
 def _git_text(root: Path, *arguments: str) -> str | None:
     try:
         result = subprocess.run(
@@ -564,10 +569,14 @@ def validate_derived_state(root: Path | str) -> list[ValidationIssue]:
         state_id, source_commit = _extract_state_metadata(state_path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
         return [ValidationIssue(str(state_path), str(exc))]
-    if not _git_check(root, "cat-file", "-e", f"{source_commit}^{{commit}}"):
+    source_present = _git_check(root, "cat-file", "-e", f"{source_commit}^{{commit}}")
+    if source_present:
+        if not _git_check(root, "merge-base", "--is-ancestor", source_commit, "HEAD"):
+            issues.append(ValidationIssue(str(state_path), "canonical source commit is not an ancestor of HEAD"))
+    elif not _git_is_shallow(root):
         issues.append(ValidationIssue(str(state_path), "canonical source commit is not present in Git"))
-    if not _git_check(root, "merge-base", "--is-ancestor", source_commit, "HEAD"):
-        issues.append(ValidationIssue(str(state_path), "canonical source commit is not an ancestor of HEAD"))
+    # A depth-one checkout cannot prove ancestry for an older source commit. The
+    # exact hash format, state metadata and manifest hashes remain enforceable.
 
     manifest_path = root / _MOBILE_MANIFEST_PATH
     try:
