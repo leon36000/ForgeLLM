@@ -26,6 +26,7 @@ outputs:
 allowed_paths:
   - tasks/open/P0-T14-lifecycle-state-validation.yaml
   - tasks/closed/P0-T14-lifecycle-state-validation.yaml
+  - tasks/open/P0-T03-repository-hardening.yaml
   - tasks/closed/P0-T03-repository-hardening.yaml
   - tasks/open/P0-T10-bounded-loop-engineering.yaml
   - tasks/open/P0-T13-public-artifact-privacy-hardening.yaml

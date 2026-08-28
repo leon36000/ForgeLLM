@@ -1,0 +1,52 @@
+# P0-T14 Lifecycle and Derived-State Verification Review
+
+- **Task:** P0-T14
+- **Authorization source:** owner-approved issue #73 and the bounded execution plan
+- **Base:** `9932a5a496df53e812d9f47c6bb95ae94b3a4a2f`
+- **Implementation head:** `51aa42cbff06d3a79df9a485ad6045b74148f522`
+- **Lifecycle packet head:** `29560d4e7ac9592e151f3fea75a4721d2cf845a1`
+- **Candidate head before this report:** `4ed80f473e107b149c69a7b76496c5791a8ff781`
+- **Evidence boundary:** repository governance and deterministic projections only
+- **Status:** remediation after independent review round 1
+
+## Scope
+
+This review covers task-directory lifecycle semantics, ADR dependency metadata, canonical state freshness, the rebuildable mobile manifest, the README current-state block, and the exact tracked-path tree. It does not authorize or assess inference, models, hardware, CUDA/ROCm, runtime, ABI, backend, kernel, serving, benchmarks, secrets or external settings.
+
+## Test-driven evidence
+
+The first focused RED checkpoint was committed as `ed82788f9db86cc5dc05f7ea5b2b5bd9cd48aa51`. Before implementation, the following command failed during collection because the lifecycle APIs did not yet exist:
+
+```text
+PYTHONPATH=src python3 -m pytest -q tests/test_lifecycle.py
+ImportError: cannot import name 'build_mobile_manifest' from forgellm_governance.validation
+```
+
+The implementation and validator integration were committed as `51aa42cbff06d3a79df9a485ad6045b74148f522`. The task packet authorization and closeout state were recorded in `c93fecf48de64e1160ad3694644e336b3dac945b` and `29560d4e7ac9592e151f3fea75a4721d2cf845a1`.
+
+## Local verification on the candidate
+
+- `PYTHONPATH=src python3 -m pytest -q tests/test_lifecycle.py tests/test_validation.py`: **26 passed**;
+- `make validate`: all project, research, benchmark, task, topology, mobile and shell gates passed;
+- `make ci`: Ruff check passed, the configured format gate passed, **500 tests passed**, **230 reference tests passed**, and the canonical synthetic simulation plus SHA-256 evidence passed;
+- `python3 -m ruff check src scripts tests`: passed;
+- `git diff --check`: passed before report remediation;
+- `TREE.txt` equals the sorted `git ls-files` output and the derived manifest equals the generator output;
+- the lifecycle validator reports `OK: ForgeLLM lifecycle state is semantically valid`.
+
+The status inventory is deterministic: P0-T03, P0-T07, P0-T08, P0-T11, P0-T12, P0-T13 and P0-T14 are closed/complete; P0-T04 is open/blocked; P0-T09 is open/in_progress; P0-T10 is open/review; and P0-T15 is open/in_progress. ADR-0005 and ADR-0006 remain proposed.
+
+## Independent review round 1
+
+GPT-5.6 Luna reviewed candidate `4ed80f473e107b149c69a7b76496c5791a8ff781` in a separate read-only context and returned `VERDICT=CHANGES_REQUESTED` for:
+
+1. missing versioned closeout evidence at `docs/reviews/P0-T14-LIFECYCLE-REVIEW.md` despite the packet requiring RED, base, implementation, review and merge evidence;
+2. the deletion of the stale open P0-T03 packet not being explicitly listed in the packet's `allowed_paths`.
+
+Both findings are addressed by this report and by adding the deleted open P0-T03 path to the P0-T14 allowed-path declaration. A new exact-head independent review is required before publication.
+
+## Safety and evidence boundaries
+
+No secret was read or written. No GitHub/Sonar setting or issue was mutated. No hardware probe, model inference, runtime/backend/ABI/kernel/CUDA/ROCm operation or benchmark was run. Historical implementation merges do not accept ADR-0005 or ADR-0006; P0-T10 remains `review` and P0-T15 remains design-only `in_progress`.
+
+**Final verdict:** pending remediation review.
