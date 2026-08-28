@@ -225,6 +225,14 @@ def test_derived_state_projection_matches_manifest(tmp_path: Path) -> None:
     assert validate_derived_state(_projection_repo(tmp_path)) == []
 
 
+def test_derived_state_accepts_shallow_checkout_without_source_object(tmp_path: Path) -> None:
+    full = _projection_repo(tmp_path)
+    shallow = tmp_path / "shallow"
+    subprocess.run(["git", "clone", "--quiet", "--depth=1", f"file://{full}", str(shallow)], check=True)
+
+    assert validate_derived_state(shallow) == []
+
+
 def test_derived_state_rejects_stale_mobile_state_id(tmp_path: Path) -> None:
     root = _projection_repo(tmp_path)
     path = root / "chatgpt/mobile-core/03_FORGELLM_STATE_AND_DECISIONS.md"
