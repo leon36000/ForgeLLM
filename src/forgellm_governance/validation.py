@@ -74,21 +74,26 @@ _SONAR_CONTRIBUTOR_COMMAND = re.compile(
 _OPEN_TASK_STATUSES = frozenset({"draft", "ready", "in_progress", "blocked", "review"})
 _CLOSED_TASK_STATUSES = frozenset({"complete", "cancelled"})
 _ADR_STATUS_VALUES = frozenset({"proposed", "accepted", "superseded", "rejected"})
-_ADR_ID_PATTERN = re.compile(r"^ADR-[0-9]{4}$")
-_STATE_ID_PATTERN = re.compile(r"^S-[0-9]{4,}$")
+_ADR_ID_PATTERN = re.compile(r"^ADR-\d{4}$", re.ASCII)
+_STATE_ID_PATTERN = re.compile(r"^S-\d{4,}$", re.ASCII)
 _COMMIT_PATTERN = re.compile(r"^[0-9a-f]{40}$")
-_STATE_ID_LINE = re.compile(r"(?m)^- \*\*State ID:\*\* (S-[0-9]{4,})\s*$")
+_STATE_ID_LINE = re.compile(r"(?m)^- \*\*State ID:\*\* (S-\d{4,})\s*$", re.ASCII)
 _STATE_COMMIT_LINE = re.compile(r"(?m)^- \*\*Canonical source commit:\*\* `([0-9a-f]{40})`\s*$")
-_MOBILE_STATE_ID_LINE = re.compile(r"(?m)^\*\*Canonical state ID:\*\* (S-[0-9]{4,})\s*$")
+_MOBILE_STATE_ID_LINE = re.compile(r"(?m)^\*\*Canonical state ID:\*\* (S-\d{4,})\s*$", re.ASCII)
 _MOBILE_COMMIT_LINE = re.compile(r"(?m)^\*\*Canonical source commit:\*\* `([0-9a-f]{40})`\s*$")
 _MOBILE_MANIFEST_LINE = re.compile(r"(?m)^\*\*Derived manifest:\*\* `([^`]+)`\s*$")
 _ADR_STATUS_LINE = re.compile(r"(?m)^- \*\*Status:\*\* (proposed|accepted|superseded|rejected)\s*$")
-_ADR_SUCCESSOR_LINE = re.compile(r"(?m)^- \*\*Successor:\*\* (ADR-[0-9]{4})\s*$")
+_ADR_SUCCESSOR_LINE = re.compile(r"(?m)^- \*\*Successor:\*\* (ADR-\d{4})\s*$", re.ASCII)
 
+_CURRENT_STATE_PATH = Path("docs/state/CURRENT_STATE.md")
+_TASK_PACKET_SCHEMA_PATH = Path("schemas/task-packet.schema.json")
+_OPEN_TASKS_PATH = Path("tasks/open")
+_CLOSED_TASKS_PATH = Path("tasks/closed")
+_YAML_FILE_PATTERN = "*.yml"
 _MOBILE_MANIFEST_PATH = Path("chatgpt/mobile-core/DERIVED-MANIFEST.yaml")
 _MOBILE_PROJECTION_PATH = Path("chatgpt/mobile-core/03_FORGELLM_STATE_AND_DECISIONS.md")
 _MOBILE_SOURCE_PATHS = (
-    Path("docs/state/CURRENT_STATE.md"),
+    _CURRENT_STATE_PATH,
     Path("docs/state/DECISIONS.md"),
     Path("docs/state/RISKS.md"),
     Path("docs/state/OPEN_QUESTIONS.md"),
@@ -256,7 +261,7 @@ def validate_task_packet_file(path: Path | str, *, root: Path | str | None = Non
         return [ValidationIssue(str(path), str(exc))]
     if not isinstance(data, Mapping):
         return [ValidationIssue(str(path), "task packet root must be an object")]
-    issues = _validate_schema(data, project_root / "schemas/task-packet.schema.json", path)
+    issues = _validate_schema(data, project_root / _TASK_PACKET_SCHEMA_PATH, path)
     if issues:
         return issues
     task_phase = data["task_id"].split("-", maxsplit=1)[0]
@@ -270,12 +275,12 @@ def validate_task_packet_file(path: Path | str, *, root: Path | str | None = Non
 def _task_packet_paths(root: Path) -> list[tuple[Path, frozenset[str]]]:
     paths: list[tuple[Path, frozenset[str]]] = []
     for relative, allowed_statuses in (
-        (Path("tasks/open"), _OPEN_TASK_STATUSES),
-        (Path("tasks/closed"), _CLOSED_TASK_STATUSES),
+        (_OPEN_TASKS_PATH, _OPEN_TASK_STATUSES),
+        (_CLOSED_TASKS_PATH, _CLOSED_TASK_STATUSES),
     ):
         directory = root / relative
         paths.extend((path, allowed_statuses) for path in sorted(directory.glob("*.yaml")))
-        paths.extend((path, allowed_statuses) for path in sorted(directory.glob("*.yml")))
+        paths.extend((path, allowed_statuses) for path in sorted(directory.glob(_YAML_FILE_PATTERN)))
     return paths
 
 
@@ -332,6 +337,34 @@ def _adr_is_accepted(root: Path, decision_id: str, source_path: Path, issues: li
         current_id = successor
 
 
+def _validate_complete_decision(
+    root: Path, path: Path, task_id: str, decision_id: str, issues: list[ValidationIssue]
+) -> None:
+    if _adr_is_accepted(root, decision_id, path, issues):
+        return
+    adr_path = _find_adr(root, decision_id)
+    status_name, _ = _adr_metadata(adr_path) if adr_path is not None else (None, None)
+    if status_name not in {"superseded", "accepted"}:
+        issues.append(
+            ValidationIssue(
+                str(path),
+                f"complete task {task_id} requires accepted {decision_id}; found {status_name or 'missing'}",
+            )
+        )
+
+
+def _validate_nonterminal_decision(root: Path, path: Path, decision_id: str, issues: list[ValidationIssue]) -> None:
+    adr_path = _find_adr(root, decision_id)
+    if adr_path is None:
+        issues.append(ValidationIssue(str(path), f"unresolved decision {decision_id}"))
+        return
+    status_name, successor = _adr_metadata(adr_path)
+    if status_name is None or status_name not in _ADR_STATUS_VALUES:
+        issues.append(ValidationIssue(str(path), f"decision {decision_id} has invalid status metadata"))
+    elif status_name == "superseded" and (successor is None or _find_adr(root, successor) is None):
+        issues.append(ValidationIssue(str(path), f"superseded {decision_id} requires an explicit successor"))
+
+
 def _validate_task_decisions(
     root: Path,
     path: Path,
@@ -346,65 +379,67 @@ def _validate_task_decisions(
     for decision_id in decision_ids:
         if not isinstance(decision_id, str) or not _ADR_ID_PATTERN.fullmatch(decision_id):
             continue
-        if status == "complete" and not _adr_is_accepted(root, decision_id, path, issues):
-            adr_path = _find_adr(root, decision_id)
-            status_name, _ = _adr_metadata(adr_path) if adr_path is not None else (None, None)
-            if status_name not in {"superseded", "accepted"}:
-                issues.append(
-                    ValidationIssue(
-                        str(path),
-                        f"complete task {task_id} requires accepted {decision_id}; found {status_name or 'missing'}",
-                    )
-                )
+        if status == "complete":
+            _validate_complete_decision(root, path, task_id, decision_id, issues)
         else:
-            adr_path = _find_adr(root, decision_id)
-            if adr_path is None:
-                issues.append(ValidationIssue(str(path), f"unresolved decision {decision_id}"))
-                continue
-            status_name, successor = _adr_metadata(adr_path)
-            if status_name is None or status_name not in _ADR_STATUS_VALUES:
-                issues.append(ValidationIssue(str(path), f"decision {decision_id} has invalid status metadata"))
-            elif status_name == "superseded" and (successor is None or _find_adr(root, successor) is None):
-                issues.append(ValidationIssue(str(path), f"superseded {decision_id} requires an explicit successor"))
+            _validate_nonterminal_decision(root, path, decision_id, issues)
 
 
-def validate_task_lifecycle(root: Path | str) -> list[ValidationIssue]:
-    """Validate task-directory status, identity, dependencies and ADR links."""
+def _validate_lifecycle_packet(
+    root: Path, path: Path, allowed_statuses: frozenset[str]
+) -> tuple[tuple[Path, Mapping[str, Any], str, str] | None, list[ValidationIssue]]:
+    try:
+        data = _load_yaml(path)
+    except ValueError as exc:
+        return None, [ValidationIssue(str(path), str(exc))]
+    if not isinstance(data, Mapping):
+        return None, [ValidationIssue(str(path), "task packet root must be an object")]
 
-    root = Path(root).resolve()
-    issues: list[ValidationIssue] = []
+    issues = _validate_schema(data, root / _TASK_PACKET_SCHEMA_PATH, path)
+    task_id = data.get("task_id")
+    status = data.get("status")
+    if not isinstance(task_id, str):
+        return None, issues
+    if not path.name.startswith(f"{task_id}-"):
+        issues.append(ValidationIssue(str(path), f"filename must start with task ID {task_id!r}"))
+    directory = _OPEN_TASKS_PATH if allowed_statuses == _OPEN_TASK_STATUSES else _CLOSED_TASKS_PATH
+    if not isinstance(status, str) or status not in allowed_statuses:
+        expectation = "non-terminal" if directory == _OPEN_TASKS_PATH else "terminal"
+        issues.append(ValidationIssue(str(path), f"{directory} packets must have a {expectation} status"))
+    if not isinstance(status, str):
+        return None, issues
+    return (path, data, task_id, status), issues
+
+
+def _collect_lifecycle_records(
+    root: Path,
+) -> tuple[list[tuple[Path, Mapping[str, Any], str, str]], list[ValidationIssue]]:
     records: list[tuple[Path, Mapping[str, Any], str, str]] = []
-    seen: dict[str, list[Path]] = {}
+    issues: list[ValidationIssue] = []
     for path, allowed_statuses in _task_packet_paths(root):
-        try:
-            data = _load_yaml(path)
-        except ValueError as exc:
-            issues.append(ValidationIssue(str(path), str(exc)))
-            continue
-        if not isinstance(data, Mapping):
-            issues.append(ValidationIssue(str(path), "task packet root must be an object"))
-            continue
-        issues.extend(_validate_schema(data, root / "schemas/task-packet.schema.json", path))
-        task_id = data.get("task_id")
-        status = data.get("status")
-        if not isinstance(task_id, str):
-            continue
-        if not path.name.startswith(f"{task_id}-"):
-            issues.append(ValidationIssue(str(path), f"filename must start with task ID {task_id!r}"))
-        if not isinstance(status, str) or status not in allowed_statuses:
-            directory = "tasks/open" if allowed_statuses == _OPEN_TASK_STATUSES else "tasks/closed"
-            expectation = "non-terminal" if directory == "tasks/open" else "terminal"
-            issues.append(ValidationIssue(str(path), f"{directory} packets must have a {expectation} status"))
-        if isinstance(status, str):
-            records.append((path, data, task_id, status))
-            seen.setdefault(task_id, []).append(path)
+        record, packet_issues = _validate_lifecycle_packet(root, path, allowed_statuses)
+        issues.extend(packet_issues)
+        if record is not None:
+            records.append(record)
+    return records, issues
 
+
+def _validate_duplicate_task_ids(
+    records: list[tuple[Path, Mapping[str, Any], str, str]], issues: list[ValidationIssue]
+) -> set[str]:
+    seen: dict[str, list[Path]] = {}
+    for path, _, task_id, _ in records:
+        seen.setdefault(task_id, []).append(path)
     for task_id, paths in sorted(seen.items()):
         if len(paths) > 1:
             locations = ", ".join(str(path) for path in paths)
             issues.append(ValidationIssue(locations, f"duplicate task ID {task_id}: {locations}"))
+    return set(seen)
 
-    known_ids = set(seen) | _historical_task_ids(root)
+
+def _validate_task_dependencies(
+    records: list[tuple[Path, Mapping[str, Any], str, str]], known_ids: set[str], issues: list[ValidationIssue]
+) -> None:
     for path, data, _, _ in records:
         dependencies = data.get("dependencies")
         if not isinstance(dependencies, list):
@@ -413,6 +448,14 @@ def validate_task_lifecycle(root: Path | str) -> list[ValidationIssue]:
             if isinstance(dependency, str) and dependency not in known_ids:
                 issues.append(ValidationIssue(str(path), f"unresolved dependency {dependency}"))
 
+
+def validate_task_lifecycle(root: Path | str) -> list[ValidationIssue]:
+    """Validate task-directory status, identity, dependencies and ADR links."""
+
+    root = Path(root).resolve()
+    records, issues = _collect_lifecycle_records(root)
+    known_ids = _validate_duplicate_task_ids(records, issues) | _historical_task_ids(root)
+    _validate_task_dependencies(records, known_ids, issues)
     for path, data, task_id, status in records:
         _validate_task_decisions(root, path, task_id, status, data, issues)
     return issues
@@ -440,7 +483,7 @@ def build_mobile_manifest(root: Path | str) -> dict[str, Any]:
     """Build the deterministic, non-authoritative mobile projection manifest."""
 
     root = Path(root).resolve()
-    state_path = root / "docs/state/CURRENT_STATE.md"
+    state_path = root / _CURRENT_STATE_PATH
     state_id, source_commit = _extract_state_metadata(state_path.read_text(encoding="utf-8"))
     source_hashes = {str(path): _sha256_file(root / path) for path in _MOBILE_SOURCE_PATHS}
     return {
@@ -564,7 +607,7 @@ def validate_derived_state(root: Path | str) -> list[ValidationIssue]:
 
     root = Path(root).resolve()
     issues: list[ValidationIssue] = []
-    state_path = root / "docs/state/CURRENT_STATE.md"
+    state_path = root / _CURRENT_STATE_PATH
     try:
         state_id, source_commit = _extract_state_metadata(state_path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
@@ -1638,7 +1681,7 @@ def validate_repository_automation(root: Path | str) -> list[ValidationIssue]:
     uses_pattern = re.compile(r"^\s*uses:\s*[^#\s]+@([^#\s]+)", re.MULTILINE)
     full_sha = re.compile(r"^[0-9a-f]{40}$")
     workflow_texts: dict[str, str] = {}
-    for workflow in sorted((root / ".github/workflows").glob("*.yml")):
+    for workflow in sorted((root / ".github/workflows").glob(_YAML_FILE_PATTERN)):
         try:
             workflow_text = workflow.read_text(encoding="utf-8")
             yaml.safe_load(workflow_text)
@@ -1688,7 +1731,7 @@ def validate_repository_automation(root: Path | str) -> list[ValidationIssue]:
     elif "run: make ci" not in phase0_text:
         issues.append(ValidationIssue(str(phase0_workflow), "Phase 0 workflow must execute the complete 'make ci' gate"))
 
-    for issue_form in sorted((root / ".github/ISSUE_TEMPLATE").glob("*.yml")):
+    for issue_form in sorted((root / ".github/ISSUE_TEMPLATE").glob(_YAML_FILE_PATTERN)):
         try:
             document = yaml.safe_load(issue_form.read_text(encoding="utf-8"))
         except yaml.YAMLError as exc:
@@ -1747,7 +1790,7 @@ def validate_project(root: Path | str) -> list[ValidationIssue]:
         "CLAUDE.md",
         "chatgpt/PROJECT_INSTRUCTIONS.txt",
         "docs/architecture/PROJECT_CHARTER.md",
-        "docs/state/CURRENT_STATE.md",
+        str(_CURRENT_STATE_PATH),
         "docs/research/RESEARCH_PROTOCOL.md",
         "docs/benchmarks/BENCHMARK_STANDARD.md",
         "research/repos.yaml",
@@ -1755,7 +1798,7 @@ def validate_project(root: Path | str) -> list[ValidationIssue]:
         "research/official_sources.yaml",
         "research/claims.yaml",
         "schemas/benchmark-result.schema.json",
-        "schemas/task-packet.schema.json",
+        str(_TASK_PACKET_SCHEMA_PATH),
     ]
     issues: list[ValidationIssue] = []
     for relative in required:
