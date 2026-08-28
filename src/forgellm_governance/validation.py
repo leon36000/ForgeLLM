@@ -589,9 +589,10 @@ def validate_tree_projection(root: Path | str) -> list[ValidationIssue]:
 
     root = Path(root).resolve()
     path = root / "TREE.txt"
-    expected = _git_text(root, "ls-files")
-    if expected is None:
+    tracked = _git_text(root, "ls-files")
+    if tracked is None:
         return [ValidationIssue(str(path), "cannot read tracked paths from Git")]
+    expected = "".join(f"{item}\n" for item in sorted(line for line in tracked.splitlines() if line))
     try:
         actual = path.read_text(encoding="utf-8")
     except OSError as exc:

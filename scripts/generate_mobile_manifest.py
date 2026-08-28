@@ -6,13 +6,15 @@ from pathlib import Path
 
 import yaml
 
-from forgellm_governance.validation import _MOBILE_MANIFEST_PATH, build_mobile_manifest
+from forgellm_governance.validation import build_mobile_manifest
+
+_DEFAULT_OUTPUT = Path("chatgpt/mobile-core/DERIVED-MANIFEST.yaml")
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Regenerate the derived ForgeLLM mobile projection manifest.")
     parser.add_argument("--root", type=Path, default=Path.cwd())
-    parser.add_argument("--output", type=Path, default=_MOBILE_MANIFEST_PATH)
+    parser.add_argument("--output", type=Path, default=_DEFAULT_OUTPUT)
     args = parser.parse_args()
     root = args.root.resolve()
     output = args.output if args.output.is_absolute() else root / args.output

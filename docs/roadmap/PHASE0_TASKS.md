@@ -13,11 +13,18 @@
 | P0-T09 / QG-01 | in progress — Task 4B.1 artifact boundary merged (inactive) | maintain and independently review the accepted `ci_based_only` scanner path without activation or submission | LOC-limit cause classified; PR #67 merged at `main@83f8ea6`; producer success/scanner skipped; current Sonar project remains Automatic Analysis |
 | P0-T11 | complete | bounded Rust CPU reference core: checked tensors, matmul, softmax, RMSNorm, argmax and recoverable allocations | PR #48; 28 Rust tests; independent review; hosted exact-head gates; merge `04342c8` |
 | P0-T12 | complete | bounded decoder tensor primitives: reshape, exact-shape add/multiply and embedding gather | PR #53; 46 Rust tests on the stacked line; independent review; hosted exact-head gates; merge `7962abe6` |
-| P0-T10 | complete — implementation and closeout merged | bounded, inert Loop Engineering bridge with provenance, task binding, receipts, and fail-closed repository validation | `main@87a1dde`; make validate-loop; 86 focused tests; ADR-0005 remains proposed pending explicit acceptance |
+| P0-T13 | complete | public-artifact privacy hardening with fail-closed sanitization and snapshot boundary | PR #78; protected merge `ad079c0`; 34 focused, 487 full and 230 speculative tests |
+| P0-T14 | complete | task lifecycle and derived-state validation with deterministic projections | issue #73; 13 lifecycle tests; `make validate`/`make ci`; ADR-0005 and ADR-0006 remain proposed |
+| P0-T15 | in progress — design-only checkpoint merged | versioned C ABI and runtime lifecycle design, without implementation | PR #75; protected merge `9932a5a`; ADR-0006 proposed; no ABI/runtime/backend code |
+| P0-T10 | review — implementation merged, acceptance pending | bounded, inert Loop Engineering bridge with provenance, task binding, receipts, and fail-closed repository validation | `main@87a1dde`; make validate-loop; ADR-0005 remains proposed; final architecture/security acceptance record absent |
 
-## P0-T10 closeout
+## P0-T10 integration checkpoint
 
-The P0-T10 static integration is complete from canonical base f8364f12402c3c58796dbc1b56f8c65d378e88de and is published at merge commit 87a1ddeb76d2bca45fe75853b4c3b4c9f19c78b0. Its receipt now binds to that public merge commit, so a fresh clone containing only protected `main` can reproduce the catalog validation. The increment remains limited to governance/reference artifacts and does not modify P0-T09, hardware, runtime, backend, or Sonar settings.
+The P0-T10 static integration is published at merge commit 87a1ddeb76d2bca45fe75853b4c3b4c9f19c78b0 from canonical base f8364f12402c3c58796dbc1b56f8c65d378e88de. Its receipt binds to that public merge commit, so a fresh clone containing only protected `main` can reproduce the catalog validation. The lifecycle record remains `review` because ADR-0005 is still `proposed` and the required final architecture/security acceptance record is absent. The increment remains limited to governance/reference artifacts and does not modify P0-T09, hardware, runtime, backend, or Sonar settings.
+
+## P0-T14 lifecycle checkpoint
+
+P0-T14 reconciles the open/closed task directories and the derived state projections required by issue #73. The implementation enforces non-terminal open packets, terminal closed packets, unique IDs, exact filename prefixes, dependency resolution, ADR status/successor rules, canonical state metadata, a hashed non-authoritative mobile manifest, the README current-state block and an exact `git ls-files` tree. P0-T10 stays in `review` because ADR-0005 is `proposed`; this checkpoint does not accept an ADR or alter any external setting.
 
 ## P0-T09 current gate
 

@@ -51,9 +51,7 @@ def _task_root(tmp_path: Path) -> Path:
     (tmp_path / "tasks/closed").mkdir(parents=True)
     (tmp_path / "schemas").mkdir()
     (tmp_path / "docs/architecture").mkdir(parents=True)
-    (tmp_path / "schemas/task-packet.schema.json").write_bytes(
-        (ROOT / "schemas/task-packet.schema.json").read_bytes()
-    )
+    (tmp_path / "schemas/task-packet.schema.json").write_bytes((ROOT / "schemas/task-packet.schema.json").read_bytes())
     return tmp_path
 
 

@@ -10,7 +10,7 @@ Scoring uses probability and impact from 1 to 5; exposure is their product.
 | R-004 | Portable DSL or dependency changes break the build. | 4 | 3 | 12 | build owner | pinned versions, adapters, fallback backend | upstream incompatible release |
 | R-005 | A public-repository workflow reaches a privileged self-hosted GPU runner. | 3 | 5 | 15 | security owner | protected `main` through FLLM, trusted-only workflow policy, separate runner review before registration | any runner registration or untrusted-event execution |
 | R-006 | Agent reports work or tests that were not executed. | 3 | 5 | 15 | verifier | command logs, CI, artifacts, independent replay | report lacks machine output |
-| R-007 | Chat or derived RAG context diverges from repository state. | 4 | 4 | 16 | governance owner | bootstrap/closeout, source commit/path in indexes, mobile regeneration | conflicting decisions/state IDs |
+| R-007 | Chat or derived RAG context diverges from repository state. | 4 | 4 | 16 | governance owner | bootstrap/closeout, canonical source metadata, deterministic mobile/README/TREE validation and regeneration | conflicting decisions/state IDs or stale projection |
 | R-008 | “Most powerful” remains undefined and unfalsifiable. | 5 | 4 | 20 | product owner | workload profiles and objective functions in P1 | optimization proposal lacks target metric |
 | R-009 | Vendor-specific optimization creates irreversible lock-in. | 3 | 4 | 12 | architect | shared semantics, ABI, conformance suite, multiple baselines | public API exposes vendor internals |
 | R-010 | Model or dataset licensing blocks publication. | 3 | 4 | 12 | legal/governance owner | license inventory and private assets | unknown or incompatible terms |

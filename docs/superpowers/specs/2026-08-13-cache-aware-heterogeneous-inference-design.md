@@ -1,10 +1,10 @@
 # ForgeLLM — Cache-Aware Heterogeneous Inference Design
 
-**Status:** owner-approved design; written specification pending final owner review  
+**Status:** reviewed and complete for the bounded synthetic simulator
 **Date:** 2026-08-13  
 **Proposed task:** P0-T07  
 **Canonical state at drafting:** S-0005 / P0-T04 blocked on first-host designation  
-**Implementation status:** none  
+**Implementation status:** bounded synthetic topology and placement simulation exists in `src/forgellm_governance/`; no production inference runtime
 **Hardware measurements:** none  
 **ForgeLLM performance claims:** none
 
@@ -434,14 +434,14 @@ All reported external performance remains `external_unreproduced`. This specific
 ## 17. Phase and task relationship
 
 - P0-T04 remains blocked pending one owner-authorized host and performs observation only.
-- P0-T07 may proceed in parallel as design and research only.
+- P0-T07 is complete for the bounded synthetic topology and placement simulator; its evidence boundary remains `synthetic_only`.
 - Hardware-dependent thresholds remain simulation variables, not accepted constants.
 - P0-T05 still defines workload profiles before any benchmark claim.
-- Implementation planning begins only after written-spec review and a separate reviewed implementation plan.
+- Any future implementation beyond the synthetic simulator still requires its own reviewed plan, task packet and authorization.
 
 ## 18. Spec self-review
 
-- No implementation code is authorized.
+- No production inference, runtime, ABI, backend or kernel implementation is authorized by this specification.
 - No product-specific conditional is part of the public architecture.
 - No external speedup is treated as a ForgeLLM measurement.
 - Exact and approximate modes are separated.
@@ -457,4 +457,4 @@ The durable decision is:
 
 > ForgeLLM will use a capability graph plus empirical placement/autotuning as its general microarchitecture-aware optimization plane, and ForgeCacheDraft will be the first bounded cache-aware CPU/GPU case study. Transition Atlas remains an experimental representation whose value must be established by simulation, conformance and end-to-end measurement.
 
-After the owner reviews this committed specification, the next action is to create a detailed implementation/research plan. No runtime implementation begins at that point without its own task authorization and review gates.
+The written specification and bounded synthetic simulator have been reviewed and accepted for their stated scope. No runtime implementation begins without its own task authorization and review gates.

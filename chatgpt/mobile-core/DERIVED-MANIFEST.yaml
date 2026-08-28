@@ -1,0 +1,21 @@
+schema_version: '1.0'
+kind: derived_mobile_manifest
+authority: derived_non_authoritative
+state_id: S-0013
+source_commit: 29560d4e7ac9592e151f3fea75a4721d2cf845a1
+projections:
+- path: chatgpt/mobile-core/03_FORGELLM_STATE_AND_DECISIONS.md
+  source_paths:
+  - docs/state/CURRENT_STATE.md
+  - docs/state/DECISIONS.md
+  - docs/state/RISKS.md
+  - docs/state/OPEN_QUESTIONS.md
+  - docs/state/HANDOFF.md
+  - docs/roadmap/PHASE0_TASKS.md
+  source_sha256:
+    docs/state/CURRENT_STATE.md: 8a7cce60b3954ad42d419fd90ca329da597c8045b6ff2641f5492f4f56c69137
+    docs/state/DECISIONS.md: 9380c441b87cb8d8ac15c920ddad8d55ce72098060902348a768e261d31667d1
+    docs/state/RISKS.md: 5c5cfeb773669e15c99d5f5ec8acb43a902a80c48c57d63afe0de0025d1d5b1f
+    docs/state/OPEN_QUESTIONS.md: 8133bbd1b054178055e6b8658b924ada23e84e10002f14f3d5733897c8b153c8
+    docs/state/HANDOFF.md: 989c06ae6fc04cff2a49938cab0f6e86cb51a946680f6dea2cc5949752057bef
+    docs/roadmap/PHASE0_TASKS.md: 5667627eb6a3f4e9de9a9f4d34ed03f6f1214eb0e35063b9f8eff70272403d56
