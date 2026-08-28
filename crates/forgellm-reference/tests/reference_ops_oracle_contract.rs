@@ -103,6 +103,31 @@ fn sha256_hex(bytes: &[u8]) -> String {
 }
 
 #[test]
+fn sha256_hex_matches_published_test_vectors() {
+    // Independently verified against Python's hashlib.sha256 for the exact
+    // same inputs, not just against the FIPS 180-4 spec's own worked example.
+    assert_eq!(
+        sha256_hex(b""),
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    );
+    assert_eq!(
+        sha256_hex(b"abc"),
+        "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+    );
+    // Exercises the exact one-block/two-block padding boundary (55 bytes +
+    // the 0x80 terminator + 8-byte length fits exactly one 64-byte block;
+    // 56 bytes does not and must spill into a second block).
+    assert_eq!(
+        sha256_hex(&[b'a'; 55]),
+        "9f4390f8d30c2dd92ec9f095b65e2b9ae9b0a925a5258e241c9f1e910f734318"
+    );
+    assert_eq!(
+        sha256_hex(&[b'a'; 64]),
+        "ffe054fe7ae0cb6dc65c3af9b61d5209f439851db43d0ba5997337df154668eb"
+    );
+}
+
+#[test]
 fn fixture_matches_its_committed_sha256_pin() {
     let digest = sha256_hex(FIXTURE_TEXT.as_bytes());
     let expected_line = FIXTURE_HASH_TEXT
