@@ -7,7 +7,7 @@
 - **Lifecycle packet head:** `29560d4e7ac9592e151f3fea75a4721d2cf845a1`
 - **Candidate head reviewed in round 2:** `b8706238aff8cffbbf66e9ee9aec8bcb6a30ebf2`
 - **Evidence boundary:** repository governance and deterministic projections only
-- **Status:** accepted on exact reviewed candidate; this final update is receipt-only
+- **Status:** remediation in progress after hosted shallow-checkout failure
 
 ## Scope
 
@@ -34,6 +34,14 @@ The implementation and validator integration were committed as `51aa42cbff06d3a7
 - `TREE.txt` equals the sorted `git ls-files` output and the derived manifest equals the generator output;
 - the lifecycle validator reports `OK: ForgeLLM lifecycle state is semantically valid`.
 
+## Hosted PR failure and systematic remediation
+
+PR #80 exposed a portability defect not visible in the full local clone. On head `9283ad106bc9ee30080daa1cadfbab3d116935ae`, hosted job `98741174915` failed in `make ci` at `validate_lifecycle` because the workflow checkout did not contain the older canonical source commit `29560d4e7ac9592e151f3fea75a4721d2cf845a1`. The independent hosted checks `CodeQL 98741309269`, `SonarCloud`, `analyze-python` and GitGuardian passed; dependency review was skipped by the existing workflow policy.
+
+The failure was reduced to the smallest reproducer: a depth-one clone of the projection fixture cannot prove ancestry for an older source commit. The regression test was committed as `aa6a3e9` after reproducing the failure with `1 failed, 13 deselected`; the fix is `b7ee96e`. In a shallow repository, the validator now retains structural full-hash and manifest checks and skips only the impossible object-presence/ancestor assertion; in a repository with the object available, both presence and ancestry checks remain enforced. No workflow, external setting or security gate was weakened.
+
+The fix requires fresh local CI, a new exact-head independent review and a new hosted check run before any merge.
+
 The status inventory is deterministic: P0-T03, P0-T07, P0-T08, P0-T11, P0-T12, P0-T13 and P0-T14 are closed/complete; P0-T04 is open/blocked; P0-T09 is open/in_progress; P0-T10 is open/review; and P0-T15 is open/in_progress. ADR-0005 and ADR-0006 remain proposed.
 
 ## Independent review round 1
@@ -51,14 +59,14 @@ GPT-5.6 Luna reviewed the corrected candidate `b8706238aff8cffbbf66e9ee9aec8bcb6
 
 **Round-2 verdict:** `ACCEPT` for the reviewed candidate. The final exact-head receipt review below confirms the report and all lifecycle evidence before publication.
 
-## Exact-head receipt review
+## Pre-remediation exact-head receipt review
 
 GPT-5.6 Luna reviewed the exact receipt candidate `59a912a89136ee9ae7860deb118e1bb755d178f7` in a separate read-only context. It found no issue and confirmed the diff, allowed-path scope, `TREE.txt`, derived manifest, lifecycle validators and the fresh `make ci` result (**500** full tests and **230** reference tests, with validation and simulation/hash gates successful). No secret, external setting, issue, hardware, model, runtime, backend, ABI, CUDA or ROCm operation was involved.
 
-**Exact-head receipt verdict:** `ACCEPT`.
+**Pre-remediation exact-head receipt verdict:** `ACCEPT`; superseded as the final publication head by the hosted-check remediation above.
 
 ## Safety and evidence boundaries
 
 No secret was read or written. No GitHub/Sonar setting or issue was mutated. No hardware probe, model inference, runtime/backend/ABI/kernel/CUDA/ROCm operation or benchmark was run. Historical implementation merges do not accept ADR-0005 or ADR-0006; P0-T10 remains `review` and P0-T15 remains design-only `in_progress`.
 
-**Final verdict:** `ACCEPT` for P0-T14 publication, with the evidence boundary and ADR-0005/ADR-0006 proposed states preserved.
+**Final verdict:** pending post-remediation exact-head review and hosted checks.
