@@ -2,7 +2,7 @@ schema_version: "1.0"
 task_id: P0-T14
 title: Enforce canonical task and derived-state lifecycle semantics
 phase: P0
-status: in_progress
+status: complete
 charter_goals:
   - Preserve canonical project state in version control.
   - Make governance and verification reproducible for human and agent contributors.
@@ -72,7 +72,7 @@ acceptance_criteria:
   - No external GitHub issue mutation, secret access, hardware/model/runtime action or architecture acceptance is claimed.
 verification_commands:
   - PYTHONPATH=src python3 -m pytest -q tests/test_lifecycle.py tests/test_validation.py
-  - python3 scripts/validate_task_packet.py tasks/open/P0-T14-lifecycle-state-validation.yaml --root .
+  - python3 scripts/validate_task_packet.py tasks/closed/P0-T14-lifecycle-state-validation.yaml --root .
   - PYTHONPATH=src python3 scripts/validate_lifecycle.py --root .
   - make mobile-manifest
   - python3 scripts/validate_project_state.py --root .
