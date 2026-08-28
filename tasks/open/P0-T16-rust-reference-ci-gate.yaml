@@ -1,0 +1,71 @@
+schema_version: "1.0"
+task_id: P0-T16
+title: Wire the Rust reference-core suite into the required repository gate
+phase: P0
+status: in_progress
+charter_goals:
+  - Correction and reproducibility precede performance.
+  - Reference CPU execution path.
+goal: Make the repository's one required branch-protection check ("Validate and test") actually exercise the Rust reference core by running cargo test, cargo fmt --check, and cargo clippy inside make ci, closing a verified gap where Rust code can merge to main untested.
+non_goals:
+  - Add, remove, or change any Rust source, test, or numerical behavior in crates/forgellm-reference.
+  - Make reference-core a required GitHub branch-protection status check (a repository-settings
+    change; recorded here as a recommendation to the owner, not performed by this task).
+  - Change the Python Phase 0 gate's own checks, thresholds, or scope.
+  - Touch any path frozen by open PR #72 or PR #75.
+inputs:
+  - Canonical ForgeLLM base cb59f457b19c74a9c9339764154c583bd57cb0b0 (protected main).
+  - "tools/repository-policy.yaml's required_checks currently lists only 'Validate and test'; reference-core is absent from both the required and candidate-required lists."
+  - ".github/workflows/rust-reference.yml already exists and runs cargo test/fmt/clippy plus a todo!/unimplemented!/unsafe grep gate, but it is path-filtered to crates/**, Cargo.*, rust-toolchain.toml, is not a required check, and does not run on every PR."
+  - "The Makefile's ci target currently runs lint plus verify (validate and pytest) plus verify-speculative plus simulate-cache-draft; it contains zero cargo invocations."
+outputs:
+  - "The Makefile's ci target additionally runs cargo fmt --all --check, cargo clippy --workspace --all-targets --locked -- -D warnings, and cargo test --workspace --all-targets --locked."
+  - "docs/quality/P0-T16-RUST-CI-GATE.md, an evidence report recording before/after make ci behavior and the exact commands added."
+  - "A .gitignore entry for target/, since running cargo locally via make ci now leaves Rust build artifacts in the working tree."
+allowed_paths:
+  - Makefile
+  - .gitignore
+  - docs/quality/P0-T16-RUST-CI-GATE.md
+  - tasks/open/P0-T16-rust-reference-ci-gate.yaml
+  - tasks/closed/P0-T16-rust-reference-ci-gate.yaml
+  - docs/state/CURRENT_STATE.md
+  - docs/state/HANDOFF.md
+forbidden_actions:
+  - Modify any file under crates/forgellm-reference/.
+  - Modify .github/workflows/rust-reference.yml or any other workflow file.
+  - Change or remove any existing line in the Makefile's ci or validate targets; only append.
+  - Add a new Rust or Python dependency.
+  - Touch scripts/hardware_inventory.py, src/forgellm_governance/{cli,hardware,snapshot}.py,
+    tests/test_{hardware,snapshot,validation}.py, tasks/open/P0-T13-*.yaml,
+    docs/architecture/ADR-0006-*.md, docs/research/P0-T15-*.md,
+    docs/superpowers/plans/2026-08-21-versioned-c-abi-design.md, or tasks/open/P0-T15-*.yaml
+    (PR #72 / PR #75 frozen paths).
+  - Add or modify any file under artifacts/governance/loop-engineering/ (that validator is
+    hard-pinned to task_id P0-T10 today; this task does not touch it).
+acceptance_criteria:
+  - make ci fails if cargo test, cargo fmt --check, or cargo clippy -D warnings would fail,
+    on a checkout that has crates/forgellm-reference present.
+  - make ci and make validate continue to pass unchanged on their existing Python-only checks.
+  - No line already present in the Makefile before this task is modified; only new lines are
+    appended to the ci target.
+  - "The PR description explicitly recommends, as an owner-only follow-up, adding reference-core to the GitHub branch-protection required-checks list, and states plainly that this task does not and cannot perform that repository-settings change itself."
+  - docs/quality/P0-T16-RUST-CI-GATE.md records the exact make ci invocation and output before
+    and after this change on the same commit.
+verification_commands:
+  - make ci
+  - make validate
+  - git diff --check
+  - python3 scripts/validate_task_packet.py tasks/open/P0-T16-rust-reference-ci-gate.yaml --root .
+evidence_requirements:
+  - Record the exact Makefile diff (append-only, line count).
+  - Record a make ci run before this change (Rust untested) and after (Rust tested), both with
+    raw output, on the same base commit, to demonstrate the gate now actually exercises
+    crates/forgellm-reference.
+  - "State explicitly that this task does not claim reference-core is a required GitHub status check; that remains an owner-authorized repository-settings action."
+  - Record that no file under crates/forgellm-reference/ or artifacts/governance/loop-engineering/
+    was touched.
+dependencies: []
+owner_role: Project owner and chief architect
+reviewer_role: Independent CI/build-tooling reviewer
+risk_ids:
+  - R-001

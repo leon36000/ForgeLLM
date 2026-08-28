@@ -49,3 +49,6 @@ datasets/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Rust build artifacts (crates/forgellm-reference)
+target/
