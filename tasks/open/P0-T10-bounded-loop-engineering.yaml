@@ -2,7 +2,7 @@ schema_version: '1.0'
 task_id: P0-T10
 title: Adopt bounded Loop Engineering orchestration
 phase: P0
-status: complete
+status: review
 charter_goals:
   - Preserve Git and accepted ADRs as ForgeLLM source of truth.
   - Make long-running agent work bounded, reproducible, interruptible, and independently verifiable.
@@ -20,6 +20,8 @@ inputs:
   - Upstream lcajigasm/loop-engineering commit ae2d610985064bb30c5013261988c813013c09e3.
   - Upstream MIT license blob 84524f23b209fccb02a8f239165f0444bfd70f3f.
   - Existing ForgeLLM loop declaration, receipt, and catalog APIs.
+decision_ids:
+  - ADR-0005
 outputs:
   - Exact inert vendor subset with provenance, license, and upstream Git blob hashes.
   - ForgeLLM-local bounded bridge skills and authority markers.

@@ -130,6 +130,20 @@ def test_lifecycle_rejects_complete_task_governed_by_proposed_adr(tmp_path: Path
     assert any("ADR-0005" in issue.message and "accepted" in issue.message for issue in issues)
 
 
+def test_lifecycle_rejects_missing_decision_for_nonterminal_task(tmp_path: Path) -> None:
+    root = _task_root(tmp_path)
+    _write_packet(
+        root,
+        "tasks/open",
+        "P0-T10-loop.yaml",
+        _packet(task_id="P0-T10", status="review", decision_ids=["ADR-0005"]),
+    )
+
+    issues = validate_task_lifecycle(root)
+
+    assert any("unresolved decision ADR-0005" in issue.message for issue in issues)
+
+
 def test_lifecycle_rejects_superseded_adr_without_successor(tmp_path: Path) -> None:
     root = _task_root(tmp_path)
     _write_adr(root, "ADR-0005", "superseded")

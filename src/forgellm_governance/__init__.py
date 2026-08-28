@@ -50,10 +50,15 @@ from .speculative_trace import (
 from .topology import TopologySnapshot, load_topology
 from .validation import (
     ValidationIssue,
+    build_mobile_manifest,
     validate_benchmark_file,
+    validate_derived_state,
+    validate_lifecycle,
     validate_project,
     validate_research_catalogs,
+    validate_task_lifecycle,
     validate_task_packet_file,
+    validate_tree_projection,
 )
 
 __all__ = [
@@ -78,6 +83,7 @@ __all__ = [
     "TransactionStateError",
     "UnreachableResidualError",
     "ValidationIssue",
+    "build_mobile_manifest",
     "acceptance_probability",
     "begin_round",
     "build_trace_document",
@@ -98,9 +104,13 @@ __all__ = [
     "sample_speculative_round",
     "synchronize_pending",
     "validate_benchmark_file",
+    "validate_derived_state",
+    "validate_lifecycle",
     "validate_project",
     "validate_research_catalogs",
     "validate_task_packet_file",
+    "validate_task_lifecycle",
+    "validate_tree_projection",
 ]
 
 __version__ = "0.1.0"
