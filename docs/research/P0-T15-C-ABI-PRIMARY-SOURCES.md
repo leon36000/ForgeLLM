@@ -98,6 +98,16 @@ Each source statement below is classified as:
 - **Selected rule:** v1 uses stable status codes plus a caller-owned diagnostic buffer; no library-allocated error object is required for ordinary failure reporting.
 - **Limitation:** this selection must be re-evaluated if structured nested diagnostics become a real binding requirement.
 
+### SRC-08 — POSIX `fork` async-signal-safety
+
+- **Official source:** <https://pubs.opengroup.org/onlinepubs/9799919799/functions/fork.html>
+- **Standard edition:** POSIX.1-2024, Issue 8 (online publication `9799919799`)
+- **Accessed:** 2026-08-27
+- **Observed source facts:** after a multithreaded process forks, the child may safely call only async-signal-safe functions until a successful `exec`; inherited locks and runtime state cannot be assumed usable for general library initialization.
+- **ForgeLLM inference:** runtime construction and every other ForgeLLM API call are outside the v1 child-before-`exec` safety boundary.
+- **Selected rule:** after any `fork`, the child makes no ForgeLLM call before a successful `exec`, whether or not the parent had a live ForgeLLM runtime; a new runtime is created only after `exec` unless a later accepted fork-safety design proves a stronger rule.
+- **Limitation:** this is a caller/process boundary, not an executable fork-safety proof; the future implementation task must test/document the no-call rule for supported process-launch patterns.
+
 ## 3. Cross-source conclusions
 
 ### 3.1 Version negotiation
@@ -217,7 +227,7 @@ Thread-safety proposal:
 - session mutation/configuration completes before request submission; concurrent mutable configuration is invalid;
 - request `poll`, `wait` and `cancel` are thread-safe and may race according to the state rules above;
 - release requires exclusive ownership of that handle reference; bindings needing shared ownership must implement it above the C ABI or use future explicit retain/release functions.
-- after `fork` in a process with a live ForgeLLM runtime, the child makes no ForgeLLM call before `exec`; a fresh runtime is created only after `exec` unless a later accepted fork-safety design proves a stronger rule.
+- after any `fork`, the child makes no ForgeLLM call before a successful `exec`; a fresh runtime is created only after `exec` unless a later accepted fork-safety design proves a stronger rule.
 
 ### 3.8 Panic and process-failure boundary
 

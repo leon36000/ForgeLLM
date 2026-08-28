@@ -229,7 +229,7 @@ When the real vertical slice includes requests:
 - verify release of a non-terminal request returns `INVALID_STATE` without blocking or consuming the handle;
 - verify release after each terminal state;
 - verify bounded shutdown reports timeout without force-freeing active resources;
-- verify a child process does not call ForgeLLM after `fork` and before `exec` when the parent had a live runtime;
+- verify a child process makes no ForgeLLM call after any `fork` and before a successful `exec`, regardless of parent runtime state;
 - run ThreadSanitizer or Loom-style internal concurrency tests where the supported toolchain permits;
 - do not add callbacks to make tests convenient.
 

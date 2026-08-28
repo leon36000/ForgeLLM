@@ -261,7 +261,7 @@ Object rules:
 
 Language bindings that need shared public-handle ownership implement that policy above the C ABI or use a future explicit retain/release addition under a new ABI version. V1 does not expose generic retain.
 
-Fork behavior is not supported after a runtime exists. After a process forks with a live ForgeLLM runtime, the child must not call ForgeLLM before `exec`; inherited live handles are invalid in the child. A new runtime may be created only after `exec` in a fresh process image, unless a later accepted fork-safety design proves a stronger rule.
+Fork behavior is not supported after any process fork. After `fork`, the child must make no ForgeLLM call before a successful `exec`, regardless of whether the parent had created a ForgeLLM runtime; inherited live handles are invalid in the child. A new runtime may be created only after `exec` in a fresh process image, unless a later accepted fork-safety design proves a stronger rule.
 
 ### 12. Core/backend separation
 

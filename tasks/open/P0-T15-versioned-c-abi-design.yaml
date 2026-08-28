@@ -46,6 +46,7 @@ acceptance_criteria:
   - ABI-visible scalars use fixed-width C integer types and ABI-visible strings/bytes use pointer-plus-length views with explicit encoding and lifetime.
   - Extensible input and output structures define size, ABI-version, reserved-zero and append-only compatibility rules.
   - ABI-visible aggregate structures cross only through const input or mutable output pointers; public aggregate parameters and returns are never by value.
+  - After any fork, the child makes no ForgeLLM call before a successful exec; runtime creation is post-exec only unless a later accepted fork-safety design proves a stronger rule.
   - Status codes are fixed-width, stable and never renumbered; detailed errors use an allocation-neutral caller-provided buffer contract.
   - No allocation is freed across a different allocator boundary; library-owned memory has an API release operation and caller-owned buffers stay caller-owned.
   - Every exported operation is no-unwind and the panic, abort and OOM evidence boundary is stated precisely.
