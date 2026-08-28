@@ -16,7 +16,7 @@
 | P0-T13 | complete | public-artifact privacy hardening with fail-closed sanitization and snapshot boundary | PR #78; protected merge `ad079c0`; 34 focused, 487 full and 230 speculative tests |
 | P0-T14 | complete | task lifecycle and derived-state validation with deterministic projections | issue #73; 16 lifecycle tests; `make validate`/`make ci`; ADR-0005 and ADR-0006 remain proposed |
 | P0-T15 | in progress — design-only checkpoint merged | versioned C ABI and runtime lifecycle design, without implementation | PR #75; protected merge `9932a5a`; ADR-0006 proposed; no ABI/runtime/backend code |
-| P0-T16 | complete — bounded CPU reference slice | one in-memory dense decoder token: embedding gather, RMSNorm, projection, softmax and greedy argmax | 51 Rust tests; independent oracle; packet/review; no model/runtime/ABI/backend/GPU scope |
+| P0-T16 | complete — bounded CPU reference slice | one in-memory dense decoder token: embedding gather, RMSNorm, projection, softmax and greedy argmax | 53 Rust tests; independent oracle; packet/review; no model/runtime/ABI/backend/GPU scope |
 | P0-T10 | review — implementation merged, acceptance pending | bounded, inert Loop Engineering bridge with provenance, task binding, receipts, and fail-closed repository validation | `main@87a1dde`; make validate-loop; ADR-0005 remains proposed; final architecture/security acceptance record absent |
 
 ## P0-T10 integration checkpoint
