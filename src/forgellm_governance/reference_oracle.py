@@ -110,7 +110,7 @@ def f32_bits_to_fraction(bits: int) -> Fraction | None:
     Returns ``None`` for NaN or infinity, which carry no rational value.
     """
     (value,) = struct.unpack("<f", struct.pack("<I", bits & 0xFFFFFFFF))
-    if value != value or math.isinf(value):  # NaN check via self-inequality
+    if math.isnan(value) or math.isinf(value):
         return None
     return Fraction(*value.as_integer_ratio())
 

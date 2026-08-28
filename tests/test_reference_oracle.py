@@ -243,8 +243,10 @@ class TestExactOpsAgreeWithF64Path:
         assert result == [[Fraction(3)], [Fraction(1)], [Fraction(3)], [Fraction(2)]]
 
     def test_embedding_gather_rejects_out_of_range(self):
+        table = [[Fraction(1)]]
+        out_of_range_token_ids = [5]
         with pytest.raises(ValueError):
-            embedding_gather_exact([[Fraction(1)]], [5])
+            embedding_gather_exact(table, out_of_range_token_ids)
 
 
 # ---------------------------------------------------------------------------
@@ -277,8 +279,9 @@ class TestTranscendentalOracle:
         # ~7.3 decimal digits at minimum); with max_prec equal to base_prec,
         # the loop gets exactly one, insufficient attempt and must raise
         # rather than return an unproven low-precision guess.
+        insufficient_value = Fraction(-1, 2)
         with pytest.raises(ReferenceOracleAmbiguousRounding):
-            decimal_transcendental_with_escape("exp", Fraction(-1, 2), base_prec=1, max_prec=1)
+            decimal_transcendental_with_escape("exp", insufficient_value, base_prec=1, max_prec=1)
 
     def test_escape_mechanism_is_reachable(self):
         # Directly exercise the precision-doubling loop by starting so low
