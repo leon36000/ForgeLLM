@@ -2,7 +2,7 @@ schema_version: "1.0"
 task_id: P0-T18
 title: Add a stdlib-only, re-derivable differential oracle for existing reference ops
 phase: P0
-status: in_progress
+status: complete
 charter_goals:
   - Correction and reproducibility precede performance.
   - Reference CPU execution path.

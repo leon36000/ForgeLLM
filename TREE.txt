@@ -223,11 +223,11 @@ tasks/closed/P0-T13-public-artifact-privacy-hardening.yaml
 tasks/closed/P0-T14-lifecycle-state-validation.yaml
 tasks/closed/P0-T16-dense-decoder-reference.yaml
 tasks/closed/P0-T17-rust-reference-ci-gate.yaml
+tasks/closed/P0-T18-differential-reference-oracle.yaml
 tasks/open/P0-T04-first-hardware-inventory.yaml
 tasks/open/P0-T09-sonarqube-main-analysis.yaml
 tasks/open/P0-T10-bounded-loop-engineering.yaml
 tasks/open/P0-T15-versioned-c-abi-design.yaml
-tasks/open/P0-T18-differential-reference-oracle.yaml
 tests/fixtures/components/duplicate-implementation.json
 tests/fixtures/components/missing-fallback.json
 tests/fixtures/components/valid-cache-draft.json
