@@ -85,3 +85,20 @@ The fix round at `b5fa926e6c609d073ef68774eb912b7e3cc99079`:
 - Residual boundary: no ABI header/symbol/FFI implementation, binary
   compatibility, runtime/backend, hardware, CUDA/ROCm, publication or secret
   evidence is claimed. ADR-0006 remains `proposed`.
+
+## Second blind Sol gate and final remediation
+
+- Blind GPT-5.6-Sol reviewed exact head `19b5642ca2d3e41d36c8e1c2ad50b8c4ccc75675`
+  against base `ad079c0bf6f86b044f1d1d819cb105e3afe5a65f` and returned
+  `VERDICT=NO-GO` with one `MAJOR`: the post-`fork` no-call rule was still
+  conditional on the parent having a live ForgeLLM runtime, which left a
+  multithreaded child without that runtime able to construct one before `exec`.
+  The gate also required authoritative POSIX provenance for the rule.
+- Final remediation commit `2e7977dee988712d05f299ea0486e252fc670bf8`
+  makes the child-before-`exec` prohibition unconditional after any `fork`,
+  permits runtime creation only after `exec`, adds POSIX.1-2024 Issue 8 as
+  `SRC-08`, and propagates the rule to the research record, implementation plan
+  and packet.
+- The final exact-head independent review and fresh local/hosted gates remain
+  required; no merge authorization is claimed in this section. ADR-0006 remains
+  `proposed`, and no ABI implementation is authorized.
