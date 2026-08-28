@@ -6,9 +6,10 @@
 - **Packet RED commit:** `a81b7daa663265aa17c7b02a84272170bcc77c1b`
 - **Implementation head:** `7ad8efdf53c60178ea83f3883a88178169583062`
 - **Test-hardening head:** `a43a0fa32650524ad4759cf0f0676d4bab690363`
+- **Evidence receipt head:** `925a58bb5b45bf6d908e72dc55519d3e753b8f14`
 - **State/projection synchronization:** `c80fcdd53ca579b35b332dd751c4baae127c652c`
 - **Evidence boundary:** in-memory Rust CPU reference semantics only
-- **Status:** candidate complete; exact hosted checks on the test-hardening head are green; final receipt/Sol gate and protected merge pending
+- **Status:** implementation complete; exact receipt checks are green; final Sol gate and protected merge pending
 
 ## Scope
 
@@ -45,6 +46,7 @@ and the packet was moved to `tasks/closed` with `status: complete`.
 ## Local candidate evidence
 
 - The test-hardening head `a43a0fa32650524ad4759cf0f0676d4bab690363` was checked locally after `git rev-parse HEAD` returned that exact hash.
+- The documentation receipt head `925a58bb5b45bf6d908e72dc55519d3e753b8f14` was then checked locally after `git rev-parse HEAD` returned that exact hash; the receipt changes no implementation behavior.
 - `cargo test --test dense_decoder`: **7 passed**;
 - `cargo test --workspace --all-targets --locked`: **53 passed**;
 - `cargo fmt --all --check`: passed;
@@ -53,7 +55,7 @@ and the packet was moved to `tasks/closed` with `status: complete`.
   the crate-level `#![forbid(unsafe_code)]` declaration;
 - `make validate`, exact P0-T16 packet validation, lifecycle/project-state validators and
   `git diff --check`: passed;
-- full `make ci` on that exact head: **503 Python tests passed**, **230 reference tests passed**, with Ruff,
+- full `make ci` on the exact receipt head: **503 Python tests passed**, **230 reference tests passed**, with Ruff,
   validators, deterministic simulation and SHA-256 evidence passed;
 - state S-0016 and canonical source `55d08c76b7fcdc3b6c256d35a4d74b275652964c` are bound to
   the protected baseline and all derived projections match.
@@ -69,6 +71,17 @@ workflow policy. SonarCloud reported a passing Quality Gate, 0 new issues, 0 acc
 and 0 security hotspots. The documentation receipt below is intentionally revalidated on its
 own exact head before the final Sol decision.
 
+The documentation receipt head `925a58bb5b45bf6d908e72dc55519d3e753b8f14` is the current PR
+head and is also `CLEAN`. Its exact hosted checks passed: Validate and test (`98754497252`),
+analyze-python (`98754497196`), reference-core (`98754497115`), CodeQL (`98754610878`),
+SonarCloud (`98754558165`, zero annotations), and GitGuardian (`98754491341`). Dependency
+Review (`98754497548`) was skipped by the existing workflow policy. The SonarCloud comment
+reports Quality Gate passed, 0 new issues, 0 accepted issues and 0 security hotspots.
+
+The closed packet's `complete` status records completion of the bounded implementation scope;
+the protected merge and post-merge validation remain separate integration gates and are not
+claimed here.
+
 ## Boundaries and residual limitations
 
 No secret was read or written. No GitHub/Sonar setting or issue was mutated. No hardware probe,
@@ -77,4 +90,4 @@ performed. This is not real-model conformance, tokenization, model-format suppor
 KV-cache, scheduling, production-decoder, P1/P2 or performance evidence. ADR-0005 and ADR-0006
 remain `proposed`; P0-T10 remains `review` and P0-T15 remains design-only `in_progress`.
 
-**Final verdict:** the implementation/test-hardening head is independently reviewed and hosted-green; the final documentation receipt, exact-head Sol gate and protected merge remain pending.
+**Final verdict:** the exact receipt head is locally and host-validated, independently reviewed for scope, and ready for the final GPT-5.6-Sol gate; protected merge and post-merge validation remain pending.

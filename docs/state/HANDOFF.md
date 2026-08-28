@@ -31,7 +31,7 @@ P0-T14 reconciles the task directories and state projections under issue #73. P0
 
 ## P0-T16 dense decoder reference slice
 
-P0-T16 delivers `dense_decode_single_token`, a single-token in-memory composition of embedding gather, RMSNorm, rank-two projection, softmax and deterministic greedy argmax. Its five independent-oracle integration tests and typed error propagation establish a CPU correctness reference only; model loading, tokenization, attention, KV cache, runtime, ABI, backend, GPU and performance remain out of scope.
+P0-T16 delivers `dense_decode_single_token`, a single-token in-memory composition of embedding gather, RMSNorm, rank-two projection, softmax and deterministic greedy argmax. Its seven integration tests include an independent golden oracle plus typed error propagation for index, shape, non-finite input/weight and epsilon failures; they establish a CPU correctness reference only. Model loading, tokenization, attention, KV cache, runtime, ABI, backend, GPU and performance remain out of scope. The bounded implementation is complete; the protected merge and post-merge validation are still integration gates.
 
 ## P0-T09 authorization and source
 
