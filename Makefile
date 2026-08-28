@@ -74,6 +74,8 @@ verify-speculative:
 
 ci: lint verify verify-speculative simulate-cache-draft
 	if [ -f Cargo.toml ]; then \
+	  $(PYTHON) scripts/generate_reference_oracle_fixture.py --check --root . && \
+	  sha256sum -c crates/forgellm-reference/tests/fixtures/reference_ops_oracle.sha256 && \
 	  cargo fmt --all --check && \
 	  cargo clippy --workspace --all-targets --locked -- -D warnings && \
 	  cargo test --workspace --all-targets --locked; \
