@@ -14,7 +14,7 @@
 | P0-T11 | complete | bounded Rust CPU reference core: checked tensors, matmul, softmax, RMSNorm, argmax and recoverable allocations | PR #48; 28 Rust tests; independent review; hosted exact-head gates; merge `04342c8` |
 | P0-T12 | complete | bounded decoder tensor primitives: reshape, exact-shape add/multiply and embedding gather | PR #53; 46 Rust tests on the stacked line; independent review; hosted exact-head gates; merge `7962abe6` |
 | P0-T13 | complete | public-artifact privacy hardening with fail-closed sanitization and snapshot boundary | PR #78; protected merge `ad079c0`; 34 focused, 487 full and 230 speculative tests |
-| P0-T14 | complete | task lifecycle and derived-state validation with deterministic projections | issue #73; 15 lifecycle tests; `make validate`/`make ci`; ADR-0005 and ADR-0006 remain proposed |
+| P0-T14 | complete | task lifecycle and derived-state validation with deterministic projections | issue #73; 16 lifecycle tests; `make validate`/`make ci`; ADR-0005 and ADR-0006 remain proposed |
 | P0-T15 | in progress — design-only checkpoint merged | versioned C ABI and runtime lifecycle design, without implementation | PR #75; protected merge `9932a5a`; ADR-0006 proposed; no ABI/runtime/backend code |
 | P0-T10 | review — implementation merged, acceptance pending | bounded, inert Loop Engineering bridge with provenance, task binding, receipts, and fail-closed repository validation | `main@87a1dde`; make validate-loop; ADR-0005 remains proposed; final architecture/security acceptance record absent |
 

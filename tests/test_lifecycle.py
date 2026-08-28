@@ -280,3 +280,9 @@ def test_tree_projection_rejects_stale_listing(tmp_path: Path) -> None:
     issues = validate_tree_projection(root)
 
     assert any("TREE.txt is stale" in issue.message for issue in issues)
+
+
+def test_repository_canonical_source_commit_is_ancestor() -> None:
+    issues = validate_derived_state(ROOT)
+
+    assert not any("canonical source commit is not an ancestor" in issue.message for issue in issues)

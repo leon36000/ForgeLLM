@@ -29,8 +29,8 @@ L’ordre d’autorité est :
 La mémoire implicite d’un assistant n’est jamais la source de vérité. Les décisions, expériences et changements d’état doivent être écrits dans Git. Un RAG externe ou une base Neon éventuelle reste un index dérivé et reconstruisible.
 
 <!-- forgellm:current-state:begin -->
-State ID: `S-0013`
-Canonical source commit: `29560d4e7ac9592e151f3fea75a4721d2cf845a1`
+State ID: `S-0014`
+Canonical source commit: `c1fd91536031fd9b2fbc24b71095bd4a0c8d0e66`
 Task statuses: P0-T03=complete; P0-T04=blocked; P0-T07=complete; P0-T08=complete; P0-T09=in_progress; P0-T10=review; P0-T11=complete; P0-T12=complete; P0-T13=complete; P0-T14=complete; P0-T15=in_progress
 <!-- forgellm:current-state:end -->
 
