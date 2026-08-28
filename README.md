@@ -31,7 +31,7 @@ La mémoire implicite d’un assistant n’est jamais la source de vérité. Les
 <!-- forgellm:current-state:begin -->
 State ID: `S-0016`
 Canonical source commit: `55d08c76b7fcdc3b6c256d35a4d74b275652964c`
-Task statuses: P0-T03=complete; P0-T04=blocked; P0-T07=complete; P0-T08=complete; P0-T09=in_progress; P0-T10=review; P0-T11=complete; P0-T12=complete; P0-T13=complete; P0-T14=complete; P0-T15=in_progress; P0-T16=complete; P0-T17=in_progress; P0-T18=in_progress
+Task statuses: P0-T03=complete; P0-T04=blocked; P0-T07=complete; P0-T08=complete; P0-T09=in_progress; P0-T10=review; P0-T11=complete; P0-T12=complete; P0-T13=complete; P0-T14=complete; P0-T15=in_progress; P0-T16=complete; P0-T17=complete; P0-T18=in_progress
 <!-- forgellm:current-state:end -->
 
 ## Dépôt public et actifs privés
