@@ -7,7 +7,7 @@
 - **Lifecycle packet head:** `29560d4e7ac9592e151f3fea75a4721d2cf845a1`
 - **Candidate head reviewed in round 2:** `b8706238aff8cffbbf66e9ee9aec8bcb6a30ebf2`
 - **Evidence boundary:** repository governance and deterministic projections only
-- **Status:** remediation in progress after Sol gate NO-GO
+- **Status:** post-remediation candidate awaiting final Sol gate
 
 ## Scope
 
@@ -28,9 +28,9 @@ The implementation and validator integration were committed as `51aa42cbff06d3a7
 
 - `PYTHONPATH=src python3 -m pytest -q tests/test_lifecycle.py tests/test_validation.py`: **28 passed**;
 - `make validate`: all project, research, benchmark, task, topology, mobile and shell gates passed;
-- `make ci`: Ruff check passed, the configured format gate passed, **501 tests passed**, **230 reference tests passed**, and the canonical synthetic simulation plus SHA-256 evidence passed;
+- `make ci`: Ruff check passed, the configured format gate passed, **502 tests passed**, **230 reference tests passed**, and the canonical synthetic simulation plus SHA-256 evidence passed;
 - `python3 -m ruff check src scripts tests`: passed;
-- `git diff --check`: passed before report remediation;
+- `git diff --check`: passed on the post-remediation candidate;
 - `TREE.txt` equals the sorted `git ls-files` output and the derived manifest equals the generator output;
 - the lifecycle validator reports `OK: ForgeLLM lifecycle state is semantically valid`.
 
@@ -78,8 +78,14 @@ GPT-5.6 Sol reviewed the exact PR head `44b94b49b3a2251faf5c2cb7c080af810576aafd
 
 The first gap is corrected to **15 lifecycle tests** after adding the tree regression. The second is covered by `test_tree_projection_rejects_stale_listing`, which exercises the existing validator against a committed stale tree. No runtime, security, external-setting or evidence-boundary change is involved. A fresh exact-head Sol gate is required after the remediation.
 
+## Post-remediation candidate evidence
+
+The two Sol findings were implemented in commit `cbe77905b14e7f2e0b58cf28fff52c7f1a14cd87`: the roadmap now records the actual **15** lifecycle tests, and `test_tree_projection_rejects_stale_listing` rejects a committed stale `TREE.txt`. The focused lifecycle/validation suite passed **28 tests**, the lifecycle validator returned `OK`, and the full local `make ci` passed **502** Python tests plus **230** reference tests.
+
+The exact PR #80 head `cbe77905b14e7f2e0b58cf28fff52c7f1a14cd87` passed the hosted checks: Validate and test `98746164007`, analyze-python `98746163937`, CodeQL `98746267222`, SonarCloud `98746253906` with **0 annotations** and **0 new issues**, and GitGuardian `98746158841`; dependency review `98746185987` was skipped by the existing workflow policy. The PR base remains `9932a5a496df53e812d9f47c6bb95ae94b3a4a2f`, the PR is clean, and issue #73 remains open. The report itself is now a receipt-only update; a final exact-head Sol gate is required after this documentation synchronization.
+
 ## Safety and evidence boundaries
 
 No secret was read or written. No GitHub/Sonar setting or issue was mutated. No hardware probe, model inference, runtime/backend/ABI/kernel/CUDA/ROCm operation or benchmark was run. Historical implementation merges do not accept ADR-0005 or ADR-0006; P0-T10 remains `review` and P0-T15 remains design-only `in_progress`.
 
-**Final verdict:** pending post-remediation critical Sol gate and hosted checks.
+**Final verdict:** pending final exact-head critical Sol gate after the receipt-only documentation synchronization.
