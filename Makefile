@@ -73,6 +73,11 @@ verify-speculative:
 	  tests/test_speculative_adversarial.py
 
 ci: lint verify verify-speculative simulate-cache-draft
+	if [ -f Cargo.toml ]; then \
+	  cargo fmt --all --check && \
+	  cargo clippy --workspace --all-targets --locked -- -D warnings && \
+	  cargo test --workspace --all-targets --locked; \
+	fi
 
 mobile-hashes:
 	$(PYTHON) scripts/hash_mobile_context.py --root .

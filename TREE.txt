@@ -91,6 +91,7 @@ docs/governance/SOLO_PROJECT_REVIEW_POLICY.md
 docs/quality/P0-T09-SONAR-ADMIN-READBACK.md
 docs/quality/P0-T09-SONAR-BASELINE.md
 docs/quality/P0-T10-LOOP-ENGINEERING.md
+docs/quality/P0-T17-RUST-CI-GATE.md
 docs/quality/QG-01-SONAR-MAIN-ANALYSIS-DESIGN.md
 docs/research/DEEP_RESEARCH_PROGRAM.md
 docs/research/EVIDENCE_POLICY.md
@@ -216,6 +217,7 @@ tasks/open/P0-T04-first-hardware-inventory.yaml
 tasks/open/P0-T09-sonarqube-main-analysis.yaml
 tasks/open/P0-T10-bounded-loop-engineering.yaml
 tasks/open/P0-T15-versioned-c-abi-design.yaml
+tasks/open/P0-T17-rust-reference-ci-gate.yaml
 tests/fixtures/components/duplicate-implementation.json
 tests/fixtures/components/missing-fallback.json
 tests/fixtures/components/valid-cache-draft.json
