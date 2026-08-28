@@ -154,6 +154,7 @@ Rules:
 - the library reads no byte beyond `min(struct_size, supported_size)`;
 - in ABI v1, `abi_version` equals the exact API-table version selected by bootstrap; it is not an independent structure revision;
 - a structure must include the mandatory `struct_size` and `abi_version` prefix and must match the selected table's `abi_version`, otherwise the call returns `VERSION_MISMATCH` before reading optional fields;
+- ABI-visible aggregate structures cross the boundary only through pointers: input descriptors are `const` pointers, output descriptors are mutable pointers, and public aggregate parameters and returns are never passed by value;
 - an explicitly supported shorter prefix is a same-table-version compatibility case, not an implicit older-table fallback; `struct_size` never infers a new structure revision;
 - fields absent from a smaller valid structure receive documented defaults;
 - a larger structure is accepted only when the known prefix is valid and all currently reserved fields in the known prefix are zero;
@@ -216,6 +217,7 @@ Thread-safety proposal:
 - session mutation/configuration completes before request submission; concurrent mutable configuration is invalid;
 - request `poll`, `wait` and `cancel` are thread-safe and may race according to the state rules above;
 - release requires exclusive ownership of that handle reference; bindings needing shared ownership must implement it above the C ABI or use future explicit retain/release functions.
+- after `fork` in a process with a live ForgeLLM runtime, the child makes no ForgeLLM call before `exec`; a fresh runtime is created only after `exec` unless a later accepted fork-safety design proves a stronger rule.
 
 ### 3.8 Panic and process-failure boundary
 

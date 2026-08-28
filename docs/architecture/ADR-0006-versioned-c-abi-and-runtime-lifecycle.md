@@ -143,6 +143,7 @@ Compatibility rules:
 - the API table version fixes the semantic contract for every structure it accepts;
 - in ABI v1, `abi_version` equals the exact API-table version selected by bootstrap; it is not an independent structure revision;
 - a structure must include the mandatory `struct_size` and `abi_version` prefix and must match the selected table's `abi_version`, otherwise the call returns `VERSION_MISMATCH` before reading optional fields;
+- ABI-visible aggregate structures cross the boundary only through pointers: input descriptors are `const` pointers, output descriptors are mutable pointers, and public aggregate parameters and returns are never passed by value;
 - a released structure never changes within one table version;
 - a newer table may deliberately accept an older structure prefix only as an explicit same-table-version compatibility rule in the newer table's tests and documentation; this is not an implicit older-table fallback and `struct_size` never infers a new structure revision;
 - the library reads no byte beyond `min(struct_size, size_known_by_that_table)`;
@@ -260,7 +261,7 @@ Object rules:
 
 Language bindings that need shared public-handle ownership implement that policy above the C ABI or use a future explicit retain/release addition under a new ABI version. V1 does not expose generic retain.
 
-Fork behavior is not guaranteed after a runtime exists. A process that forks must create a new runtime in the child before using ForgeLLM there; inherited live handles are invalid in the child.
+Fork behavior is not supported after a runtime exists. After a process forks with a live ForgeLLM runtime, the child must not call ForgeLLM before `exec`; inherited live handles are invalid in the child. A new runtime may be created only after `exec` in a fresh process image, unless a later accepted fork-safety design proves a stronger rule.
 
 ### 12. Core/backend separation
 

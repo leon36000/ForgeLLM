@@ -162,6 +162,7 @@ Before Rust behavior:
 
 - compile the header as C11 and C++17 with warnings-as-errors;
 - assert widths, offsets, alignment, table size and reserved fields;
+- assert that every ABI-visible aggregate descriptor crosses through the required `const` input or mutable output pointer and that no public aggregate parameter or return is by value;
 - inspect the dynamic symbol table and reject every unapproved export;
 - compile old-size/new-size fixture headers where the accepted table explicitly supports them;
 - verify that default compiler packing produces the expected layout without `#pragma pack`.
@@ -228,6 +229,7 @@ When the real vertical slice includes requests:
 - verify release of a non-terminal request returns `INVALID_STATE` without blocking or consuming the handle;
 - verify release after each terminal state;
 - verify bounded shutdown reports timeout without force-freeing active resources;
+- verify a child process does not call ForgeLLM after `fork` and before `exec` when the parent had a live runtime;
 - run ThreadSanitizer or Loom-style internal concurrency tests where the supported toolchain permits;
 - do not add callbacks to make tests convenient.
 
