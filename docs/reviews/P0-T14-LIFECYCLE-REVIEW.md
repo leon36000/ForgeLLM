@@ -7,7 +7,7 @@
 - **Lifecycle packet head:** `29560d4e7ac9592e151f3fea75a4721d2cf845a1`
 - **Candidate head reviewed in round 2:** `b8706238aff8cffbbf66e9ee9aec8bcb6a30ebf2`
 - **Evidence boundary:** repository governance and deterministic projections only
-- **Status:** accepted on the reviewed candidate; final receipt head requires exact-head re-review
+- **Status:** accepted on exact reviewed candidate; this final update is receipt-only
 
 ## Scope
 
@@ -49,10 +49,16 @@ Both findings are addressed by this report and by adding the deleted open P0-T03
 
 GPT-5.6 Luna reviewed the corrected candidate `b8706238aff8cffbbf66e9ee9aec8bcb6a30ebf2` in a separate read-only context. It reran the RED replay, focused tests, packet/lifecycle/project validators, `make ci` in a temporary clone, manifest/tree comparison and the allowed-path audit. It found no Critical, High or Medium issue; the two round-1 findings were confirmed resolved. The review recorded **500 passing Python tests**, **230 passing reference tests**, successful Ruff/validation/simulation/hash gates, a clean worktree and no external mutation.
 
-**Round-2 verdict:** `ACCEPT` for the reviewed candidate. This report update is evidence-only; the resulting final head must receive an exact-head receipt review before publication.
+**Round-2 verdict:** `ACCEPT` for the reviewed candidate. The final exact-head receipt review below confirms the report and all lifecycle evidence before publication.
+
+## Exact-head receipt review
+
+GPT-5.6 Luna reviewed the exact receipt candidate `59a912a89136ee9ae7860deb118e1bb755d178f7` in a separate read-only context. It found no issue and confirmed the diff, allowed-path scope, `TREE.txt`, derived manifest, lifecycle validators and the fresh `make ci` result (**500** full tests and **230** reference tests, with validation and simulation/hash gates successful). No secret, external setting, issue, hardware, model, runtime, backend, ABI, CUDA or ROCm operation was involved.
+
+**Exact-head receipt verdict:** `ACCEPT`.
 
 ## Safety and evidence boundaries
 
 No secret was read or written. No GitHub/Sonar setting or issue was mutated. No hardware probe, model inference, runtime/backend/ABI/kernel/CUDA/ROCm operation or benchmark was run. Historical implementation merges do not accept ADR-0005 or ADR-0006; P0-T10 remains `review` and P0-T15 remains design-only `in_progress`.
 
-**Final verdict:** pending exact-head receipt review.
+**Final verdict:** `ACCEPT` for P0-T14 publication, with the evidence boundary and ADR-0005/ADR-0006 proposed states preserved.
