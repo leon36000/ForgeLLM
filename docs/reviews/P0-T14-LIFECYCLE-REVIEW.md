@@ -7,7 +7,7 @@
 - **Lifecycle packet head:** `29560d4e7ac9592e151f3fea75a4721d2cf845a1`
 - **Candidate head reviewed in round 2:** `b8706238aff8cffbbf66e9ee9aec8bcb6a30ebf2`
 - **Evidence boundary:** repository governance and deterministic projections only
-- **Status:** remediation in progress after hosted shallow-checkout failure
+- **Status:** hosted remediation verified; ready for final Sol gate
 
 ## Scope
 
@@ -28,7 +28,7 @@ The implementation and validator integration were committed as `51aa42cbff06d3a7
 
 - `PYTHONPATH=src python3 -m pytest -q tests/test_lifecycle.py tests/test_validation.py`: **26 passed**;
 - `make validate`: all project, research, benchmark, task, topology, mobile and shell gates passed;
-- `make ci`: Ruff check passed, the configured format gate passed, **500 tests passed**, **230 reference tests passed**, and the canonical synthetic simulation plus SHA-256 evidence passed;
+- `make ci`: Ruff check passed, the configured format gate passed, **501 tests passed**, **230 reference tests passed**, and the canonical synthetic simulation plus SHA-256 evidence passed;
 - `python3 -m ruff check src scripts tests`: passed;
 - `git diff --check`: passed before report remediation;
 - `TREE.txt` equals the sorted `git ls-files` output and the derived manifest equals the generator output;
@@ -42,7 +42,7 @@ The failure was reduced to the smallest reproducer: a depth-one clone of the pro
 
 The initial hosted SonarCloud run reported a passing Quality Gate but still created 11 new annotations on the changed validator: five quality findings for duplicated literals and cognitive complexity, plus six concise-regex warnings. None were accepted as harmless by default. The literal findings were removed with shared path/pattern constants; the complexity findings were reduced by splitting decision and packet/lifecycle collection helpers; and the numeric regexes now use `\d` with `re.ASCII` so the original ASCII identifier semantics remain explicit.
 
-The shallow-checkout fix was committed as `b7ee96e`; the Sonar remediation refactor is `3a75f78`. The fix requires fresh local CI, a new exact-head independent review and a new hosted check run before any merge.
+The shallow-checkout fix was committed as `b7ee96e`; the Sonar remediation refactor is `3a75f78`. The fresh local `make ci` on `13dce624da6f0cf27962ad06796696953b6e3bd2` passed with **501** full tests and **230** reference tests. The matching hosted checks are: Validate and test `98742841471`, analyze-python `98742841262`, CodeQL `98742957759`, SonarCloud `98742924616` with **0 annotations**, and GitGuardian `98742840150`; dependency review `98742863210` was skipped by the existing workflow policy. The hosted remediation head is therefore green and requires only the final critical Sol gate before merge.
 
 The status inventory is deterministic: P0-T03, P0-T07, P0-T08, P0-T11, P0-T12, P0-T13 and P0-T14 are closed/complete; P0-T04 is open/blocked; P0-T09 is open/in_progress; P0-T10 is open/review; and P0-T15 is open/in_progress. ADR-0005 and ADR-0006 remain proposed.
 
@@ -71,4 +71,4 @@ GPT-5.6 Luna reviewed the exact receipt candidate `59a912a89136ee9ae7860deb118e1
 
 No secret was read or written. No GitHub/Sonar setting or issue was mutated. No hardware probe, model inference, runtime/backend/ABI/kernel/CUDA/ROCm operation or benchmark was run. Historical implementation merges do not accept ADR-0005 or ADR-0006; P0-T10 remains `review` and P0-T15 remains design-only `in_progress`.
 
-**Final verdict:** pending post-remediation exact-head review and hosted checks.
+**Final verdict:** pending final critical Sol gate; hosted remediation checks are green with zero Sonar annotations.
