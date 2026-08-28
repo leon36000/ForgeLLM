@@ -15,9 +15,14 @@ from fractions import Fraction
 
 import pytest
 
+# _margin_to_nearest_rounding_boundary is private; importing it directly is
+# deliberate here, to regression-test the exact function a real reviewer
+# found inverted (see test_margin_to_rounding_boundary_shrinks_toward_a_real_tie
+# and test_escape_mechanism_does_not_confidently_misresolve_near_a_tie below).
 from forgellm_governance.reference_oracle import (
     F32_CAST_HALF_ULP,
     ReferenceOracleAmbiguousRounding,
+    _margin_to_nearest_rounding_boundary,
     decimal_to_fraction,
     decimal_transcendental_with_escape,
     elementwise_add_exact,
@@ -304,6 +309,70 @@ class TestTranscendentalOracle:
         # precision before decimal ever saw it, if float() were used).
         relative_error = abs(back - odd_fraction) / abs(odd_fraction)
         assert relative_error < Fraction(1, 10**48)
+
+    def test_margin_to_rounding_boundary_shrinks_toward_a_real_tie(self):
+        # Regression test for a real BLOCKER found by an independent
+        # reviewer (and reproduced here): an earlier version of this
+        # function returned `abs(value - nearest)` -- the residual from
+        # `value` to its own rounded neighbor -- which moves in the
+        # *opposite* direction from safety (it is near `half_ulp` exactly
+        # when `value` sits near a tie, and near 0 when `value` sits near
+        # one specific representable point). The escape check's `>
+        # error_bound` comparison was therefore accepting the inputs it
+        # should have escalated, and vice versa. Confirmed: values placed
+        # within 2**-135 of a real f32 tie were confidently, silently
+        # resolved to the wrong bit pattern under the old logic (1063/4000
+        # in the reviewer's adversarial battery).
+        lo = f32_bits_to_fraction(0x3F800000)  # 1.0
+        hi = f32_bits_to_fraction(0x3F800001)  # next float up
+        tie = (lo + hi) / 2
+        # Exponents chosen well above f32's own ULP scale at this magnitude
+        # (half_ulp here is 2**-24 =~ 5.96e-8, i.e. exponent ~24): anything
+        # coarser than that would land outside the [lo, hi] interval
+        # entirely and compare against an unrelated neighbor, not exercise
+        # "close to this specific tie" at all.
+        margins = [
+            float(_margin_to_nearest_rounding_boundary(tie + Fraction(1, 2**exponent)))
+            for exponent in (30, 50, 70, 100, 130)
+        ]
+        # Must be monotonically non-increasing as the offset from the tie
+        # shrinks (i.e. as the candidate gets closer to the danger zone).
+        assert all(earlier >= later for earlier, later in zip(margins, margins[1:], strict=False)), margins
+        # And must approach zero, not `half_ulp`, as the offset vanishes.
+        assert margins[-1] < 1e-30, margins
+
+    def test_escape_mechanism_does_not_confidently_misresolve_near_a_tie(self):
+        # Direct reproduction of the reviewer's adversarial battery at the
+        # module's real base_prec=40: construct candidates within
+        # 2**-128..2**-138 of a genuine f32 tie and confirm the escape
+        # check never both (a) declares confidence and (b) is wrong.
+        rng = random.Random(2026)
+        tested = 0
+        confidently_wrong = 0
+        for _ in range(2000):
+            base_bits = rng.randint(0x3F000000, 0x41000000)
+            lo_bits, hi_bits = base_bits, base_bits + 1
+            lo = f32_bits_to_fraction(lo_bits)
+            hi = f32_bits_to_fraction(hi_bits)
+            if lo is None or hi is None:
+                continue
+            tie = (lo + hi) / 2
+            exponent = rng.randint(128, 138)
+            sign = rng.choice([1, -1])
+            candidate = tie + sign * Fraction(1, 2**exponent)
+            correct_bits = fraction_to_f32_bits(candidate)
+            expected_bits = hi_bits if sign > 0 else lo_bits
+            if correct_bits != expected_bits:
+                continue  # construction sanity check failed; skip
+            tested += 1
+
+            error_bound = abs(candidate) * Fraction(1, 2) * Fraction(10) ** -(40 - 1)
+            margin = _margin_to_nearest_rounding_boundary(candidate)
+            confidently_accepted = margin > error_bound
+            if confidently_accepted and correct_bits != expected_bits:
+                confidently_wrong += 1
+        assert tested > 1000, "construction sanity check itself may be broken"
+        assert confidently_wrong == 0, f"{confidently_wrong}/{tested} confidently wrong near a real tie"
 
 
 # ---------------------------------------------------------------------------

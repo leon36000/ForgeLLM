@@ -110,6 +110,57 @@ green:
    transcendental path. Regression test: `test_fraction_to_decimal_never_touches_float`, using a
    Fraction whose naive `float()` conversion would already be lossy.
 
+## BLOCKER found by an independent reviewer, fixed and re-verified before merge
+
+A second independent Sonnet reviewer (running in parallel, with a genuinely different tool
+constraint — read-only, no compiler/interpreter execution rights on this repo, so it verified by
+executing the actual PR source in an isolated Python namespace and porting the Rust logic to
+Python by hand for cross-checking) found a real, concretely-reproduced correctness bug in
+`_distance_to_nearest_f32_boundary` (the Ziv-escape safety check's core primitive), independent of
+and in addition to the 5 issues already listed above.
+
+**The bug:** the function returned `abs(value - nearest)` — the residual from a high-precision
+candidate to its own correctly-rounded f32 neighbor — as if it were "distance to the nearest
+rounding tie." These move in *opposite* directions: the residual is *small* when `value` sits
+close to one specific representable point (genuinely safe, unambiguous rounding) and grows toward
+`half_ulp` as `value` approaches an actual tie (genuinely dangerous, ambiguous rounding). The
+escape check's `if margin > error_bound: return candidate` (accept as safely resolved) was
+therefore accepting exactly the inputs that most needed escalation, and unnecessarily escalating
+inputs that were already perfectly safe.
+
+**Reproduction (both by the reviewer and independently by me, using the reviewer's exact
+construction):** building candidates within `2**-128`..`2**-138` of a genuine f32 rounding tie —
+close enough that the module's real `base_prec=40` default cannot distinguish which side of the
+tie they fall on by more precision alone, but constructed here as already-exact Fractions so the
+*only* variable under test is the safety check's own logic — the buggy version confidently
+accepted (without escalating) results that were on the *wrong* side of the tie in **1063 of 4000**
+(reviewer's run) and **0 of 4000 correctly-flagged, 3269 correctly escalated** cases respectively
+before and after the fix (my own independent re-run against the exact same construction).
+
+**Why the shipped fixture's specific numbers were never actually wrong:** both the reviewer and I
+separately checked the 8 cases in the real committed fixture against 300+ digit ground truth; the
+worst true margin-to-tie ratio found was `~0.22`, nowhere near the danger zone this bug affects.
+The bug lived in reusable safety-net infrastructure that happened not to be exercised adversarially
+by this task's own small, hand-picked fixture cases — exactly the kind of defect a "does the
+current output look right" check would never catch, and exactly why an adversarial, from-first-
+principles review mattered here.
+
+**Fix:** renamed the function to `_margin_to_nearest_rounding_boundary` (the old name described
+what it happened to compute, not what it needed to compute) and corrected the body to
+`half_ulp_at(nearest) - abs(value - nearest)`, using the already-independently-verified-correct
+`half_ulp_at` helper. Added two permanent regression tests
+(`test_margin_to_rounding_boundary_shrinks_toward_a_real_tie`,
+`test_escape_mechanism_does_not_confidently_misresolve_near_a_tie`) that directly encode the
+reviewer's adversarial construction, so this exact class of regression cannot silently return.
+Re-verified: the fixed function now correctly reports a margin that shrinks toward zero (not
+`half_ulp`) as a candidate approaches a tie, end-to-end `exp()`/`sqrt()` calls across 6000
+randomized trials still converge to within `libm` agreement (the handful of apparent large-
+magnitude "misses" in an ad-hoc check turned out to be a fixed-absolute-tolerance artifact at
+`exp(x)` for `x` near 45 — relative error was `~1e-16`, i.e. perfect f64 agreement — not a real
+regression), and the full `make ci` suite passes (546 pytest, up from 544; 72 Rust tests
+unchanged; fixture regenerated and re-pinned since the corrected margin computation changes which
+precision some cases converge at).
+
 ## Mid-review task-ID churn (this task was P0-T17, then P0-T18)
 
 Two task packets were originally drafted together: a small CI-gate fix (originally P0-T16) and

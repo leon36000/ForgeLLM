@@ -253,27 +253,41 @@ def assert_f64_exact_accumulation(partial_sums: list[Fraction], *, context: str)
 # ---------------------------------------------------------------------------
 
 
-def _distance_to_nearest_f32_boundary(value: Fraction) -> Fraction:
-    """Exact distance from `value` to the nearer of its two neighboring f32
-    representable values (or its own exact value if already exactly f32-representable)."""
-    if value == 0:
-        return Fraction(1, 2**149)  # smallest positive subnormal magnitude
-    lower_bits = fraction_to_f32_bits(value)
-    lower_fraction = f32_bits_to_fraction(lower_bits)
-    if lower_fraction == value:
-        # value is already exactly f32-representable; distance to a boundary
-        # is at least half the local ULP.
-        sign = 1 if value < 0 else 0
-        magnitude = -value if sign else value
-        e = magnitude.numerator.bit_length() - magnitude.denominator.bit_length()
-        while Fraction(2) ** e > magnitude:
-            e -= 1
-        while Fraction(2) ** (e + 1) <= magnitude:
-            e += 1
-        field_exp = max(e, -126)
-        ulp = Fraction(2) ** (field_exp - 23)
-        return ulp / 2
-    return abs(value - lower_fraction)
+def _margin_to_nearest_rounding_boundary(value: Fraction) -> Fraction:
+    """How far `value` sits from the nearest f32 rounding *tie* (the halfway
+    point between two adjacent representable values) -- the safety margin
+    the Ziv escape check in `decimal_transcendental_with_escape` needs.
+
+    LARGE means `value` is safely far from any tie, so which f32 it rounds
+    to is unambiguous even if `value` itself has some residual imprecision.
+    SMALL (near zero) means `value` sits dangerously close to a tie, where a
+    tiny error in `value` could flip which neighbor is actually closer --
+    exactly the case that must trigger a precision escalation, not a
+    confident answer.
+
+    An earlier version of this function returned `abs(value - nearest)` --
+    the residual from `value` to its own rounded neighbor -- which moves in
+    the *opposite* direction from safety: that residual is *small* when
+    `value` sits close to one specific representable point (genuinely safe)
+    and grows toward `half_ulp` as `value` approaches a tie (genuinely
+    dangerous), so the escape check's `> error_bound` comparison was
+    accepting exactly the inputs it should have escalated, and vice versa.
+    Confirmed by construction: values placed within 2**-135 of a real f32
+    tie were confidently accepted without escalation under the old logic.
+    This version returns `half_ulp - residual`, which has the correct sign
+    in both directions.
+    """
+    nearest_bits = fraction_to_f32_bits(value)
+    nearest = f32_bits_to_fraction(nearest_bits)
+    if nearest is None:
+        # `value` is so large it rounds to +/-infinity. That is itself an
+        # unambiguous rounding decision in every practical case this module
+        # exercises (softmax/rms_norm operate on normalized magnitudes far
+        # from the overflow boundary) -- treat it as maximally safe rather
+        # than attempt a finite margin computation against a boundary that
+        # does not exist in finite f32 space.
+        return Fraction(2**128)
+    return half_ulp_at(nearest) - abs(value - nearest)
 
 
 def fraction_to_decimal(value: Fraction, prec: int) -> Decimal:
@@ -323,7 +337,7 @@ def decimal_transcendental_with_escape(
             # General Decimal Arithmetic Specification bound: a correctly
             # rounded P-digit decimal result is within 0.5*10**-(P-1) relative.
             error_bound = abs(candidate) * Fraction(1, 2) * Fraction(10) ** -(prec - 1)
-            if _distance_to_nearest_f32_boundary(candidate) > error_bound:
+            if _margin_to_nearest_rounding_boundary(candidate) > error_bound:
                 return candidate
             prec *= 2
         raise ReferenceOracleAmbiguousRounding(f"could not prove correct rounding within max_prec={max_prec}")
