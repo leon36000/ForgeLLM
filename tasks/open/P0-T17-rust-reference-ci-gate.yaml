@@ -1,5 +1,5 @@
 schema_version: "1.0"
-task_id: P0-T16
+task_id: P0-T17
 title: Wire the Rust reference-core suite into the required repository gate
 phase: P0
 status: in_progress
@@ -20,14 +20,17 @@ inputs:
   - "The Makefile's ci target currently runs lint plus verify (validate and pytest) plus verify-speculative plus simulate-cache-draft; it contains zero cargo invocations."
 outputs:
   - "The Makefile's ci target additionally runs cargo fmt --all --check, cargo clippy --workspace --all-targets --locked -- -D warnings, and cargo test --workspace --all-targets --locked."
-  - "docs/quality/P0-T16-RUST-CI-GATE.md, an evidence report recording before/after make ci behavior and the exact commands added."
+  - "docs/quality/P0-T17-RUST-CI-GATE.md, an evidence report recording before/after make ci behavior and the exact commands added."
   - "A .gitignore entry for target/, since running cargo locally via make ci now leaves Rust build artifacts in the working tree."
+  - "Regenerated README.md current-state block and TREE.txt, required by the newly-merged P0-T14 lifecycle validator whenever a task packet is added."
 allowed_paths:
   - Makefile
   - .gitignore
-  - docs/quality/P0-T16-RUST-CI-GATE.md
-  - tasks/open/P0-T16-rust-reference-ci-gate.yaml
-  - tasks/closed/P0-T16-rust-reference-ci-gate.yaml
+  - README.md
+  - TREE.txt
+  - docs/quality/P0-T17-RUST-CI-GATE.md
+  - tasks/open/P0-T17-rust-reference-ci-gate.yaml
+  - tasks/closed/P0-T17-rust-reference-ci-gate.yaml
   - docs/state/CURRENT_STATE.md
   - docs/state/HANDOFF.md
 forbidden_actions:
@@ -49,13 +52,13 @@ acceptance_criteria:
   - No line already present in the Makefile before this task is modified; only new lines are
     appended to the ci target.
   - "The PR description explicitly recommends, as an owner-only follow-up, adding reference-core to the GitHub branch-protection required-checks list, and states plainly that this task does not and cannot perform that repository-settings change itself."
-  - docs/quality/P0-T16-RUST-CI-GATE.md records the exact make ci invocation and output before
+  - docs/quality/P0-T17-RUST-CI-GATE.md records the exact make ci invocation and output before
     and after this change on the same commit.
 verification_commands:
   - make ci
   - make validate
   - git diff --check
-  - python3 scripts/validate_task_packet.py tasks/open/P0-T16-rust-reference-ci-gate.yaml --root .
+  - python3 scripts/validate_task_packet.py tasks/open/P0-T17-rust-reference-ci-gate.yaml --root .
 evidence_requirements:
   - Record the exact Makefile diff (append-only, line count).
   - Record a make ci run before this change (Rust untested) and after (Rust tested), both with
