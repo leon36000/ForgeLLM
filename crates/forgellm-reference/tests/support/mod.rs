@@ -33,9 +33,18 @@ impl fmt::Display for ParseError {
 
 impl std::error::Error for ParseError {}
 
+/// The real fixture never nests more than 5 levels deep (root -> cases ->
+/// case -> inputs -> tensor -> data_hex). This is a generous multiple of
+/// that, not a tight fit -- its purpose is solely to convert unbounded
+/// recursion (a genuine stack overflow, which aborts the whole process
+/// rather than returning a catchable error -- confirmed empirically during
+/// review at 5,000 levels) into a clean `ParseError` instead.
+const MAX_NESTING_DEPTH: usize = 64;
+
 struct Parser<'a> {
     bytes: &'a [u8],
     position: usize,
+    depth: usize,
 }
 
 impl<'a> Parser<'a> {
@@ -43,6 +52,7 @@ impl<'a> Parser<'a> {
         Self {
             bytes: text.as_bytes(),
             position: 0,
+            depth: 0,
         }
     }
 
@@ -81,8 +91,22 @@ impl<'a> Parser<'a> {
     fn parse_value(&mut self) -> Result<Value, ParseError> {
         self.skip_whitespace();
         match self.peek() {
-            Some(b'{') => self.parse_object(),
-            Some(b'[') => self.parse_array(),
+            Some(b'{' | b'[') => {
+                if self.depth >= MAX_NESTING_DEPTH {
+                    return Err(ParseError(format!(
+                        "nesting depth exceeds the fixture's maximum ({MAX_NESTING_DEPTH}) at byte {}",
+                        self.position
+                    )));
+                }
+                self.depth += 1;
+                let result = if self.peek() == Some(b'{') {
+                    self.parse_object()
+                } else {
+                    self.parse_array()
+                };
+                self.depth -= 1;
+                result
+            }
             Some(b'"') => self.parse_string().map(Value::String),
             Some(byte) if byte == b'-' || byte.is_ascii_digit() => self.parse_integer(),
             Some(byte) => Err(ParseError(format!(
@@ -425,5 +449,43 @@ mod tests {
         assert_eq!(cases.len(), 1);
         assert_eq!(cases[0].op, "elementwise_add");
         assert_eq!(cases[0].expected.data, vec![2.0_f32]);
+    }
+}
+
+#[cfg(test)]
+mod recursion_depth_probe {
+    use super::*;
+
+    fn nested_array(depth: usize) -> String {
+        let mut text = String::new();
+        for _ in 0..depth {
+            text.push('[');
+        }
+        text.push('1');
+        for _ in 0..depth {
+            text.push(']');
+        }
+        text
+    }
+
+    #[test]
+    fn nesting_within_the_limit_still_parses() {
+        let text = nested_array(MAX_NESTING_DEPTH - 1);
+        assert!(parse(&text).is_ok());
+    }
+
+    #[test]
+    fn nesting_beyond_the_limit_is_a_clean_error_not_a_crash() {
+        // Regression test: before MAX_NESTING_DEPTH existed, this exact
+        // shape of input (confirmed at depth=5,000 during review, well
+        // below what's tried here) stack-overflowed and aborted the whole
+        // process (SIGABRT) rather than returning a ParseError -- a real
+        // bug, found by actually running an adversarial input, not by
+        // reasoning about the code on paper. The fixture is
+        // generator-controlled, not untrusted external input, so this is a
+        // robustness hardening, not a claimed security fix.
+        let text = nested_array(1_000_000);
+        let error = parse(&text).expect_err("must fail closed, not crash the process");
+        assert!(error.0.contains("nesting depth exceeds"));
     }
 }

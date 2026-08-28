@@ -26,10 +26,13 @@
 - `crates/forgellm-reference/tests/support/mod.rs`: a ~280-line dependency-free JSON reader
   restricted to the fixture's exact flat grammar (no `serde_json` dependency), with 14 of its
   own malformed-input tests (duplicate keys, escapes, floats, trailing commas, unterminated
-  strings, non-hex, wrong-length hex, etc.).
+  strings, non-hex, wrong-length hex, etc.) plus 2 recursion-depth-limit tests added after an
+  adversarial-input audit (see below).
 - `crates/forgellm-reference/tests/reference_ops_oracle_contract.rs`: fixture-driven differential
   tests, plus a dependency-free from-scratch SHA-256 implementation used only to verify the
-  fixture's own committed hash pin at test time (not exposed as a library API).
+  fixture's own committed hash pin at test time (not exposed as a library API), itself checked
+  against 4 real `hashlib`-derived test vectors including the one-block/two-block padding
+  boundary (55 vs. 64 input bytes).
 - `tests/test_reference_oracle.py`: 41 pytest cases for the oracle itself.
 
 ## Verification (this exact head)
@@ -38,10 +41,11 @@
 - `PYTHONPATH=src python3 -m pytest -q tests/test_reference_oracle.py`: **41/41 passed**.
 - `python3 scripts/generate_reference_oracle_fixture.py --check --root .`: OK, byte-identical.
 - `sha256sum -c crates/forgellm-reference/tests/fixtures/reference_ops_oracle.sha256`: passed.
-- `cargo test --workspace --all-targets --locked`: **69/69 passed** (2 `allocation_tests`, 17
-  `decoder_primitives`, 7 `dense_decoder`, 3 `numerical_contract`, 24 `reference_ops`, 16 new
+- `cargo test --workspace --all-targets --locked`: **72/72 passed** (2 `allocation_tests`, 17
+  `decoder_primitives`, 7 `dense_decoder`, 3 `numerical_contract`, 24 `reference_ops`, 19 new
   `reference_ops_oracle_contract` — the last including the fixture-driven differential tests for
-  all 6 ops, the SHA-256 pin check, and the 14 parser malformed-input tests).
+  all 6 ops, the SHA-256 pin check and its 4 published-vector checks, the 14 parser
+  malformed-input tests, and the 2 recursion-depth tests).
 - `cargo fmt --all --check`: clean. `cargo clippy --workspace --all-targets --locked -- -D warnings`: 0 warnings.
 - Full `make ci`: **exit 0** — 544 pytest (up from 503 at this task's base, +41 from
   `test_reference_oracle.py`), 230 focused speculative tests, cache-placement simulation hashes,
@@ -71,7 +75,17 @@ three real defects before any Rust code was written against the oracle:
    This is a real, documented limitation of representing f32 values as `Fraction` (not a bug in
    the rounding arithmetic itself) — excluded explicitly in the exhaustive test with a named
    constant and a comment, rather than silently passed over.
-3. **The initial `decimal_transcendental_with_escape`/`softmax_oracle`/`rms_norm_oracle` design
+3. **The hand-rolled JSON reader (`tests/support/mod.rs`) stack-overflowed and aborted the whole
+   test process (SIGABRT) on a deeply-nested adversarial input** (confirmed at 5,000 levels of
+   `[` nesting; the real fixture never nests more than 5 levels). This is a genuine robustness
+   gap in unbounded recursive descent, found by actually constructing and running the adversarial
+   input, not by reasoning about the parser on paper. Fixed by adding `MAX_NESTING_DEPTH = 64`
+   (generous relative to the fixture's real depth of 5) checked once, centrally, in
+   `parse_value`, converting unbounded recursion into a clean `ParseError`. Verified the fix
+   holds even at 1,000,000 levels of adversarial nesting (`nesting_beyond_the_limit_is_a_clean_error_not_a_crash`).
+   The fixture is generator-controlled, not untrusted external input, so this is robustness
+   hardening rather than a claimed security fix for an actual attack surface.
+4. **The initial `decimal_transcendental_with_escape`/`softmax_oracle`/`rms_norm_oracle` design
    converted its Fraction input to a Python `float` before building the `Decimal`**
    (`Decimal(str(float(value))).exp()`), which is exactly the double-rounding failure mode this
    module's own docstring says it avoids. Caught during implementation, before any test ran
