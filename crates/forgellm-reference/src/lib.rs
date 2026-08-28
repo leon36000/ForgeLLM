@@ -374,6 +374,27 @@ pub fn embedding_gather(table: &Tensor, token_ids: &[usize]) -> Result<Tensor, R
     Tensor::new(output_shape, output)
 }
 
+/// Decodes one token through the bounded dense CPU reference pipeline.
+///
+/// The operation is intentionally a composition of the existing checked primitives:
+/// embedding gather, RMS normalization, rank-two projection, softmax and first-index argmax.
+/// It accepts only in-memory tensors and makes no model-format, runtime, backend or performance
+/// claim.
+pub fn dense_decode_single_token(
+    embedding_table: &Tensor,
+    token_id: usize,
+    rms_weights: &[f32],
+    rms_epsilon: f32,
+    projection: &Tensor,
+) -> Result<usize, ReferenceError> {
+    let gathered = embedding_gather(embedding_table, &[token_id])?;
+    let normalized = rms_norm(gathered.data(), rms_weights, rms_epsilon)?;
+    let hidden = Tensor::new(vec![1, normalized.len()], normalized)?;
+    let logits = matmul(&hidden, projection)?;
+    let probabilities = softmax(logits.data())?;
+    argmax(&probabilities)
+}
+
 /// Multiplies two rank-two row-major tensors using a fixed accumulation order.
 ///
 /// Products are accumulated in `f64` and converted once per output element to provide a

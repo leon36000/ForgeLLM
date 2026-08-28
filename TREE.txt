@@ -62,6 +62,7 @@ crates/forgellm-reference/Cargo.toml
 crates/forgellm-reference/src/allocation_tests.rs
 crates/forgellm-reference/src/lib.rs
 crates/forgellm-reference/tests/decoder_primitives.rs
+crates/forgellm-reference/tests/dense_decoder.rs
 crates/forgellm-reference/tests/numerical_contract.rs
 crates/forgellm-reference/tests/reference_ops.rs
 docs/agents/AGENT_ROLES.md
@@ -114,6 +115,7 @@ docs/reviews/P0-T12-CODEX-REVIEW-2026-08-20.md
 docs/reviews/P0-T13-GPT-5.6-LUNA-ROUND-1-2026-08-27.md
 docs/reviews/P0-T14-LIFECYCLE-REVIEW.md
 docs/reviews/P0-T15-C-ABI-DESIGN-REVIEW.md
+docs/reviews/P0-T16-DENSE-DECODER-REVIEW.md
 docs/roadmap/PHASE0_TASKS.md
 docs/roadmap/PHASES.md
 docs/simulations/CACHE_AWARE_SIMULATOR.md
@@ -209,6 +211,7 @@ tasks/closed/P0-T11-rust-reference-core-experiment.yaml
 tasks/closed/P0-T12-decoder-tensor-primitives.yaml
 tasks/closed/P0-T13-public-artifact-privacy-hardening.yaml
 tasks/closed/P0-T14-lifecycle-state-validation.yaml
+tasks/closed/P0-T16-dense-decoder-reference.yaml
 tasks/open/P0-T04-first-hardware-inventory.yaml
 tasks/open/P0-T09-sonarqube-main-analysis.yaml
 tasks/open/P0-T10-bounded-loop-engineering.yaml

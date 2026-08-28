@@ -1,7 +1,7 @@
 # ForgeLLM Handoff
 
-**From state:** S-0014
-**To work:** resolve the next free bounded CPU reference task ID from live Git; P0-T09 remains inactive and human-gated, P0-T04 still awaits host designation
+**From state:** S-0016
+**To work:** run the final fresh validation/evidence checkpoint from the approved plan; P0-T09 remains inactive and human-gated, P0-T04 still awaits host designation
 **Generated:** 2026-08-27
 
 ## P0-T10 integration handoff
@@ -18,6 +18,7 @@ P0-T10's bounded implementation is present at public merge commit 87a1ddeb76d2bc
 - P0-T10: `review`, publicly merged at `main@87a1dde`, ADR-0005 proposed;
 - P0-T13: complete and publicly merged at `main@ad079c0`;
 - P0-T14: complete after protected merge `c1fd915`, with lifecycle validation and projections reconciled; its canonical source anchor is the protected merge snapshot;
+- P0-T16: `complete`, bounded in-memory CPU dense decoder reference slice; no model, runtime, backend, ABI or GPU work;
 - P0-T15: `in_progress`, design-only, publicly merged at `main@9932a5a`, ADR-0006 proposed;
 - P0-T11/P0-T12: bounded Rust CPU reference line complete and merged on `main`;
 - P0-T04: blocked only on owner host designation;
@@ -26,7 +27,11 @@ P0-T10's bounded implementation is present at public merge commit 87a1ddeb76d2bc
 
 ## P0-T14 lifecycle reconciliation
 
-P0-T14 reconciles the task directories and state projections under issue #73. P0-T03 has one canonical closed packet; P0-T10 is open with status `review` while ADR-0005 is `proposed`; P0-T13 is closed and complete after its protected merge; P0-T15 is open with status `in_progress` while ADR-0006 is `proposed`; and P0-T14 is closed and complete only for the bounded validator/projection work. After the PR #80 squash, the canonical source anchor is the protected snapshot `c1fd915…`; the post-merge repair preserves the ancestry gate and synchronizes the projections. The validator rejects directory/status inversions, duplicate IDs, unresolved dependencies and invalid ADR successor metadata, and it verifies the canonical state ID/source commit, generated mobile manifest, README block and exact tracked-path tree. The derived projections are rebuildable and never replace Git state as authority.
+P0-T14 reconciles the task directories and state projections under issue #73. P0-T03 has one canonical closed packet; P0-T10 is open with status `review` while ADR-0005 is `proposed`; P0-T13 is closed and complete after its protected merge; P0-T15 is open with status `in_progress` while ADR-0006 is `proposed`; P0-T14 is closed and complete only for the bounded validator/projection work. After the PR #80 squash, the canonical source anchor is the protected snapshot `c1fd915…`; the post-merge repair preserves the ancestry gate and synchronizes the projections. P0-T16 is closed and complete as the bounded CPU reference slice; it has no model, runtime, backend, ABI or GPU scope. The validator rejects directory/status inversions, duplicate IDs, unresolved dependencies and invalid ADR successor metadata, and it verifies the canonical state ID/source commit, generated mobile manifest, README block and exact tracked-path tree. The derived projections are rebuildable and never replace Git state as authority.
+
+## P0-T16 dense decoder reference slice
+
+P0-T16 delivers `dense_decode_single_token`, a single-token in-memory composition of embedding gather, RMSNorm, rank-two projection, softmax and deterministic greedy argmax. Its seven integration tests include an independent golden oracle plus typed error propagation for index, shape, non-finite input/weight and epsilon failures; they establish a CPU correctness reference only. Model loading, tokenization, attention, KV cache, runtime, ABI, backend, GPU and performance remain out of scope. The bounded implementation is complete; the protected merge and post-merge validation are still integration gates.
 
 ## P0-T09 authorization and source
 

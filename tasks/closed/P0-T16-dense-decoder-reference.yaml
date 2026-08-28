@@ -1,0 +1,85 @@
+schema_version: "1.0"
+task_id: P0-T16
+title: Add bounded dense decoder reference slice
+phase: P0
+status: complete
+charter_goals:
+  - Continue the first executable engine path as a correctness reference.
+  - Preserve Rust as the default control-plane and reference execution language.
+  - Reduce later decoder implementation risk with independently verified semantics.
+goal: Implement one bounded CPU single-token dense decoder reference operation by composing embedding gather, RMS normalization, projection, softmax and deterministic greedy argmax over in-memory tensors.
+non_goals:
+  - Load, download, serialize or convert real model weights, tokenizers or model formats.
+  - Implement an ABI, FFI boundary, runtime, scheduler, cache, backend, GPU, CUDA, HIP or distributed path.
+  - Add third-party dependencies, unsafe code, performance claims, benchmarks or production-readiness claims.
+  - Change the existing tensor-operation numerical contracts or bypass their typed validation.
+inputs:
+  - Approved ForgeLLM convergence execution plan Task 5.
+  - Protected main at 55d08c76b7fcdc3b6c256d35a4d74b275652964c.
+  - Completed P0-T11 Rust reference operations and completed P0-T12 decoder tensor primitives.
+  - Existing checked Tensor, embedding_gather, rms_norm, matmul, softmax and argmax semantics.
+  - P0-T14 lifecycle/state validation and protected projections.
+outputs:
+  - A public Rust CPU reference function for one dense decoder token from in-memory tensors.
+  - Independent hand-written oracle tests covering the composed pipeline and deterministic ties.
+  - Typed propagation of existing shape, index, finite-input and epsilon errors.
+  - Versioned task, review, roadmap, state and handoff evidence bounded to this slice.
+allowed_paths:
+  - crates/forgellm-reference/src/lib.rs
+  - crates/forgellm-reference/tests/dense_decoder.rs
+  - tasks/open/P0-T16-dense-decoder-reference.yaml
+  - tasks/closed/P0-T16-dense-decoder-reference.yaml
+  - docs/reviews/P0-T16-DENSE-DECODER-REVIEW.md
+  - docs/roadmap/PHASE0_TASKS.md
+  - docs/state/CURRENT_STATE.md
+  - docs/state/HANDOFF.md
+  - README.md
+  - chatgpt/mobile-core/03_FORGELLM_STATE_AND_DECISIONS.md
+  - chatgpt/mobile-core/DERIVED-MANIFEST.yaml
+  - TREE.txt
+forbidden_actions:
+  - Read, download, embed or infer from real model weights, private datasets or credentials.
+  - Add CUDA, HIP, GPU, backend, runtime, scheduler, KV-cache, service, ABI or FFI behavior.
+  - Add a Rust dependency, unsafe code, TODO, stub, panic-based normal error path or skipped test.
+  - Change softmax tolerance, RMSNorm semantics, Tensor layout or existing operation contracts.
+  - Make a benchmark, throughput, latency, superiority or production-readiness claim.
+  - Mutate GitHub issues/settings, Sonar settings, repository secrets or external systems.
+acceptance_criteria:
+  - dense_decode_single_token composes embedding_gather -> RMSNorm -> projection -> softmax -> greedy argmax in that order.
+  - The function accepts only in-memory checked tensors and returns one deterministic token ID without side effects.
+  - The embedding table is rank two and token/index validation is delegated to the existing typed embedding contract.
+  - RMSNorm uses the existing finite-input, weight-length and positive-epsilon validation contract.
+  - Projection uses an existing checked rank-two Tensor with hidden width as its input dimension and vocabulary width as its output dimension.
+  - Softmax uses the existing tolerance-qualified implementation and argmax preserves first-index tie behavior.
+  - Independent oracle tests compute the pipeline result without calling the composed function's internal stages and cover a golden token, ties and typed failures.
+  - No third-party dependency, unsafe code, TODO, stub, model artifact or runtime/backend implementation is introduced.
+  - cargo fmt --all --check, cargo clippy --workspace --all-targets --locked -- -D warnings and cargo test --workspace --all-targets --locked pass on the exact final head.
+  - Existing make ci, exact packet validation, project/lifecycle validation, diff-check and clean status pass on the exact final head.
+  - The final review records this as a bounded CPU reference slice, not real-model conformance, P1/P2 promotion or a performance result.
+verification_commands:
+  - cargo test --workspace --all-targets --locked
+  - cargo fmt --all --check
+  - cargo clippy --workspace --all-targets --locked -- -D warnings
+  - git grep -n -E 'todo!|unimplemented!|TODO|FIXME|unsafe' -- crates/forgellm-reference || true
+  - PYTHONPATH=src python3 scripts/validate_task_packet.py tasks/closed/P0-T16-dense-decoder-reference.yaml --root .
+  - make validate
+  - make ci
+  - git diff --check
+  - git status --short
+evidence_requirements:
+  - Record live free ID resolution, protected base, RED output, implementation head, independent review and merge evidence.
+  - Preserve exact Rust test counts and typed error results for invalid token, shape, finite-input and epsilon cases.
+  - Record that the oracle uses only in-memory synthetic tensors and no model or hardware execution.
+  - Record no dependency change, unsafe code, ABI/runtime/backend/GPU action or performance claim.
+  - "Record residual limitations: no real-model conformance, tokenization, model format, attention, KV cache or production decoder behavior."
+dependencies:
+  - P0-T11
+  - P0-T12
+  - P0-T14
+owner_role: Project owner and chief architect
+reviewer_role: Independent Rust correctness and numerical-semantics reviewer
+risk_ids:
+  - R-003
+  - R-006
+  - R-007
+  - R-013
