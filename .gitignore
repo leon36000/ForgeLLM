@@ -25,6 +25,7 @@ credentials/
 # Local or potentially sensitive laboratory outputs
 artifacts/hardware-*.json
 artifacts/session-snapshot.md
+artifacts/simulations/synthetic-cache-draft-result.json
 artifacts/research/
 artifacts/raw/
 artifacts/traces/
