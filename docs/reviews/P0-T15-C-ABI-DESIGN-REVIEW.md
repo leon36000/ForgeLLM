@@ -66,3 +66,22 @@ The fix round at `b5fa926e6c609d073ef68774eb912b7e3cc99079`:
 - The Sol findings are addressed pending fresh exact-head independent review,
   local/hosted verification and a new blind Sol gate. ADR-0006 remains
   `proposed`; no ABI implementation is authorized.
+
+## Independent re-review of Sol remediation
+
+- Reviewer: `gpt-5.6-luna`.
+- Exact remediation review: `240be7be298dbffb9b6b2068a7c2f5e02c945258..35bb8231edd7b59100fb73b431a4e78acca24f01`.
+- Prior finding 1, ABI aggregate by-value risk: `ADDRESSED` by the explicit
+  pointer-only rule (`const` inputs, mutable outputs), no public aggregate
+  by-value parameters or returns, and future C11/C++17 signature fixtures.
+- Prior finding 2, unsafe child runtime creation after `fork`: `ADDRESSED` by
+  prohibiting ForgeLLM calls in the child before `exec` when a live runtime was
+  inherited; fresh runtime creation is post-`exec` only absent a later accepted
+  fork-safety design.
+- New findings: `none`.
+- Implementation verdict: `ACCEPT`.
+- Task-quality verdict: `CONDITIONAL ACCEPT`, pending the controller's fresh
+  final local evidence, hosted checks and blind GPT-5.6-Sol acceptance.
+- Residual boundary: no ABI header/symbol/FFI implementation, binary
+  compatibility, runtime/backend, hardware, CUDA/ROCm, publication or secret
+  evidence is claimed. ADR-0006 remains `proposed`.
