@@ -7,7 +7,7 @@
 - **Lifecycle packet head:** `29560d4e7ac9592e151f3fea75a4721d2cf845a1`
 - **Candidate head reviewed in round 2:** `b8706238aff8cffbbf66e9ee9aec8bcb6a30ebf2`
 - **Evidence boundary:** repository governance and deterministic projections only
-- **Status:** post-remediation candidate awaiting final Sol gate
+- **Status:** post-merge source-anchor repair in progress
 
 ## Scope
 
@@ -88,4 +88,14 @@ The exact PR #80 head `cbe77905b14e7f2e0b58cf28fff52c7f1a14cd87` passed the host
 
 No secret was read or written. No GitHub/Sonar setting or issue was mutated. No hardware probe, model inference, runtime/backend/ABI/kernel/CUDA/ROCm operation or benchmark was run. Historical implementation merges do not accept ADR-0005 or ADR-0006; P0-T10 remains `review` and P0-T15 remains design-only `in_progress`.
 
-**Final verdict:** pending final exact-head critical Sol gate after the receipt-only documentation synchronization.
+**Final verdict:** post-merge repair required: the squashed protected head exposed a stale branch-only source anchor; final repair evidence and exact-head Sol gate are pending.
+
+## Post-merge squash regression
+
+The first post-merge validation was run on protected `main@c1fd91536031fd9b2fbc24b71095bd4a0c8d0e66` in a detached full checkout. `make ci` stopped at `validate_lifecycle` with `canonical source commit is not an ancestor of HEAD`: the state projection still named branch commit `29560d4e7ac9592e151f3fea75a4721d2cf845a1`, which was flattened out by the PR #80 squash. This is a reproducible integration defect, not a hosted-check or shallow-checkout exception.
+
+The repair starts RED with `test_repository_canonical_source_commit_is_ancestor`, which fails on the protected post-merge state (`1 failed, 1 passed, 14 deselected`). The authorized minimal correction is to advance the canonical state projection to the protected snapshot `c1fd91536031fd9b2fbc24b71095bd4a0c8d0e66`, increment the state projection to S-0014, synchronize README/mobile/HANDOFF/manifest data, and preserve the validator's strict ancestry requirement. No validator weakening, task-status change, ADR acceptance, secret access or runtime/hardware/model action is involved.
+
+## Source-anchor repair candidate
+
+The repair candidate passes the focused lifecycle/validation suite (**29 tests**), the new repository ancestry regression, the exact closed P0-T14 packet validation, lifecycle validation, project-state validation, and `git diff --check`. Its full local `make ci` passes **503 Python tests** and **230 reference tests**, with Ruff, all repository validators, the synthetic simulation and SHA-256 evidence successful. The current state is S-0014, its canonical source is the protected merge snapshot `c1fd91536031fd9b2fbc24b71095bd4a0c8d0e66`, and all synchronized projections carry that value. The candidate has not yet been published; hosted exact-head checks and the final Sol gate remain required.
