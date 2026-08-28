@@ -6,10 +6,10 @@
 - **Packet RED commit:** `a81b7daa663265aa17c7b02a84272170bcc77c1b`
 - **Implementation head:** `7ad8efdf53c60178ea83f3883a88178169583062`
 - **Test-hardening head:** `a43a0fa32650524ad4759cf0f0676d4bab690363`
-- **Evidence receipt head:** `925a58bb5b45bf6d908e72dc55519d3e753b8f14`
+- **Prior evidence receipt head:** `925a58bb5b45bf6d908e72dc55519d3e753b8f14`
 - **State/projection synchronization:** `c80fcdd53ca579b35b332dd751c4baae127c652c`
 - **Evidence boundary:** in-memory Rust CPU reference semantics only
-- **Status:** implementation complete; exact receipt checks are green; final Sol gate and protected merge pending
+- **Status:** implementation complete; the prior receipt checks are green; the current documentation-only receipt still requires exact-head validation, Sol and protected merge
 
 ## Scope
 
@@ -71,13 +71,15 @@ workflow policy. SonarCloud reported a passing Quality Gate, 0 new issues, 0 acc
 and 0 security hotspots. The documentation receipt below is intentionally revalidated on its
 own exact head before the final Sol decision.
 
-The documentation receipt head `925a58bb5b45bf6d908e72dc55519d3e753b8f14` is the current PR
-head and is also `CLEAN`. Its exact hosted checks passed: Validate and test (`98754497252`),
+The prior documentation receipt head `925a58bb5b45bf6d908e72dc55519d3e753b8f14` was the PR
+head at the time of those checks and was `CLEAN`. Its exact hosted checks passed: Validate and test (`98754497252`),
 analyze-python (`98754497196`), reference-core (`98754497115`), CodeQL (`98754610878`),
 SonarCloud (`98754558165`, zero annotations), and GitGuardian (`98754491341`). Dependency
 Review (`98754497548`) was skipped by the existing workflow policy. The SonarCloud comment
 reports Quality Gate passed, 0 new issues, 0 accepted issues and 0 security hotspots.
 
+The current branch adds only documentation wording/manifest synchronization after that prior
+receipt; its own local and hosted gates must still be checked before the final Sol decision.
 The closed packet's `complete` status records completion of the bounded implementation scope;
 the protected merge and post-merge validation remain separate integration gates and are not
 claimed here.
@@ -90,4 +92,4 @@ performed. This is not real-model conformance, tokenization, model-format suppor
 KV-cache, scheduling, production-decoder, P1/P2 or performance evidence. ADR-0005 and ADR-0006
 remain `proposed`; P0-T10 remains `review` and P0-T15 remains design-only `in_progress`.
 
-**Final verdict:** the exact receipt head is locally and host-validated, independently reviewed for scope, and ready for the final GPT-5.6-Sol gate; protected merge and post-merge validation remain pending.
+**Final verdict:** the prior receipt head is locally and host-validated; the current documentation-only head requires its own fresh exact-head gates and GPT-5.6-Sol decision before protected merge and post-merge validation.
