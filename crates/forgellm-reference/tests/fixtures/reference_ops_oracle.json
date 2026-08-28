@@ -1,0 +1,349 @@
+{
+  "cases": [
+    {
+      "case_id": "elementwise_add_basic",
+      "comparison": {
+        "mode": "exact"
+      },
+      "expected": {
+        "data_hex": [
+          "3fc00000",
+          "bf800000",
+          "40000000",
+          "40840000"
+        ],
+        "shape": [
+          4
+        ]
+      },
+      "inputs": {
+        "lhs": {
+          "data_hex": [
+            "3f800000",
+            "c0200000",
+            "40400000",
+            "3e000000"
+          ],
+          "shape": [
+            4
+          ]
+        },
+        "rhs": {
+          "data_hex": [
+            "3f000000",
+            "3fc00000",
+            "bf800000",
+            "40800000"
+          ],
+          "shape": [
+            4
+          ]
+        }
+      },
+      "op": "elementwise_add"
+    },
+    {
+      "case_id": "elementwise_mul_basic",
+      "comparison": {
+        "mode": "exact"
+      },
+      "expected": {
+        "data_hex": [
+          "40c00000",
+          "c0c00000",
+          "bf000000",
+          "40800000"
+        ],
+        "shape": [
+          4
+        ]
+      },
+      "inputs": {
+        "lhs": {
+          "data_hex": [
+            "40000000",
+            "bfc00000",
+            "3e800000",
+            "41000000"
+          ],
+          "shape": [
+            4
+          ]
+        },
+        "rhs": {
+          "data_hex": [
+            "40400000",
+            "40800000",
+            "c0000000",
+            "3f000000"
+          ],
+          "shape": [
+            4
+          ]
+        }
+      },
+      "op": "elementwise_mul"
+    },
+    {
+      "case_id": "embedding_gather_repeated_tokens",
+      "comparison": {
+        "mode": "exact"
+      },
+      "expected": {
+        "data_hex": [
+          "40a00000",
+          "40c00000",
+          "3f800000",
+          "40000000",
+          "40a00000",
+          "40c00000",
+          "40400000",
+          "40800000"
+        ],
+        "shape": [
+          4,
+          2
+        ]
+      },
+      "inputs": {
+        "table": {
+          "data_hex": [
+            "3f800000",
+            "40000000",
+            "40400000",
+            "40800000",
+            "40a00000",
+            "40c00000"
+          ],
+          "shape": [
+            3,
+            2
+          ]
+        },
+        "token_ids": [
+          2,
+          0,
+          2,
+          1
+        ]
+      },
+      "op": "embedding_gather"
+    },
+    {
+      "case_id": "matmul_2x3_3x2",
+      "comparison": {
+        "mode": "exact"
+      },
+      "expected": {
+        "data_hex": [
+          "c0800000",
+          "40800000",
+          "41700000",
+          "c0d00000"
+        ],
+        "shape": [
+          2,
+          2
+        ]
+      },
+      "inputs": {
+        "lhs": {
+          "data_hex": [
+            "3f800000",
+            "40000000",
+            "bf800000",
+            "3f000000",
+            "c0000000",
+            "40400000"
+          ],
+          "shape": [
+            2,
+            3
+          ]
+        },
+        "rhs": {
+          "data_hex": [
+            "40000000",
+            "3f800000",
+            "bf800000",
+            "3f000000",
+            "40800000",
+            "c0000000"
+          ],
+          "shape": [
+            3,
+            2
+          ]
+        }
+      },
+      "op": "matmul"
+    },
+    {
+      "case_id": "rms_norm_basic",
+      "comparison": {
+        "mode": "abs_tolerance_hex_per_element",
+        "tolerance_derivation": "(n/2 + 4) * 2**-53 * |result| + half_ulp_at(result); the relative term is provable from sqrt/div correct rounding, the half-ULP term scales with each result's own magnitude rather than assuming magnitude ~1.",
+        "tolerance_hex": [
+          "33000000",
+          "33800000",
+          "33800000",
+          "32800000"
+        ]
+      },
+      "expected": {
+        "data_hex": [
+          "3f07a1d1",
+          "bf87a1d1",
+          "3fcb72b9",
+          "3e87a1d1"
+        ],
+        "shape": [
+          4
+        ]
+      },
+      "inputs": {
+        "epsilon": "358637bd",
+        "values": {
+          "data_hex": [
+            "3f800000",
+            "c0000000",
+            "40400000",
+            "3f000000"
+          ],
+          "shape": [
+            4
+          ]
+        },
+        "weights": {
+          "data_hex": [
+            "3f800000",
+            "3f800000",
+            "3f800000",
+            "3f800000"
+          ],
+          "shape": [
+            4
+          ]
+        }
+      },
+      "op": "rms_norm"
+    },
+    {
+      "case_id": "rms_norm_large_magnitude",
+      "comparison": {
+        "mode": "abs_tolerance_hex_per_element",
+        "tolerance_derivation": "(n/2 + 4) * 2**-53 * |result| + half_ulp_at(result); the relative term is provable from sqrt/div correct rounding, the half-ULP term scales with each result's own magnitude rather than assuming magnitude ~1.",
+        "tolerance_hex": [
+          "33800000",
+          "33800000",
+          "33800000",
+          "33800000"
+        ]
+      },
+      "expected": {
+        "data_hex": [
+          "40000000",
+          "40000000",
+          "40000000",
+          "40000000"
+        ],
+        "shape": [
+          4
+        ]
+      },
+      "inputs": {
+        "epsilon": "358637bd",
+        "values": {
+          "data_hex": [
+            "41000000",
+            "41000000",
+            "41000000",
+            "41000000"
+          ],
+          "shape": [
+            4
+          ]
+        },
+        "weights": {
+          "data_hex": [
+            "40000000",
+            "40000000",
+            "40000000",
+            "40000000"
+          ],
+          "shape": [
+            4
+          ]
+        }
+      },
+      "op": "rms_norm"
+    },
+    {
+      "case_id": "softmax_basic",
+      "comparison": {
+        "mode": "abs_tolerance_hex",
+        "tolerance_derivation": "(2*kappa + n + 2) * 2**-53 + 2**-24, kappa=4 (cited libm ULP assumption for exp), n=len(logits); dominated by the final f64->f32 cast term 2**-24 for any realistic n.",
+        "tolerance_hex": "33800000",
+        "tolerance_value_for_reference_only": "536870925/9007199254740992"
+      },
+      "expected": {
+        "data_hex": [
+          "3db861f3",
+          "3e7a9a1a",
+          "3f2a4d3b"
+        ],
+        "shape": [
+          3
+        ]
+      },
+      "inputs": {
+        "logits": {
+          "data_hex": [
+            "3f800000",
+            "40000000",
+            "40400000"
+          ],
+          "shape": [
+            3
+          ]
+        }
+      },
+      "op": "softmax"
+    },
+    {
+      "case_id": "softmax_equal_logits",
+      "comparison": {
+        "mode": "abs_tolerance_hex",
+        "tolerance_derivation": "(2*kappa + n + 2) * 2**-53 + 2**-24, kappa=4 (cited libm ULP assumption for exp), n=len(logits); dominated by the final f64->f32 cast term 2**-24 for any realistic n.",
+        "tolerance_hex": "33800000",
+        "tolerance_value_for_reference_only": "536870925/9007199254740992"
+      },
+      "expected": {
+        "data_hex": [
+          "3eaaaaab",
+          "3eaaaaab",
+          "3eaaaaab"
+        ],
+        "shape": [
+          3
+        ]
+      },
+      "inputs": {
+        "logits": {
+          "data_hex": [
+            "3f000000",
+            "3f000000",
+            "3f000000"
+          ],
+          "shape": [
+            3
+          ]
+        }
+      },
+      "op": "softmax"
+    }
+  ],
+  "float_encoding": "ieee754-binary32-hex-be",
+  "generator": "scripts/generate_reference_oracle_fixture.py",
+  "schema_version": "1.0"
+}

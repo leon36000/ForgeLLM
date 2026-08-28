@@ -1,0 +1,122 @@
+schema_version: "1.0"
+task_id: P0-T18
+title: Add a stdlib-only, re-derivable differential oracle for existing reference ops
+phase: P0
+status: in_progress
+charter_goals:
+  - Correction and reproducibility precede performance.
+  - Reference CPU execution path.
+goal: Replace the hand-copied numerical constants in crates/forgellm-reference's existing tests with a committed, hash-pinned, CI-regenerated fixture computed by a stdlib-only Python oracle, so every asserted value is independently re-derivable from source rather than transcribed once and trusted forever.
+non_goals:
+  - Implement attention, transpose, RoPE, KV cache, or any new tensor operation (reserved for a
+    future P0-T19, deliberately not designed here).
+  - Change the value or documented meaning of SOFTMAX_ABS_TOLERANCE, or edit
+    numerical_contract.rs, reference_ops.rs, or decoder_primitives.rs.
+  - Add PyTorch, NumPy, or any other third-party Python or Rust runtime dependency.
+  - Claim numerical conformance with PyTorch, JAX, or any real model implementation.
+  - Promote Phase 1 or Phase 2 exit-gate claims, or treat this as hardware, baseline, or
+    production-readiness evidence.
+  - Generalize scripts/validate_loop_engineering.py beyond its current P0-T10 scope.
+  - Touch any path frozen by open PR #72 or PR #75, or any P0-T13/P0-T14/P0-T15 path.
+inputs:
+  - Canonical ForgeLLM base cb59f457b19c74a9c9339764154c583bd57cb0b0 (protected main).
+  - "crates/forgellm-reference/src/lib.rs (586 lines, zero dependencies, #![forbid(unsafe_code)]): matmul, elementwise_add, elementwise_mul, embedding_gather, reshape, argmax, softmax, rms_norm, each accumulating in f64 and casting to f32 exactly once at the end."
+  - "The existing tests assert against hand-copied literals (for example numerical_contract.rs's 0.090_030_57) with no generator anywhere in the repository."
+  - "ARCHITECTURE_PRINCIPLES.md names the CPU reference path as the oracle for GPU and quantized paths; that claim is not yet backed by a re-derivable oracle for its own existing ops."
+  - "IEEE 754-2019 mandates correctly-rounded results for the basic operations (+, -, x, /, sqrt) and only recommends, without requiring, correct rounding for exp. This asymmetry means sqrt-based ops (rms_norm) can be given a provable error budget, while exp-based ops (softmax) need an explicitly derived, honestly-labeled budget resting on a stated libm-quality assumption."
+  - "The existing house idiom for exact rational arithmetic is fractions.Fraction, already used throughout src/forgellm_governance/exact_distribution.py."
+  - "pyproject.toml declares stdlib plus jsonschema==4.26.0 plus PyYAML==6.0.3 only; no numerical dependency exists today."
+outputs:
+  - "src/forgellm_governance/reference_oracle.py: stdlib-only exact (fractions.Fraction) and high-precision (decimal.Decimal) reference implementations of matmul, elementwise_add, elementwise_mul, embedding_gather, softmax, and rms_norm, each with a documented, derived per-op error budget."
+  - "A rounding routine that converts an exact Fraction or Decimal result directly to the nearest f32 bit pattern in one step (round-half-to-even, integer/exact-Fraction comparisons only), so no intermediate Python float rounding is introduced between the high-precision value and the final f32 comparison."
+  - "scripts/generate_reference_oracle_fixture.py: a deterministic CLI generator with a non-mutating --check mode that regenerates the fixture in memory and diffs it byte-for-byte against the committed file."
+  - "crates/forgellm-reference/tests/fixtures/reference_ops_oracle.json and its committed .sha256 hash pin, following the existing sha256sum -c convention already used for artifacts/simulations/P0-T07-evidence.sha256."
+  - "A dependency-free Rust fixture reader under crates/forgellm-reference/tests/support/, restricted to the fixture's fixed schema, with its own malformed-input tests, introducing no new Cargo dependency."
+  - "crates/forgellm-reference/tests/reference_ops_oracle_contract.rs: fixture-driven differential tests for the six ops above, additive to (not replacing) the existing hand-authored tests."
+  - "tests/test_reference_oracle.py: pytest coverage of the oracle itself, including an f32-to-Fraction round-trip property test and round-half-to-even tie-breaking tests."
+  - "docs/superpowers/specs/2026-08-27-p0-t18-reference-oracle-design.md and docs/superpowers/plans/2026-08-27-p0-t18-reference-oracle.md, following the existing spec-plus-plan convention used by P0-T08/P0-T10."
+  - "docs/quality/P0-T18-REFERENCE-ORACLE.md evidence report."
+allowed_paths:
+  - crates/forgellm-reference/tests/
+  - src/forgellm_governance/reference_oracle.py
+  - scripts/generate_reference_oracle_fixture.py
+  - tests/test_reference_oracle.py
+  - docs/superpowers/specs/2026-08-27-p0-t18-reference-oracle-design.md
+  - docs/superpowers/plans/2026-08-27-p0-t18-reference-oracle.md
+  - docs/quality/P0-T18-REFERENCE-ORACLE.md
+  - docs/reviews/
+  - tasks/open/P0-T18-differential-reference-oracle.yaml
+  - tasks/closed/P0-T18-differential-reference-oracle.yaml
+  - docs/state/CURRENT_STATE.md
+  - docs/state/HANDOFF.md
+forbidden_actions:
+  - Add PyTorch, NumPy, serde_json, or any other third-party Rust or Python dependency to
+    Cargo.toml or pyproject.toml.
+  - Modify crates/forgellm-reference/src/lib.rs (no production source change; oracle and tests only).
+  - Change the value or documented meaning of SOFTMAX_ABS_TOLERANCE or edit numerical_contract.rs,
+    reference_ops.rs, or decoder_primitives.rs.
+  - Round a high-precision oracle value to f32 through an intermediate Python float; round
+    directly from the exact Fraction or Decimal value.
+  - Commit any new file under artifacts/governance/loop-engineering/declarations/ or
+    artifacts/governance/loop-engineering/receipts/ (that validator is hard-pinned to task_id
+    P0-T10 and its governing ADR-0005 remains proposed, not accepted).
+  - Touch scripts/hardware_inventory.py, src/forgellm_governance/{cli,hardware,snapshot}.py,
+    tests/test_{hardware,snapshot,validation}.py, tasks/open/P0-T13-*.yaml,
+    docs/architecture/ADR-0006-*.md, docs/research/P0-T15-*.md,
+    docs/superpowers/plans/2026-08-21-versioned-c-abi-design.md, or tasks/open/P0-T15-*.yaml.
+  - Make a real-model, PyTorch-conformance, performance, or production-readiness claim.
+acceptance_criteria:
+  - reference_oracle.py computes matmul, elementwise_add, elementwise_mul, and embedding_gather
+    with fractions.Fraction at zero comparison tolerance, for fixture vectors the generator
+    mechanically verifies stay within f64-exact accumulation range (every intermediate partial
+    sum's bit length is checked, not assumed).
+  - reference_oracle.py computes softmax and rms_norm with decimal.Decimal at a derived working
+    precision, documents the derivation of both the precision and the per-op comparison
+    tolerance in module docstrings, and applies a fail-closed precision-escalation check
+    (doubling precision and retrying, raising rather than guessing, if a result falls within
+    its own error bound of an f32 rounding boundary).
+  - The rms_norm error budget is derived from IEEE 754's correct-rounding guarantee for sqrt
+    and division; the softmax error budget is derived from a stated, cited libm-quality
+    assumption propagated through the shift/exp/sum/divide/cast pipeline, and is explicitly
+    labeled as resting on that assumption rather than proven.
+  - generate_reference_oracle_fixture.py --check exits non-zero with a diff summary when the
+    committed fixture does not match a freshly regenerated one, and exits zero without mutating
+    the file when they match.
+  - crates/forgellm-reference/tests/fixtures/reference_ops_oracle.json matches its committed
+    .sha256 pin.
+  - "The new Rust fixture reader parses only the fixture's fixed schema, has its own malformed-input tests, and introduces no new Cargo dependency."
+  - cargo test --workspace --all-targets --locked passes, including the new fixture-driven
+    contract tests, alongside the existing (unmodified) hand-authored tests.
+  - cargo fmt --all --check and cargo clippy --workspace --all-targets --locked -- -D warnings pass.
+  - PYTHONPATH=src python3 -m pytest -q tests/test_reference_oracle.py passes, including the
+    f32-Fraction round-trip and round-half-to-even tie tests.
+  - No file under artifacts/governance/loop-engineering/ is added or modified by this task.
+  - Independent correctness and numerical-methods review records ACCEPT before merge.
+  - The final report states this is a bounded CPU-only reference increment, explicitly leaves
+    the pre-existing golden-constant tests unconverted with a named follow-up recommended, and
+    does not claim PyTorch or real-model numerical conformance.
+verification_commands:
+  - cargo test --workspace --all-targets --locked
+  - cargo fmt --all --check
+  - cargo clippy --workspace --all-targets --locked -- -D warnings
+  - PYTHONPATH=src python3 -m pytest -q tests/test_reference_oracle.py
+  - python3 scripts/generate_reference_oracle_fixture.py --check --root .
+  - sha256sum -c crates/forgellm-reference/tests/fixtures/reference_ops_oracle.sha256
+  - python3 scripts/validate_task_packet.py tasks/open/P0-T18-differential-reference-oracle.yaml --root .
+  - git diff --check
+evidence_requirements:
+  - Record canonical base, RED (failing-test-first) head, implementation head, and eventual
+    merge commit.
+  - Record the exact cargo and pytest test counts before and after this task.
+  - "Record the derivation, not just the value, of each per-op error budget: zero tolerance for the Fraction-only ops given the generator's mechanically checked f64-exactness precondition, and the exp-path derived tolerance with its stated libm-quality assumption and citation."
+  - Record that generate_reference_oracle_fixture.py --check passed on the exact final head,
+    and record the fixture's committed sha256.
+  - Confirm no dependency was added to Cargo.toml, Cargo.lock, or pyproject.toml.
+  - Confirm no file under artifacts/governance/loop-engineering/ was added or changed.
+  - "Record independent review results and residual limitations, explicitly including that PyTorch and real-model numerical conformance remain unestablished and deferred, and that the pre-existing golden-constant tests were deliberately left unconverted."
+dependencies:
+  - P0-T17
+owner_role: Project owner and chief architect
+reviewer_role: Independent correctness and numerical-methods reviewer
+risk_ids:
+  - R-001

@@ -63,8 +63,12 @@ crates/forgellm-reference/src/allocation_tests.rs
 crates/forgellm-reference/src/lib.rs
 crates/forgellm-reference/tests/decoder_primitives.rs
 crates/forgellm-reference/tests/dense_decoder.rs
+crates/forgellm-reference/tests/fixtures/reference_ops_oracle.json
+crates/forgellm-reference/tests/fixtures/reference_ops_oracle.sha256
 crates/forgellm-reference/tests/numerical_contract.rs
 crates/forgellm-reference/tests/reference_ops.rs
+crates/forgellm-reference/tests/reference_ops_oracle_contract.rs
+crates/forgellm-reference/tests/support/mod.rs
 docs/agents/AGENT_ROLES.md
 docs/agents/CODEX_CLAUDE_SETUP.md
 docs/agents/MASTER_AGENT_PROMPT.md
@@ -135,10 +139,12 @@ docs/superpowers/plans/2026-08-14-sonarqube-main-analysis.md
 docs/superpowers/plans/2026-08-19-forgellm-engine-orchestration.md
 docs/superpowers/plans/2026-08-21-p0-t10-loop-engineering.md
 docs/superpowers/plans/2026-08-21-versioned-c-abi-design.md
+docs/superpowers/plans/2026-08-27-p0-t18-reference-oracle.md
 docs/superpowers/specs/2026-08-12-forgellm-phase-0-design.md
 docs/superpowers/specs/2026-08-13-cache-aware-heterogeneous-inference-design.md
 docs/superpowers/specs/2026-08-14-exact-speculative-decoding-semantics.md
 docs/superpowers/specs/2026-08-21-p0-t10-loop-engineering-design.md
+docs/superpowers/specs/2026-08-27-p0-t18-reference-oracle-design.md
 docs/tooling/CHATGPT_MOBILE_CONTINUITY.md
 docs/tooling/GITHUB_GITLAB_OPERATIONS.md
 docs/tooling/HARDWARE_LAB_CHECKLIST.md
@@ -165,6 +171,7 @@ schemas/task-packet.schema.json
 schemas/topology.schema.json
 scripts/bootstrap_core_ubuntu.sh
 scripts/generate_mobile_manifest.py
+scripts/generate_reference_oracle_fixture.py
 scripts/github/apply_branch_protection.py
 scripts/github/audit_repository.py
 scripts/github/bootstrap_labels.py
@@ -194,6 +201,7 @@ src/forgellm_governance/hardware.py
 src/forgellm_governance/legality.py
 src/forgellm_governance/loop_engineering.py
 src/forgellm_governance/planner.py
+src/forgellm_governance/reference_oracle.py
 src/forgellm_governance/schema_io.py
 src/forgellm_governance/simulation.py
 src/forgellm_governance/snapshot.py
@@ -213,11 +221,12 @@ tasks/closed/P0-T12-decoder-tensor-primitives.yaml
 tasks/closed/P0-T13-public-artifact-privacy-hardening.yaml
 tasks/closed/P0-T14-lifecycle-state-validation.yaml
 tasks/closed/P0-T16-dense-decoder-reference.yaml
-tasks/closed/P0-T17-rust-reference-ci-gate.yaml
 tasks/open/P0-T04-first-hardware-inventory.yaml
 tasks/open/P0-T09-sonarqube-main-analysis.yaml
 tasks/open/P0-T10-bounded-loop-engineering.yaml
 tasks/open/P0-T15-versioned-c-abi-design.yaml
+tasks/open/P0-T17-rust-reference-ci-gate.yaml
+tasks/open/P0-T18-differential-reference-oracle.yaml
 tests/fixtures/components/duplicate-implementation.json
 tests/fixtures/components/missing-fallback.json
 tests/fixtures/components/valid-cache-draft.json
@@ -239,6 +248,7 @@ tests/test_lifecycle.py
 tests/test_loop_engineering.py
 tests/test_mobile_context.py
 tests/test_planner.py
+tests/test_reference_oracle.py
 tests/test_schema_io.py
 tests/test_simulation_cli.py
 tests/test_snapshot.py
