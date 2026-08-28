@@ -7,7 +7,7 @@
 - **Lifecycle packet head:** `29560d4e7ac9592e151f3fea75a4721d2cf845a1`
 - **Candidate head reviewed in round 2:** `b8706238aff8cffbbf66e9ee9aec8bcb6a30ebf2`
 - **Evidence boundary:** repository governance and deterministic projections only
-- **Status:** hosted remediation verified; ready for final Sol gate
+- **Status:** remediation in progress after Sol gate NO-GO
 
 ## Scope
 
@@ -26,7 +26,7 @@ The implementation and validator integration were committed as `51aa42cbff06d3a7
 
 ## Local verification on the candidate
 
-- `PYTHONPATH=src python3 -m pytest -q tests/test_lifecycle.py tests/test_validation.py`: **26 passed**;
+- `PYTHONPATH=src python3 -m pytest -q tests/test_lifecycle.py tests/test_validation.py`: **28 passed**;
 - `make validate`: all project, research, benchmark, task, topology, mobile and shell gates passed;
 - `make ci`: Ruff check passed, the configured format gate passed, **501 tests passed**, **230 reference tests passed**, and the canonical synthetic simulation plus SHA-256 evidence passed;
 - `python3 -m ruff check src scripts tests`: passed;
@@ -69,8 +69,17 @@ GPT-5.6 Luna reviewed the exact receipt candidate `59a912a89136ee9ae7860deb118e1
 
 **Pre-remediation exact-head receipt verdict:** `ACCEPT`; superseded as the final publication head by the hosted-check and Sonar remediation above.
 
+## Sol gate round 1
+
+GPT-5.6 Sol reviewed the exact PR head `44b94b49b3a2251faf5c2cb7c080af810576aafd` with all hosted checks green and returned `VERDICT=NO-GO` for two factual/test-coverage gaps:
+
+1. the roadmap row stated **13 lifecycle tests**, while the shallow-checkout regression had already increased the suite to 14;
+2. the lifecycle test module lacked a negative regression proving that a stale `TREE.txt` is rejected.
+
+The first gap is corrected to **15 lifecycle tests** after adding the tree regression. The second is covered by `test_tree_projection_rejects_stale_listing`, which exercises the existing validator against a committed stale tree. No runtime, security, external-setting or evidence-boundary change is involved. A fresh exact-head Sol gate is required after the remediation.
+
 ## Safety and evidence boundaries
 
 No secret was read or written. No GitHub/Sonar setting or issue was mutated. No hardware probe, model inference, runtime/backend/ABI/kernel/CUDA/ROCm operation or benchmark was run. Historical implementation merges do not accept ADR-0005 or ADR-0006; P0-T10 remains `review` and P0-T15 remains design-only `in_progress`.
 
-**Final verdict:** pending final critical Sol gate; hosted remediation checks are green with zero Sonar annotations.
+**Final verdict:** pending post-remediation critical Sol gate and hosted checks.

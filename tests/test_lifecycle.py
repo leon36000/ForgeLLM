@@ -9,6 +9,7 @@ from forgellm_governance.validation import (
     build_mobile_manifest,
     validate_derived_state,
     validate_task_lifecycle,
+    validate_tree_projection,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -263,3 +264,19 @@ def test_derived_state_rejects_stale_readme_state_id(tmp_path: Path) -> None:
     issues = validate_derived_state(root)
 
     assert any("README current-state block" in issue.message for issue in issues)
+
+
+def test_tree_projection_rejects_stale_listing(tmp_path: Path) -> None:
+    root = tmp_path / "tree"
+    root.mkdir()
+    (root / "README.md").write_text("# fixture\n", encoding="utf-8")
+    (root / "TREE.txt").write_text("README.md\n", encoding="utf-8")
+    subprocess.run(["git", "init", "--quiet"], cwd=root, check=True)
+    subprocess.run(["git", "config", "user.email", "test@example.invalid"], cwd=root, check=True)
+    subprocess.run(["git", "config", "user.name", "Lifecycle Test"], cwd=root, check=True)
+    subprocess.run(["git", "add", "."], cwd=root, check=True)
+    subprocess.run(["git", "commit", "--quiet", "-m", "base"], cwd=root, check=True)
+
+    issues = validate_tree_projection(root)
+
+    assert any("TREE.txt is stale" in issue.message for issue in issues)
