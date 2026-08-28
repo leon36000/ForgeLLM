@@ -50,3 +50,19 @@ The fix round at `b5fa926e6c609d073ef68774eb912b7e3cc99079`:
   symbol/layout, panic, sanitizer, fuzz, concurrency, hardware, CUDA/ROCm,
   backend, publication, or secret evidence is claimed. P0-T15 is a proposed
   design and does not authorize implementation.
+
+## Sol gate and remediation
+
+- Blind GPT-5.6-Sol reviewed exact head `240be7be298dbffb9b6b2068a7c2f5e02c945258`
+  against base `ad079c0bf6f86b044f1d1d819cb105e3afe5a65f` and returned
+  `VERDICT=NO-GO` with two `MAJOR` findings: ABI-visible structures were not
+  explicitly pointer-only, and the post-`fork` rule incorrectly permitted a
+  child to create a runtime before `exec`.
+- Remediation commit `428766443cc1c8ad6655e3f1a51572feabb04090` requires
+  `const` input pointers and mutable output pointers for all ABI-visible
+  aggregate structures, prohibits public by-value aggregate parameters and
+  returns, adds C11/C++17 signature-fixture gates, and forbids ForgeLLM calls
+  in a child after `fork` and before `exec` when a live runtime was inherited.
+- The Sol findings are addressed pending fresh exact-head independent review,
+  local/hosted verification and a new blind Sol gate. ADR-0006 remains
+  `proposed`; no ABI implementation is authorized.
