@@ -1,18 +1,38 @@
 # ForgeLLM Current State
 
-- **State ID:** S-0012
-- **Updated:** 2026-08-22
+- **State ID:** S-0013
+- **Updated:** 2026-08-27
+- **Canonical source commit:** `29560d4e7ac9592e151f3fea75a4721d2cf845a1`
 - **Phase:** P0
-- **Milestone:** P0-M6 — exact speculative-decoding reference verified
-- **Overall status:** P0-T08 / CA-03 is complete; the bounded Rust CPU reference line P0-T11/P0-T12 is complete and merged; P0-T10 is complete and its public receipt is bound to `main@87a1dde`; P0-T09 / QG-01 remains active after the default-off Task 4B.1 preparation was merged for the accepted ADR-0004 method `ci_based_only`. PR #67 merged the secretless producer-to-scanner artifact transfer and fail-closed governance checks at protected `main@83f8ea6`; the scanner remains inactive and this is not a CI scanner submission. Verified pre-change evidence anchor: protected `main@26a0a66bbbc3c5e3f6e68ed379e074ca06da47f5` has Automatic Analysis `2a0d79e4-bbb1-4536-b1e6-6351ab2ef56d` with public Quality Gate `OK`, Phase 0 and CodeQL success, and prepared-workflow posture `producer=success`, `scanner=skipped`. The diagnosed historical failure remains classified `platform_limitation / subscription_loc_limit_exceeded` with internal task status `FAILED`; the owner-authorized minimal remediation changed only Sonar project visibility for `leon36000_ForgeLLM` from private to public, matching the already-public canonical GitHub repository. Billing & usage after the change shows Free plan, 50,000 private-LOC entitlement, 48,248 private LOC consumed and approximately 1.8k remaining. P0-T04 remains blocked on designation of one owner-authorized host.
-- **Authorized next work:** ADR-0004 is accepted and selects `ci_based_only`. A fresh repository readback confirms the `SONAR_TOKEN` secret name is present, but the token lifecycle review remains `not_ready_for_activation`; secret presence does not authorize activation. Obtain explicit independent review and authorization for issuer, scope, storage, expiry/rotation, revocation, audit and incident response, then record enabled readback → owner-authorized disable action → disabled readback, and only then permit the first controlled CI submission. Do not read the token, change Sonar/GitHub settings, activate CI, submit a scan, or design the blocked PR bridge from this documentation increment. P0-T04 may proceed independently after host designation.
+- **Milestone:** P0-M7 — lifecycle/state semantics reconciled
+- **Overall status:** P0-T07, P0-T08/CA-03, P0-T11/P0-T12 and P0-T13 are complete; P0-T14 lifecycle validation is complete; P0-T10 remains in `review` because ADR-0005 is still `proposed`; P0-T15 remains `in_progress` as a design-only task with ADR-0006 `proposed`; P0-T09/QG-01 remains active and its scanner is inactive. The current protected-main evidence for the latest merged checkpoints is recorded below. P0-T04 remains blocked on designation of one owner-authorized host.
+- **Authorized next work:** Execute only the next bounded CPU reference data-plane task after resolving its free task ID from live Git. Do not accept ADR-0005 or ADR-0006 from merged design/integration evidence alone. P0-T09 remains under its independent no-overlap/token lifecycle gates; do not read `SONAR_TOKEN`, change Sonar/GitHub settings, activate CI, submit a scan, or run hardware/model/runtime work.
 - **State anchor:** the Git commit containing this file
 
-- **Latest protected-main checkpoint:** `main@901667fe0dc5b20e5b97ef883c6659198202a2ae`, PR #70 documentation merge; repository secret metadata was read back without reading its value
+- **Latest protected-main checkpoint:** `main@9932a5a496df53e812d9f47c6bb95ae94b3a4a2f`, PR #75 design-only squash merge; P0-T15/ADR-0006 remain proposed and no ABI implementation is present
 
-## P0-T10 completed status
+`Canonical source commit` identifies the Git snapshot read when this state projection was reconciled; it intentionally is not the commit that contains this file, avoiding a self-referential hash. The derived mobile manifest below hashes the exact canonical source files used for the projection and is non-authoritative.
 
-P0-T10 is complete at public merge commit 87a1ddeb76d2bca45fe75853b4c3b4c9f19c78b0 from canonical base f8364f12402c3c58796dbc1b56f8c65d378e88de. Its receipt and review input bind to that public commit. The ADR-0005 integration adds only an inert pinned vendor subset, a ForgeLLM-owned bounded bridge, and repository-native receipts/validation; P0-T09 and hardware/runtime boundaries remain unchanged. ADR-0005 remains proposed pending explicit architectural acceptance.
+## P0-T14 lifecycle reconciliation
+
+- P0-T03 has one canonical `complete` packet under `tasks/closed`; its stale open duplicate was removed.
+- P0-T10 remains under `tasks/open` with status `review`. ADR-0005 remains `proposed`; the final Sol gate found that explicit architectural acceptance evidence is still missing. The implementation merge at `main@87a1dde` is not treated as ADR acceptance.
+- P0-T13 is under `tasks/closed` with status `complete`, backed by protected merge `ad079c0bf6f86b044f1d1d819cb105e3afe5a65f` and its post-merge validation.
+- P0-T14 is under `tasks/closed` with status `complete` at the reconciled candidate snapshot `29560d4e7ac9592e151f3fea75a4721d2cf845a1`.
+- P0-T15 remains under `tasks/open` with status `in_progress`; ADR-0006 remains `proposed` and the merged increment contains no ABI header, symbol, FFI, backend or runtime implementation.
+- The validator rejects directory/status inversions, duplicate IDs, unresolved dependencies and unresolved ADR successors; it also validates the README block, mobile manifest and exact tracked-path tree.
+
+## P0-T10 integration status
+
+The P0-T10 implementation is present at public merge commit 87a1ddeb76d2bca45fe75853b4c3b4c9f19c78b0 from canonical base f8364f12402c3c58796dbc1b56f8c65d378e88de. Its receipt and review input bind to that public commit. The ADR-0005 integration adds only an inert pinned vendor subset, a ForgeLLM-owned bounded bridge, and repository-native receipts/validation; P0-T09 and hardware/runtime boundaries remain unchanged. Lifecycle status is now `review`, not `complete`, because ADR-0005 remains `proposed` and the required final architecture/security acceptance record is absent. The Sol gate explicitly rejected treating the implementation merge as architectural acceptance.
+
+## P0-T13 privacy closeout
+
+P0-T13 is complete under protected merge `ad079c0bf6f86b044f1d1d819cb105e3afe5a65f` (PR #78). The fail-closed public-artifact sanitizer and snapshot privacy boundary passed the post-merge focused suite (`34` tests), full suite (`487` tests), speculative suite (`230` tests), packet validation, Ruff, diff-check and cleanup. No real host probe or inventory publication occurred.
+
+## P0-T15 design-only checkpoint
+
+P0-T15 is an `in_progress` design task under `tasks/open/P0-T15-versioned-c-abi-design.yaml`. Its protected merge `9932a5a496df53e812d9f47c6bb95ae94b3a4a2f` contains only the proposed ADR-0006, source review, bounded implementation plan, task packet and review record. ADR-0006 remains `proposed`; no ABI header, symbol, binding, runtime, backend or C/C++ implementation is authorized by this state.
 
 ## Objective
 

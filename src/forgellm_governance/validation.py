@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import re
 import statistics
+import subprocess
 import tomllib
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
@@ -68,6 +70,38 @@ _SONAR_CONTRIBUTOR_COMMAND = re.compile(
     r"yarn(?:\s|$)|git\s+(?:clone|checkout|switch)|bash\s+(?:\./)?(?:scripts?/|\.github/)|"
     r"sh\s+(?:\./)?(?:scripts?/|\.github/))"
 )
+
+_OPEN_TASK_STATUSES = frozenset({"draft", "ready", "in_progress", "blocked", "review"})
+_CLOSED_TASK_STATUSES = frozenset({"complete", "cancelled"})
+_ADR_STATUS_VALUES = frozenset({"proposed", "accepted", "superseded", "rejected"})
+_ADR_ID_PATTERN = re.compile(r"^ADR-\d{4}$", re.ASCII)
+_STATE_ID_PATTERN = re.compile(r"^S-\d{4,}$", re.ASCII)
+_COMMIT_PATTERN = re.compile(r"^[0-9a-f]{40}$")
+_STATE_ID_LINE = re.compile(r"(?m)^- \*\*State ID:\*\* (S-\d{4,})\s*$", re.ASCII)
+_STATE_COMMIT_LINE = re.compile(r"(?m)^- \*\*Canonical source commit:\*\* `([0-9a-f]{40})`\s*$")
+_MOBILE_STATE_ID_LINE = re.compile(r"(?m)^\*\*Canonical state ID:\*\* (S-\d{4,})\s*$", re.ASCII)
+_MOBILE_COMMIT_LINE = re.compile(r"(?m)^\*\*Canonical source commit:\*\* `([0-9a-f]{40})`\s*$")
+_MOBILE_MANIFEST_LINE = re.compile(r"(?m)^\*\*Derived manifest:\*\* `([^`]+)`\s*$")
+_ADR_STATUS_LINE = re.compile(r"(?m)^- \*\*Status:\*\* (proposed|accepted|superseded|rejected)\s*$")
+_ADR_SUCCESSOR_LINE = re.compile(r"(?m)^- \*\*Successor:\*\* (ADR-\d{4})\s*$", re.ASCII)
+
+_CURRENT_STATE_PATH = Path("docs/state/CURRENT_STATE.md")
+_TASK_PACKET_SCHEMA_PATH = Path("schemas/task-packet.schema.json")
+_OPEN_TASKS_PATH = Path("tasks/open")
+_CLOSED_TASKS_PATH = Path("tasks/closed")
+_YAML_FILE_PATTERN = "*.yml"
+_MOBILE_MANIFEST_PATH = Path("chatgpt/mobile-core/DERIVED-MANIFEST.yaml")
+_MOBILE_PROJECTION_PATH = Path("chatgpt/mobile-core/03_FORGELLM_STATE_AND_DECISIONS.md")
+_MOBILE_SOURCE_PATHS = (
+    _CURRENT_STATE_PATH,
+    Path("docs/state/DECISIONS.md"),
+    Path("docs/state/RISKS.md"),
+    Path("docs/state/OPEN_QUESTIONS.md"),
+    Path("docs/state/HANDOFF.md"),
+    Path("docs/roadmap/PHASE0_TASKS.md"),
+)
+_README_STATE_BEGIN = "<!-- forgellm:current-state:begin -->"
+_README_STATE_END = "<!-- forgellm:current-state:end -->"
 
 
 @dataclass(frozen=True, slots=True)
@@ -227,7 +261,7 @@ def validate_task_packet_file(path: Path | str, *, root: Path | str | None = Non
         return [ValidationIssue(str(path), str(exc))]
     if not isinstance(data, Mapping):
         return [ValidationIssue(str(path), "task packet root must be an object")]
-    issues = _validate_schema(data, project_root / "schemas/task-packet.schema.json", path)
+    issues = _validate_schema(data, project_root / _TASK_PACKET_SCHEMA_PATH, path)
     if issues:
         return issues
     task_phase = data["task_id"].split("-", maxsplit=1)[0]
@@ -236,6 +270,395 @@ def validate_task_packet_file(path: Path | str, *, root: Path | str | None = Non
     if data["task_id"] in data["dependencies"]:
         issues.append(ValidationIssue(str(path), "a task cannot depend on itself"))
     return issues
+
+
+def _task_packet_paths(root: Path) -> list[tuple[Path, frozenset[str]]]:
+    paths: list[tuple[Path, frozenset[str]]] = []
+    for relative, allowed_statuses in (
+        (_OPEN_TASKS_PATH, _OPEN_TASK_STATUSES),
+        (_CLOSED_TASKS_PATH, _CLOSED_TASK_STATUSES),
+    ):
+        directory = root / relative
+        paths.extend((path, allowed_statuses) for path in sorted(directory.glob("*.yaml")))
+        paths.extend((path, allowed_statuses) for path in sorted(directory.glob(_YAML_FILE_PATTERN)))
+    return paths
+
+
+def _historical_task_ids(root: Path) -> set[str]:
+    identifiers: set[str] = set()
+    for path in sorted((root / "examples/tasks").glob("*.y*ml")):
+        try:
+            data = _load_yaml(path)
+        except ValueError:
+            continue
+        if isinstance(data, Mapping) and isinstance(data.get("task_id"), str):
+            identifiers.add(data["task_id"])
+    return identifiers
+
+
+def _find_adr(root: Path, decision_id: str) -> Path | None:
+    matches = sorted((root / "docs/architecture").glob(f"{decision_id}-*.md"))
+    return matches[0] if len(matches) == 1 else None
+
+
+def _adr_metadata(path: Path) -> tuple[str | None, str | None]:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return None, None
+    statuses = _ADR_STATUS_LINE.findall(text)
+    successors = _ADR_SUCCESSOR_LINE.findall(text)
+    status = statuses[0] if len(statuses) == 1 else None
+    successor = successors[0] if len(successors) == 1 else None
+    return status, successor
+
+
+def _adr_is_accepted(root: Path, decision_id: str, source_path: Path, issues: list[ValidationIssue]) -> bool:
+    current_id = decision_id
+    visited: set[str] = set()
+    while True:
+        if current_id in visited:
+            issues.append(ValidationIssue(str(source_path), f"ADR successor cycle includes {current_id}"))
+            return False
+        visited.add(current_id)
+        adr_path = _find_adr(root, current_id)
+        if adr_path is None:
+            issues.append(ValidationIssue(str(source_path), f"unresolved decision {current_id}"))
+            return False
+        status, successor = _adr_metadata(adr_path)
+        if status == "accepted":
+            return True
+        if status != "superseded":
+            issues.append(ValidationIssue(str(source_path), f"decision {current_id} has invalid or unresolved status"))
+            return False
+        if successor is None or not _ADR_ID_PATTERN.fullmatch(successor):
+            issues.append(ValidationIssue(str(source_path), f"superseded {current_id} requires an explicit successor"))
+            return False
+        current_id = successor
+
+
+def _validate_complete_decision(
+    root: Path, path: Path, task_id: str, decision_id: str, issues: list[ValidationIssue]
+) -> None:
+    if _adr_is_accepted(root, decision_id, path, issues):
+        return
+    adr_path = _find_adr(root, decision_id)
+    status_name, _ = _adr_metadata(adr_path) if adr_path is not None else (None, None)
+    if status_name not in {"superseded", "accepted"}:
+        issues.append(
+            ValidationIssue(
+                str(path),
+                f"complete task {task_id} requires accepted {decision_id}; found {status_name or 'missing'}",
+            )
+        )
+
+
+def _validate_nonterminal_decision(root: Path, path: Path, decision_id: str, issues: list[ValidationIssue]) -> None:
+    adr_path = _find_adr(root, decision_id)
+    if adr_path is None:
+        issues.append(ValidationIssue(str(path), f"unresolved decision {decision_id}"))
+        return
+    status_name, successor = _adr_metadata(adr_path)
+    if status_name is None or status_name not in _ADR_STATUS_VALUES:
+        issues.append(ValidationIssue(str(path), f"decision {decision_id} has invalid status metadata"))
+    elif status_name == "superseded" and (successor is None or _find_adr(root, successor) is None):
+        issues.append(ValidationIssue(str(path), f"superseded {decision_id} requires an explicit successor"))
+
+
+def _validate_task_decisions(
+    root: Path,
+    path: Path,
+    task_id: str,
+    status: str,
+    data: Mapping[str, Any],
+    issues: list[ValidationIssue],
+) -> None:
+    decision_ids = data.get("decision_ids")
+    if not isinstance(decision_ids, list):
+        return
+    for decision_id in decision_ids:
+        if not isinstance(decision_id, str) or not _ADR_ID_PATTERN.fullmatch(decision_id):
+            continue
+        if status == "complete":
+            _validate_complete_decision(root, path, task_id, decision_id, issues)
+        else:
+            _validate_nonterminal_decision(root, path, decision_id, issues)
+
+
+def _validate_lifecycle_packet(
+    root: Path, path: Path, allowed_statuses: frozenset[str]
+) -> tuple[tuple[Path, Mapping[str, Any], str, str] | None, list[ValidationIssue]]:
+    try:
+        data = _load_yaml(path)
+    except ValueError as exc:
+        return None, [ValidationIssue(str(path), str(exc))]
+    if not isinstance(data, Mapping):
+        return None, [ValidationIssue(str(path), "task packet root must be an object")]
+
+    issues = _validate_schema(data, root / _TASK_PACKET_SCHEMA_PATH, path)
+    task_id = data.get("task_id")
+    status = data.get("status")
+    if not isinstance(task_id, str):
+        return None, issues
+    if not path.name.startswith(f"{task_id}-"):
+        issues.append(ValidationIssue(str(path), f"filename must start with task ID {task_id!r}"))
+    directory = _OPEN_TASKS_PATH if allowed_statuses == _OPEN_TASK_STATUSES else _CLOSED_TASKS_PATH
+    if not isinstance(status, str) or status not in allowed_statuses:
+        expectation = "non-terminal" if directory == _OPEN_TASKS_PATH else "terminal"
+        issues.append(ValidationIssue(str(path), f"{directory} packets must have a {expectation} status"))
+    if not isinstance(status, str):
+        return None, issues
+    return (path, data, task_id, status), issues
+
+
+def _collect_lifecycle_records(
+    root: Path,
+) -> tuple[list[tuple[Path, Mapping[str, Any], str, str]], list[ValidationIssue]]:
+    records: list[tuple[Path, Mapping[str, Any], str, str]] = []
+    issues: list[ValidationIssue] = []
+    for path, allowed_statuses in _task_packet_paths(root):
+        record, packet_issues = _validate_lifecycle_packet(root, path, allowed_statuses)
+        issues.extend(packet_issues)
+        if record is not None:
+            records.append(record)
+    return records, issues
+
+
+def _validate_duplicate_task_ids(
+    records: list[tuple[Path, Mapping[str, Any], str, str]], issues: list[ValidationIssue]
+) -> set[str]:
+    seen: dict[str, list[Path]] = {}
+    for path, _, task_id, _ in records:
+        seen.setdefault(task_id, []).append(path)
+    for task_id, paths in sorted(seen.items()):
+        if len(paths) > 1:
+            locations = ", ".join(str(path) for path in paths)
+            issues.append(ValidationIssue(locations, f"duplicate task ID {task_id}: {locations}"))
+    return set(seen)
+
+
+def _validate_task_dependencies(
+    records: list[tuple[Path, Mapping[str, Any], str, str]], known_ids: set[str], issues: list[ValidationIssue]
+) -> None:
+    for path, data, _, _ in records:
+        dependencies = data.get("dependencies")
+        if not isinstance(dependencies, list):
+            continue
+        for dependency in dependencies:
+            if isinstance(dependency, str) and dependency not in known_ids:
+                issues.append(ValidationIssue(str(path), f"unresolved dependency {dependency}"))
+
+
+def validate_task_lifecycle(root: Path | str) -> list[ValidationIssue]:
+    """Validate task-directory status, identity, dependencies and ADR links."""
+
+    root = Path(root).resolve()
+    records, issues = _collect_lifecycle_records(root)
+    known_ids = _validate_duplicate_task_ids(records, issues) | _historical_task_ids(root)
+    _validate_task_dependencies(records, known_ids, issues)
+    for path, data, task_id, status in records:
+        _validate_task_decisions(root, path, task_id, status, data, issues)
+    return issues
+
+
+def _extract_state_metadata(text: str) -> tuple[str, str]:
+    state_ids = _STATE_ID_LINE.findall(text)
+    commits = _STATE_COMMIT_LINE.findall(text)
+    if len(state_ids) != 1 or not _STATE_ID_PATTERN.fullmatch(state_ids[0]):
+        raise ValueError("CURRENT_STATE.md must contain exactly one canonical State ID")
+    if len(commits) != 1 or not _COMMIT_PATTERN.fullmatch(commits[0]):
+        raise ValueError("CURRENT_STATE.md must contain exactly one canonical source commit")
+    return state_ids[0], commits[0]
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def build_mobile_manifest(root: Path | str) -> dict[str, Any]:
+    """Build the deterministic, non-authoritative mobile projection manifest."""
+
+    root = Path(root).resolve()
+    state_path = root / _CURRENT_STATE_PATH
+    state_id, source_commit = _extract_state_metadata(state_path.read_text(encoding="utf-8"))
+    source_hashes = {str(path): _sha256_file(root / path) for path in _MOBILE_SOURCE_PATHS}
+    return {
+        "schema_version": "1.0",
+        "kind": "derived_mobile_manifest",
+        "authority": "derived_non_authoritative",
+        "state_id": state_id,
+        "source_commit": source_commit,
+        "projections": [
+            {
+                "path": str(_MOBILE_PROJECTION_PATH),
+                "source_paths": [str(path) for path in _MOBILE_SOURCE_PATHS],
+                "source_sha256": source_hashes,
+            }
+        ],
+    }
+
+
+def _git_check(root: Path, *arguments: str) -> bool:
+    try:
+        result = subprocess.run(
+            ["git", *arguments],
+            cwd=root,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+    except OSError:
+        return False
+    return result.returncode == 0
+
+
+def _git_is_shallow(root: Path) -> bool:
+    value = _git_text(root, "rev-parse", "--is-shallow-repository")
+    return value is not None and value.strip() == "true"
+
+
+def _git_text(root: Path, *arguments: str) -> str | None:
+    try:
+        result = subprocess.run(
+            ["git", *arguments],
+            cwd=root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        return None
+    return result.stdout if result.returncode == 0 else None
+
+
+def _task_status_map(root: Path) -> dict[str, str]:
+    statuses: dict[str, str] = {}
+    for _path, _, task_id, status in _lifecycle_records_without_validation(root):
+        if task_id not in statuses:
+            statuses[task_id] = status
+    return statuses
+
+
+def _lifecycle_records_without_validation(root: Path) -> list[tuple[Path, Mapping[str, Any], str, str]]:
+    records: list[tuple[Path, Mapping[str, Any], str, str]] = []
+    for path, _ in _task_packet_paths(root):
+        try:
+            data = _load_yaml(path)
+        except ValueError:
+            continue
+        if not isinstance(data, Mapping):
+            continue
+        task_id = data.get("task_id")
+        status = data.get("status")
+        if isinstance(task_id, str) and isinstance(status, str):
+            records.append((path, data, task_id, status))
+    return records
+
+
+def _validate_mobile_projection(root: Path, state_id: str, source_commit: str, issues: list[ValidationIssue]) -> None:
+    path = root / _MOBILE_PROJECTION_PATH
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        issues.append(ValidationIssue(str(path), f"cannot read mobile projection: {exc}"))
+        return
+    mobile_ids = _MOBILE_STATE_ID_LINE.findall(text)
+    mobile_commits = _MOBILE_COMMIT_LINE.findall(text)
+    manifests = _MOBILE_MANIFEST_LINE.findall(text)
+    if mobile_ids != [state_id]:
+        issues.append(ValidationIssue(str(path), "mobile projection state ID is stale"))
+    if mobile_commits != [source_commit]:
+        issues.append(ValidationIssue(str(path), "mobile projection source commit is stale"))
+    if manifests != [str(_MOBILE_MANIFEST_PATH)]:
+        issues.append(ValidationIssue(str(path), "mobile projection must name the derived manifest"))
+
+
+def _validate_readme_projection(root: Path, state_id: str, source_commit: str, issues: list[ValidationIssue]) -> None:
+    path = root / "README.md"
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        issues.append(ValidationIssue(str(path), f"cannot read README projection: {exc}"))
+        return
+    if text.count(_README_STATE_BEGIN) != 1 or text.count(_README_STATE_END) != 1:
+        issues.append(ValidationIssue(str(path), "README must contain one delimited current-state block"))
+        return
+    body = text.split(_README_STATE_BEGIN, maxsplit=1)[1].split(_README_STATE_END, maxsplit=1)[0].strip()
+    status_map = _task_status_map(root)
+    status_text = "; ".join(f"{task_id}={status}" for task_id, status in sorted(status_map.items())) or "<none>"
+    expected = "\n".join(
+        (
+            f"State ID: `{state_id}`",
+            f"Canonical source commit: `{source_commit}`",
+            f"Task statuses: {status_text}",
+        )
+    )
+    if body != expected:
+        issues.append(ValidationIssue(str(path), "README current-state block is stale"))
+
+
+def validate_derived_state(root: Path | str) -> list[ValidationIssue]:
+    """Validate canonical state metadata and its README/mobile projections."""
+
+    root = Path(root).resolve()
+    issues: list[ValidationIssue] = []
+    state_path = root / _CURRENT_STATE_PATH
+    try:
+        state_id, source_commit = _extract_state_metadata(state_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        return [ValidationIssue(str(state_path), str(exc))]
+    source_present = _git_check(root, "cat-file", "-e", f"{source_commit}^{{commit}}")
+    if source_present:
+        if not _git_check(root, "merge-base", "--is-ancestor", source_commit, "HEAD"):
+            issues.append(ValidationIssue(str(state_path), "canonical source commit is not an ancestor of HEAD"))
+    elif not _git_is_shallow(root):
+        issues.append(ValidationIssue(str(state_path), "canonical source commit is not present in Git"))
+    # A depth-one checkout cannot prove ancestry for an older source commit. The
+    # exact hash format, state metadata and manifest hashes remain enforceable.
+
+    manifest_path = root / _MOBILE_MANIFEST_PATH
+    try:
+        manifest = _load_yaml(manifest_path)
+        expected_manifest = build_mobile_manifest(root)
+    except (OSError, ValueError) as exc:
+        issues.append(ValidationIssue(str(manifest_path), f"cannot build derived mobile manifest: {exc}"))
+    else:
+        if manifest != expected_manifest:
+            issues.append(ValidationIssue(str(manifest_path), "derived mobile manifest is stale"))
+
+    _validate_mobile_projection(root, state_id, source_commit, issues)
+    _validate_readme_projection(root, state_id, source_commit, issues)
+    return issues
+
+
+def validate_tree_projection(root: Path | str) -> list[ValidationIssue]:
+    """Require TREE.txt to equal the sorted tracked-path listing exactly."""
+
+    root = Path(root).resolve()
+    path = root / "TREE.txt"
+    tracked = _git_text(root, "ls-files")
+    if tracked is None:
+        return [ValidationIssue(str(path), "cannot read tracked paths from Git")]
+    expected = "".join(f"{item}\n" for item in sorted(line for line in tracked.splitlines() if line))
+    try:
+        actual = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        return [ValidationIssue(str(path), f"cannot read tree projection: {exc}")]
+    if actual != expected:
+        return [ValidationIssue(str(path), "TREE.txt is stale; regenerate it from git ls-files")]
+    return []
+
+
+def validate_lifecycle(root: Path | str) -> list[ValidationIssue]:
+    """Validate task lifecycle and all declared current-state projections."""
+
+    root = Path(root).resolve()
+    return validate_task_lifecycle(root) + validate_derived_state(root) + validate_tree_projection(root)
 
 
 def _require_mapping(path: Path, data: Any, key: str) -> tuple[list[Any], list[ValidationIssue]]:
@@ -1258,7 +1681,7 @@ def validate_repository_automation(root: Path | str) -> list[ValidationIssue]:
     uses_pattern = re.compile(r"^\s*uses:\s*[^#\s]+@([^#\s]+)", re.MULTILINE)
     full_sha = re.compile(r"^[0-9a-f]{40}$")
     workflow_texts: dict[str, str] = {}
-    for workflow in sorted((root / ".github/workflows").glob("*.yml")):
+    for workflow in sorted((root / ".github/workflows").glob(_YAML_FILE_PATTERN)):
         try:
             workflow_text = workflow.read_text(encoding="utf-8")
             yaml.safe_load(workflow_text)
@@ -1308,7 +1731,7 @@ def validate_repository_automation(root: Path | str) -> list[ValidationIssue]:
     elif "run: make ci" not in phase0_text:
         issues.append(ValidationIssue(str(phase0_workflow), "Phase 0 workflow must execute the complete 'make ci' gate"))
 
-    for issue_form in sorted((root / ".github/ISSUE_TEMPLATE").glob("*.yml")):
+    for issue_form in sorted((root / ".github/ISSUE_TEMPLATE").glob(_YAML_FILE_PATTERN)):
         try:
             document = yaml.safe_load(issue_form.read_text(encoding="utf-8"))
         except yaml.YAMLError as exc:
@@ -1367,7 +1790,7 @@ def validate_project(root: Path | str) -> list[ValidationIssue]:
         "CLAUDE.md",
         "chatgpt/PROJECT_INSTRUCTIONS.txt",
         "docs/architecture/PROJECT_CHARTER.md",
-        "docs/state/CURRENT_STATE.md",
+        str(_CURRENT_STATE_PATH),
         "docs/research/RESEARCH_PROTOCOL.md",
         "docs/benchmarks/BENCHMARK_STANDARD.md",
         "research/repos.yaml",
@@ -1375,7 +1798,7 @@ def validate_project(root: Path | str) -> list[ValidationIssue]:
         "research/official_sources.yaml",
         "research/claims.yaml",
         "schemas/benchmark-result.schema.json",
-        "schemas/task-packet.schema.json",
+        str(_TASK_PACKET_SCHEMA_PATH),
     ]
     issues: list[ValidationIssue] = []
     for relative in required:
@@ -1413,4 +1836,5 @@ def validate_project(root: Path | str) -> list[ValidationIssue]:
 
     issues.extend(validate_repository_automation(root))
     issues.extend(scan_for_secrets(root))
+    issues.extend(validate_lifecycle(root))
     return issues

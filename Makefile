@@ -22,14 +22,14 @@ SPECULATIVE_FORMAT_FILES := \
 	tests/test_speculative_trace.py \
 	tests/test_speculative_adversarial.py
 
-.PHONY: validate validate-loop test lint verify verify-speculative ci mobile-hashes simulate-cache-draft inventory snapshot clean
+.PHONY: validate validate-loop validate-lifecycle mobile-manifest test lint verify verify-speculative ci mobile-hashes simulate-cache-draft inventory snapshot clean
 
-validate: validate-loop
+validate: validate-loop validate-lifecycle
 	$(PYTHON) scripts/validate_project_state.py --root .
 	$(PYTHON) scripts/validate_research_catalog.py --root .
 	$(PYTHON) scripts/validate_benchmark.py examples/benchmarks/valid-example.json --root .
 	$(PYTHON) scripts/validate_task_packet.py examples/tasks/P0-T02.yaml --root .
-	$(PYTHON) scripts/validate_task_packet.py tasks/open/P0-T03-repository-hardening.yaml --root .
+	$(PYTHON) scripts/validate_task_packet.py tasks/closed/P0-T03-repository-hardening.yaml --root .
 	$(PYTHON) scripts/validate_task_packet.py tasks/open/P0-T04-first-hardware-inventory.yaml --root .
 	$(PYTHON) scripts/validate_task_packet.py tasks/closed/P0-T07-cache-aware-placement-simulator.yaml --root .
 	$(PYTHON) scripts/validate_task_packet.py tasks/closed/P0-T08-exact-speculative-decoding.yaml --root .
@@ -44,6 +44,12 @@ validate: validate-loop
 validate-loop:
 	$(PYTHON) scripts/validate_task_packet.py tasks/open/P0-T10-bounded-loop-engineering.yaml --root .
 	$(PYTHON) scripts/validate_loop_engineering.py --root .
+
+validate-lifecycle:
+	$(PYTHON) scripts/validate_lifecycle.py --root .
+
+mobile-manifest:
+	$(PYTHON) scripts/generate_mobile_manifest.py --root .
 
 test:
 	$(PYTHON) -m pytest -q

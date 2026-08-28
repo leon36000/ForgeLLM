@@ -1,6 +1,7 @@
 # ADR-NNNN: Concise decision title
 
 - **Status:** proposed | accepted | superseded | rejected
+- **Successor:** ADR-NNNN (required when Status is superseded)
 - **Date:** YYYY-MM-DD
 - **Owners:** named human owner and reviewing role
 - **Related tasks/claims:** identifiers

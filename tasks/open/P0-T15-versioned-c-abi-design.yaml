@@ -20,6 +20,8 @@ inputs:
   - Engine orchestration plan sequencing ABI/lifecycle design before backend implementation.
   - Official Rust 1.97.1 FFI, layout, panic and unwinding documentation.
   - Exact ONNX Runtime, LLVM/MLIR and Vulkan source revisions plus versioned CUDA documentation reviewed on 2026-08-21.
+decision_ids:
+  - ADR-0006
 outputs:
   - Proposed ADR-0006 defining public ABI versioning, object lifecycle and failure semantics.
   - Primary-source research record with exact revisions, claims, limitations and rejected pattern transfers.

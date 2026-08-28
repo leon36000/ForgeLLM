@@ -1,0 +1,99 @@
+schema_version: "1.0"
+task_id: P0-T14
+title: Enforce canonical task and derived-state lifecycle semantics
+phase: P0
+status: complete
+charter_goals:
+  - Preserve canonical project state in version control.
+  - Make governance and verification reproducible for human and agent contributors.
+  - Keep correctness and security gates explicit before implementation promotion.
+goal: Add deterministic semantic validation for task packet lifecycle, ADR dependencies and derived state projections, then reconcile only the stale canonical facts proven by the repository.
+non_goals:
+  - Implement inference, runtime, ABI, backend, model, benchmark, hardware, CUDA or ROCm behavior.
+  - Accept ADR-0005 or ADR-0006 without the independent architecture and security evidence they require.
+  - Rewrite historical evidence, mutate GitHub issues/settings, close external issues automatically, or touch secrets.
+  - Add a lifecycle database, shadow project state, broad prose grep, or a placeholder validator.
+inputs:
+  - Owner-approved P0-T14 lifecycle design recorded in issue #73.
+  - Protected ForgeLLM main at 9932a5a496df53e812d9f47c6bb95ae94b3a4a2f.
+  - Existing task packet schema, ADR-0000 metadata template and Git-tracked state projections.
+  - P0-T10 and P0-T15 proposed ADR dependencies and P0-T13 merged privacy closeout.
+outputs:
+  - Deterministic task/ADR lifecycle validator and focused semantic regression tests.
+  - Optional task-packet decision_ids metadata and standardized superseded-ADR successor metadata.
+  - Rebuildable non-authoritative mobile projection manifest, README status block and exact TREE projection gate.
+  - Reconciled P0-T03/P0-T10/P0-T13/P0-T15/P0-T07 lifecycle facts and state handoff.
+allowed_paths:
+  - tasks/open/P0-T14-lifecycle-state-validation.yaml
+  - tasks/closed/P0-T14-lifecycle-state-validation.yaml
+  - tasks/open/P0-T03-repository-hardening.yaml
+  - tasks/closed/P0-T03-repository-hardening.yaml
+  - tasks/open/P0-T10-bounded-loop-engineering.yaml
+  - tasks/open/P0-T13-public-artifact-privacy-hardening.yaml
+  - tasks/closed/P0-T13-public-artifact-privacy-hardening.yaml
+  - tasks/open/P0-T15-versioned-c-abi-design.yaml
+  - schemas/task-packet.schema.json
+  - src/forgellm_governance/validation.py
+  - src/forgellm_governance/__init__.py
+  - scripts/validate_lifecycle.py
+  - scripts/generate_mobile_manifest.py
+  - tests/test_lifecycle.py
+  - docs/architecture/ADR-0000-template.md
+  - docs/superpowers/specs/2026-08-13-cache-aware-heterogeneous-inference-design.md
+  - docs/state/CURRENT_STATE.md
+  - docs/state/DECISIONS.md
+  - docs/state/RISKS.md
+  - docs/state/HANDOFF.md
+  - docs/roadmap/PHASE0_TASKS.md
+  - README.md
+  - TREE.txt
+  - chatgpt/mobile-core/03_FORGELLM_STATE_AND_DECISIONS.md
+  - chatgpt/mobile-core/DERIVED-MANIFEST.yaml
+  - Makefile
+  - docs/reviews/P0-T14-LIFECYCLE-REVIEW.md
+forbidden_actions:
+  - Push directly to main or bypass pull-request, exact-head, hosted-check and blind Sol gates.
+  - Read, print, copy, provision, rotate or mutate secrets, credentials, accounts, Sonar or GitHub settings.
+  - Close GitHub issues automatically or treat a chat/loop receipt as canonical authority.
+  - Run hardware probes, model inference, benchmarks, runtime, ABI, backend, kernel, CUDA or ROCm work.
+  - Accept a proposed or rejected governing ADR merely because an implementation or design was merged.
+  - Replace task/ADR/state authority with a database, shadow files, broad string matching or generated guesses.
+  - Weaken existing validation, rewrite historical evidence, add dependencies or leave a stub/skipped regression test.
+acceptance_criteria:
+  - Open packets have non-terminal statuses and closed packets have terminal complete/cancelled statuses.
+  - Task IDs are unique across both task directories, filenames match IDs, and dependencies resolve to packets or examples.
+  - decision_ids is schema-valid; every referenced ADR exists and superseded ADRs name an explicit successor.
+  - A complete task with decision_ids is rejected unless every governing ADR or accepted successor is accepted.
+  - CURRENT_STATE has one canonical state ID/source commit; the mobile projection and README block match it.
+  - The derived mobile manifest hashes the exact canonical source paths and fails closed when stale or widened.
+  - TREE.txt equals the sorted tracked Git path list exactly.
+  - P0-T03 has no open duplicate, P0-T13 is closed after its merged evidence, P0-T10 is review while ADR-0005 is proposed, and P0-T15 remains in_progress while ADR-0006 is proposed.
+  - P0-T07 lifecycle prose records its reviewed synthetic implementation without changing simulator semantics or evidence boundaries.
+  - Focused RED-to-GREEN tests, full make ci, exact packet validation, diff-check and clean status pass on the final head.
+  - No external GitHub issue mutation, secret access, hardware/model/runtime action or architecture acceptance is claimed.
+verification_commands:
+  - PYTHONPATH=src python3 -m pytest -q tests/test_lifecycle.py tests/test_validation.py
+  - PYTHONPATH=src python3 scripts/validate_task_packet.py tasks/closed/P0-T14-lifecycle-state-validation.yaml --root .
+  - PYTHONPATH=src python3 scripts/validate_lifecycle.py --root .
+  - make mobile-manifest
+  - python3 scripts/validate_project_state.py --root .
+  - python3 -m ruff check src scripts tests
+  - make ci
+  - git diff --check
+  - git status --short
+evidence_requirements:
+  - Record the live issue/design source, base, RED output, implementation head, review head and merge evidence.
+  - Record each status inversion, duplicate, ADR and stale-projection regression with deterministic diagnostics.
+  - Record exact mobile manifest source hashes, state ID/source commit, README/TREE validation and task inventory.
+  - Record the P0-T10 Sol NO-GO disposition and leave ADR-0005 proposed with P0-T10 non-terminal.
+  - Record no external mutation, secret access, hardware probe, model inference or runtime/backend work.
+dependencies:
+  - P0-T13
+owner_role: Project owner and governance/architecture authority
+reviewer_role: Independent lifecycle, security and reproducibility reviewer
+risk_ids:
+  - R-006
+  - R-007
+  - R-013
+  - R-014
+  - R-016

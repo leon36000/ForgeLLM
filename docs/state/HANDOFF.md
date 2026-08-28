@@ -1,12 +1,12 @@
 # ForgeLLM Handoff
 
-**From state:** S-0012
-**To work:** continue P0-T09 through the ordered token/lifecycle and no-overlap gates after the merged inactive artifact-boundary checkpoint; P0-T04 still awaits host designation
-**Generated:** 2026-08-22
+**From state:** S-0013
+**To work:** resolve the next free bounded CPU reference task ID from live Git; P0-T09 remains inactive and human-gated, P0-T04 still awaits host designation
+**Generated:** 2026-08-27
 
-## P0-T10 completed handoff
+## P0-T10 integration handoff
 
-P0-T10 is complete at public merge commit 87a1ddeb76d2bca45fe75853b4c3b4c9f19c78b0 from f8364f12402c3c58796dbc1b56f8c65d378e88de. The receipt is reproducible from protected `main`; do not execute upstream installers, runners, hooks, or any P0-T09, hardware, runtime, or external administrative operation. ADR-0005 remains proposed pending explicit architectural acceptance.
+P0-T10's bounded implementation is present at public merge commit 87a1ddeb76d2bca45fe75853b4c3b4c9f19c78b0 from f8364f12402c3c58796dbc1b56f8c65d378e88de. Its receipt is reproducible from protected `main`, but lifecycle status is `review`: ADR-0005 remains `proposed` and the required final architecture/security acceptance record is absent. Do not treat the implementation merge or historical agent/Terra approval as ADR acceptance; do not execute upstream installers, runners, hooks, or any P0-T09, hardware, runtime, or external administrative operation.
 
 ## Canonical status
 
@@ -14,12 +14,19 @@ P0-T10 is complete at public merge commit 87a1ddeb76d2bca45fe75853b4c3b4c9f19c78
 - protected default branch: `main`;
 - P0-T07: complete;
 - P0-T08 / CA-03: complete;
-- P0-T09 / QG-01: owner-authorized and `in_progress`;
-- P0-T10: complete and publicly merged at `main@87a1dde`;
+- P0-T09 / QG-01: owner-authorized and `in_progress`, scanner inactive;
+- P0-T10: `review`, publicly merged at `main@87a1dde`, ADR-0005 proposed;
+- P0-T13: complete and publicly merged at `main@ad079c0`;
+- P0-T14: complete in the current candidate, with lifecycle validation and projections reconciled;
+- P0-T15: `in_progress`, design-only, publicly merged at `main@9932a5a`, ADR-0006 proposed;
 - P0-T11/P0-T12: bounded Rust CPU reference line complete and merged on `main`;
 - P0-T04: blocked only on owner host designation;
 - P0-T05/P0-T06: blocked behind inventory and workload/SLO gates;
 - no model, runtime, backend, kernel, or Transition Atlas implementation is authorized.
+
+## P0-T14 lifecycle reconciliation
+
+P0-T14 reconciles the task directories and state projections under issue #73. P0-T03 has one canonical closed packet; P0-T10 is open with status `review` while ADR-0005 is `proposed`; P0-T13 is closed and complete after its protected merge; P0-T15 is open with status `in_progress` while ADR-0006 is `proposed`; and P0-T14 is closed and complete only for the bounded validator/projection work. The validator rejects directory/status inversions, duplicate IDs, unresolved dependencies and invalid ADR successor metadata, and it verifies the canonical state ID/source commit, generated mobile manifest, README block and exact tracked-path tree. The derived projections are rebuildable and never replace Git state as authority.
 
 ## P0-T09 authorization and source
 

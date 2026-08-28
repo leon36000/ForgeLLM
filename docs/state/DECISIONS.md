@@ -12,6 +12,7 @@
 | D-0008 | 2026-08-13 | accepted | Keep the source/governance repository public and place every restricted or operationally sensitive payload in a separate private asset plane. | ADR-0003 / issue #8 |
 | D-0009 | 2026-08-13 | accepted | External RAG systems and agent tools are derived, least-privilege services; Git remains canonical. | ADR-0003 |
 | D-0010 | 2026-08-13 | accepted | Repository ruleset `FLLM` is the active solo-maintainer protection policy for `main` until superseded by reviewed state. | P0-T03 / issue #10 |
+| D-0011 | 2026-08-27 | accepted | Task lifecycle state is authoritative in Git packets; README, mobile state and `TREE.txt` are deterministic derived projections carrying explicit freshness metadata. | P0-T14 / issue #73 |
 
 ## Register protocol
 
