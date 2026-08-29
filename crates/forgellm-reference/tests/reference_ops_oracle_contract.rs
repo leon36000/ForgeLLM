@@ -13,7 +13,8 @@
 mod support;
 
 use forgellm_reference::{
-    Tensor, elementwise_add, elementwise_mul, embedding_gather, matmul, rms_norm, softmax,
+    Tensor, attention_decode_single_query, elementwise_add, elementwise_mul, embedding_gather,
+    matmul, rms_norm, softmax, transpose,
 };
 use support::{FixtureCase, FixtureTensor, Value, parse_cases};
 
@@ -187,6 +188,7 @@ fn assert_comparison_mode_matches_op(case: &FixtureCase) {
         "elementwise_mul",
         "matmul",
         "embedding_gather",
+        "transpose",
     ];
     if exact_ops.contains(&case.op.as_str()) {
         assert_eq!(
@@ -274,6 +276,30 @@ fn run_case(case: &FixtureCase) {
             let tolerance = tolerance_values(case, result.len());
             assert_within(&result, &case.expected.data, &tolerance, &case.case_id);
         }
+        "transpose" => {
+            let tensor = tensor_from(&support::parse_tensor(&case.inputs["tensor"]).unwrap());
+            let result = transpose(&tensor).expect("transpose must succeed");
+            assert_eq!(
+                result.data(),
+                case.expected.data.as_slice(),
+                "{}",
+                case.case_id
+            );
+        }
+        "attention" => {
+            let query = tensor_from(&support::parse_tensor(&case.inputs["query"]).unwrap());
+            let keys = tensor_from(&support::parse_tensor(&case.inputs["keys"]).unwrap());
+            let values = tensor_from(&support::parse_tensor(&case.inputs["values"]).unwrap());
+            let result = attention_decode_single_query(&query, &keys, &values)
+                .expect("attention_decode_single_query must succeed");
+            let tolerance = tolerance_values(case, result.data().len());
+            assert_within(
+                result.data(),
+                &case.expected.data,
+                &tolerance,
+                &case.case_id,
+            );
+        }
         other => panic!("unrecognized fixture op {other:?}; add a case handler in run_case"),
     }
 }
@@ -296,6 +322,8 @@ fn every_fixture_case_matches_the_reference_oracle() {
         "embedding_gather",
         "softmax",
         "rms_norm",
+        "transpose",
+        "attention",
     ]
     .into_iter()
     .collect();

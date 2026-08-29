@@ -1,4 +1,4 @@
-use forgellm_reference::{ReferenceError, Tensor, argmax, matmul, rms_norm, softmax};
+use forgellm_reference::{ReferenceError, Tensor, argmax, matmul, rms_norm, softmax, transpose};
 
 fn assert_close(actual: f32, expected: f32, tolerance: f32) {
     let delta = (actual - expected).abs();
@@ -107,6 +107,67 @@ fn matmul_rejects_non_finite_result() {
         ReferenceError::NonFiniteResult {
             operation: "matmul",
             index: 0,
+        }
+    );
+}
+
+#[test]
+fn transpose_matches_golden_row_major_result() {
+    let tensor = Tensor::new(vec![2, 3], vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]).unwrap();
+
+    let output = transpose(&tensor).unwrap();
+
+    assert_eq!(output.shape(), &[3, 2]);
+    assert_eq!(output.data(), &[1.0, 4.0, 2.0, 5.0, 3.0, 6.0]);
+}
+
+#[test]
+fn transpose_is_its_own_inverse() {
+    let tensor = Tensor::new(vec![2, 3], vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]).unwrap();
+
+    let round_tripped = transpose(&transpose(&tensor).unwrap()).unwrap();
+
+    assert_eq!(round_tripped, tensor);
+}
+
+#[test]
+fn transpose_handles_row_and_column_vectors() {
+    let row = Tensor::new(vec![1, 4], vec![1.0, 2.0, 3.0, 4.0]).unwrap();
+    let as_column = transpose(&row).unwrap();
+    assert_eq!(as_column.shape(), &[4, 1]);
+    assert_eq!(as_column.data(), row.data());
+
+    let column = Tensor::new(vec![4, 1], vec![1.0, 2.0, 3.0, 4.0]).unwrap();
+    let as_row = transpose(&column).unwrap();
+    assert_eq!(as_row.shape(), &[1, 4]);
+    assert_eq!(as_row.data(), column.data());
+}
+
+#[test]
+fn transpose_rejects_non_rank_two_tensor() {
+    let tensor = Tensor::new(vec![2, 1, 2], vec![1.0, 2.0, 3.0, 4.0]).unwrap();
+
+    let error = transpose(&tensor).unwrap_err();
+    assert_eq!(
+        error,
+        ReferenceError::RankMismatch {
+            operation: "transpose",
+            expected: 2,
+            actual: 3,
+        }
+    );
+}
+
+#[test]
+fn transpose_rejects_non_finite_input() {
+    let tensor = Tensor::new(vec![1, 2], vec![1.0, f32::NAN]).unwrap();
+
+    let error = transpose(&tensor).unwrap_err();
+    assert_eq!(
+        error,
+        ReferenceError::NonFiniteInput {
+            operation: "transpose",
+            index: 1,
         }
     );
 }

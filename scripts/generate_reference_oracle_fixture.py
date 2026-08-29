@@ -17,6 +17,7 @@ from pathlib import Path
 
 from forgellm_governance.reference_oracle import (
     assert_f64_exact_accumulation,
+    attention_oracle,
     elementwise_add_exact,
     elementwise_mul_exact,
     embedding_gather_exact,
@@ -25,6 +26,7 @@ from forgellm_governance.reference_oracle import (
     matmul_exact,
     rms_norm_oracle,
     softmax_oracle,
+    transpose_exact,
 )
 
 FIXTURE_PATH = Path("crates/forgellm-reference/tests/fixtures/reference_ops_oracle.json")
@@ -196,6 +198,78 @@ def _build_cases() -> list[dict]:
 
     cases.append(rms_norm_case("rms_norm_basic", [1.0, -2.0, 3.0, 0.5], [1.0, 1.0, 1.0, 1.0], 1e-6))
     cases.append(rms_norm_case("rms_norm_large_magnitude", [8.0, 8.0, 8.0, 8.0], [2.0, 2.0, 2.0, 2.0], 1e-6))
+
+    # --- transpose (exact: pure rearrangement, no arithmetic) ---
+    transpose_rows = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]
+    transpose_frac = _to_fraction_matrix(transpose_rows)
+    transposed = transpose_exact(transpose_frac)
+    cases.append(
+        {
+            "op": "transpose",
+            "case_id": "transpose_2x3",
+            "inputs": {"tensor": _tensor([2, 3], _flatten(transpose_rows))},
+            "expected": _tensor_fraction([3, 2], _flatten(transposed)),
+            "comparison": {"mode": "exact"},
+        }
+    )
+
+    # --- attention (single-query scaled dot-product; per-element tolerance on the
+    # context vector, derived in attention_oracle's own docstring) ---
+    def attention_case(
+        case_id: str, query: list[float], keys_rows: list[list[float]], values_rows: list[list[float]]
+    ) -> dict:
+        head_dim = len(query)
+        context_len = len(keys_rows)
+        query_f = [f32_bits_to_fraction(struct.unpack("<I", struct.pack("<f", v))[0]) for v in query]
+        keys_f = _to_fraction_matrix(keys_rows)
+        values_f = _to_fraction_matrix(values_rows)
+
+        raw_scores = matmul_exact([query_f], transpose_exact(keys_f))[0]
+        assert_f64_exact_accumulation(raw_scores, context=f"{case_id}_raw_scores")
+
+        context, tolerances = attention_oracle(query_f, keys_f, values_f)
+        assert_f64_exact_accumulation(context, context=f"{case_id}_context")
+
+        return {
+            "op": "attention",
+            "case_id": case_id,
+            "inputs": {
+                "query": _tensor([1, head_dim], query),
+                "keys": _tensor([context_len, head_dim], _flatten(keys_rows)),
+                "values": _tensor([context_len, head_dim], _flatten(values_rows)),
+            },
+            "expected": _tensor_fraction([1, head_dim], context),
+            "comparison": {
+                "mode": "abs_tolerance_hex_per_element",
+                "tolerance_hex": [_fraction_bits_hex(t) for t in tolerances],
+                "tolerance_derivation": (
+                    "softmax_epsilon * sum_j |values[j][k]| + half_ulp_at(context[k]) per "
+                    "output column k; raw_scores and context are each one matmul-style "
+                    "f64-accumulate-then-cast-once step (mechanically checked exact via "
+                    "assert_f64_exact_accumulation at generation time), the scale step's own "
+                    "f64-rounding gap is provably negligible next to softmax's own budget, and "
+                    "softmax_epsilon is propagated worst-case-linearly through the final matmul "
+                    "-- see attention_oracle's docstring for the full derivation."
+                ),
+            },
+        }
+
+    cases.append(
+        attention_case(
+            "attention_context_len_one",
+            [1.0, 0.0],
+            [[2.0, 0.0]],
+            [[3.0, 4.0]],
+        )
+    )
+    cases.append(
+        attention_case(
+            "attention_context_len_three",
+            [1.0, 1.0],
+            [[1.0, 0.0], [0.0, 1.0], [1.0, 1.0]],
+            [[2.0, 0.0], [0.0, 2.0], [1.0, 1.0]],
+        )
+    )
 
     return sorted(cases, key=lambda case: (case["op"], case["case_id"]))
 

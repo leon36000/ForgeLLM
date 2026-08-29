@@ -1,6 +1,122 @@
 {
   "cases": [
     {
+      "case_id": "attention_context_len_one",
+      "comparison": {
+        "mode": "abs_tolerance_hex_per_element",
+        "tolerance_derivation": "softmax_epsilon * sum_j |values[j][k]| + half_ulp_at(context[k]) per output column k; raw_scores and context are each one matmul-style f64-accumulate-then-cast-once step (mechanically checked exact via assert_f64_exact_accumulation at generation time), the scale step's own f64-rounding gap is provably negligible next to softmax's own budget, and softmax_epsilon is propagated worst-case-linearly through the final matmul -- see attention_oracle's docstring for the full derivation.",
+        "tolerance_hex": [
+          "34e00000",
+          "35400000"
+        ]
+      },
+      "expected": {
+        "data_hex": [
+          "40400000",
+          "40800000"
+        ],
+        "shape": [
+          1,
+          2
+        ]
+      },
+      "inputs": {
+        "keys": {
+          "data_hex": [
+            "40000000",
+            "00000000"
+          ],
+          "shape": [
+            1,
+            2
+          ]
+        },
+        "query": {
+          "data_hex": [
+            "3f800000",
+            "00000000"
+          ],
+          "shape": [
+            1,
+            2
+          ]
+        },
+        "values": {
+          "data_hex": [
+            "40400000",
+            "40800000"
+          ],
+          "shape": [
+            1,
+            2
+          ]
+        }
+      },
+      "op": "attention"
+    },
+    {
+      "case_id": "attention_context_len_three",
+      "comparison": {
+        "mode": "abs_tolerance_hex_per_element",
+        "tolerance_derivation": "softmax_epsilon * sum_j |values[j][k]| + half_ulp_at(context[k]) per output column k; raw_scores and context are each one matmul-style f64-accumulate-then-cast-once step (mechanically checked exact via assert_f64_exact_accumulation at generation time), the scale step's own f64-rounding gap is provably negligible next to softmax's own budget, and softmax_epsilon is propagated worst-case-linearly through the final matmul -- see attention_oracle's docstring for the full derivation.",
+        "tolerance_hex": [
+          "34a00000",
+          "34a00000"
+        ]
+      },
+      "expected": {
+        "data_hex": [
+          "3f800000",
+          "3f800000"
+        ],
+        "shape": [
+          1,
+          2
+        ]
+      },
+      "inputs": {
+        "keys": {
+          "data_hex": [
+            "3f800000",
+            "00000000",
+            "00000000",
+            "3f800000",
+            "3f800000",
+            "3f800000"
+          ],
+          "shape": [
+            3,
+            2
+          ]
+        },
+        "query": {
+          "data_hex": [
+            "3f800000",
+            "3f800000"
+          ],
+          "shape": [
+            1,
+            2
+          ]
+        },
+        "values": {
+          "data_hex": [
+            "40000000",
+            "00000000",
+            "00000000",
+            "40000000",
+            "3f800000",
+            "3f800000"
+          ],
+          "shape": [
+            3,
+            2
+          ]
+        }
+      },
+      "op": "attention"
+    },
+    {
       "case_id": "elementwise_add_basic",
       "comparison": {
         "mode": "exact"
@@ -341,6 +457,43 @@
         }
       },
       "op": "softmax"
+    },
+    {
+      "case_id": "transpose_2x3",
+      "comparison": {
+        "mode": "exact"
+      },
+      "expected": {
+        "data_hex": [
+          "3f800000",
+          "40800000",
+          "40000000",
+          "40a00000",
+          "40400000",
+          "40c00000"
+        ],
+        "shape": [
+          3,
+          2
+        ]
+      },
+      "inputs": {
+        "tensor": {
+          "data_hex": [
+            "3f800000",
+            "40000000",
+            "40400000",
+            "40800000",
+            "40a00000",
+            "40c00000"
+          ],
+          "shape": [
+            2,
+            3
+          ]
+        }
+      },
+      "op": "transpose"
     }
   ],
   "float_encoding": "ieee754-binary32-hex-be",

@@ -23,6 +23,7 @@ from forgellm_governance.reference_oracle import (
     F32_CAST_HALF_ULP,
     ReferenceOracleAmbiguousRounding,
     _margin_to_nearest_rounding_boundary,
+    attention_oracle,
     decimal_to_fraction,
     decimal_transcendental_with_escape,
     elementwise_add_exact,
@@ -34,6 +35,7 @@ from forgellm_governance.reference_oracle import (
     matmul_exact,
     rms_norm_oracle,
     softmax_oracle,
+    transpose_exact,
 )
 
 
@@ -253,6 +255,23 @@ class TestExactOpsAgreeWithF64Path:
         with pytest.raises(ValueError):
             embedding_gather_exact(table, out_of_range_token_ids)
 
+    def test_transpose_exact_matches_hand_computed_result(self):
+        matrix = [[Fraction(1), Fraction(2), Fraction(3)], [Fraction(4), Fraction(5), Fraction(6)]]
+        assert transpose_exact(matrix) == [
+            [Fraction(1), Fraction(4)],
+            [Fraction(2), Fraction(5)],
+            [Fraction(3), Fraction(6)],
+        ]
+
+    def test_transpose_exact_is_its_own_inverse(self):
+        matrix = [[Fraction(1), Fraction(2), Fraction(3)], [Fraction(4), Fraction(5), Fraction(6)]]
+        assert transpose_exact(transpose_exact(matrix)) == matrix
+
+    def test_transpose_exact_rejects_ragged_matrix(self):
+        ragged = [[Fraction(1), Fraction(2)], [Fraction(3)]]
+        with pytest.raises(ValueError):
+            transpose_exact(ragged)
+
 
 # ---------------------------------------------------------------------------
 # Decimal/Fraction transcendental oracle: agreement with f64 libm, and the
@@ -447,3 +466,145 @@ class TestEndToEndOracles:
         weights = [f32_bits_to_fraction(_bits(2.0))] * 4
         _normalized, tolerances = rms_norm_oracle(values, weights, Fraction(0))
         assert all(tolerance > F32_CAST_HALF_ULP for tolerance in tolerances)
+
+    @staticmethod
+    def _simulated_rust_attention(query, keys, values, context_len, head_dim):
+        """Independent third re-derivation of the real Rust pipeline, in pure Python f64
+        floats with explicit f32 rounding (`_f32`) at exactly the points the real Rust code
+        casts to f32 -- neither the Rust implementation nor attention_oracle's own
+        Fraction/Decimal code, matching the same pattern already used for
+        crates/forgellm-reference/tests/attention.rs's own independent oracle."""
+        raw_scores = []
+        for j in range(context_len):
+            acc = 0.0
+            for k in range(head_dim):
+                acc += float(query[k]) * float(keys[j * head_dim + k])
+            raw_scores.append(_f32(acc))
+        scale = 1.0 / math.sqrt(head_dim)
+        scaled = [_f32(float(s) * scale) for s in raw_scores]
+        maximum = max(scaled)
+        exponentials = [math.exp(float(s) - float(maximum)) for s in scaled]
+        denominator = sum(exponentials)
+        probabilities = [_f32(e / denominator) for e in exponentials]
+        context = []
+        for k in range(head_dim):
+            acc = 0.0
+            for j in range(context_len):
+                acc += float(probabilities[j]) * float(values[j * head_dim + k])
+            context.append(_f32(acc))
+        return context
+
+    @staticmethod
+    def _assert_attention_oracle_matches_simulation(query, keys, values, context_len, head_dim, label):
+        """Shared body for both randomized cross-check tests below: simulate the real Rust
+        pipeline, convert the same f32 inputs to exact Fractions, call attention_oracle, and
+        assert every context element stays within its derived tolerance of the simulation.
+        Factored out (rather than duplicated per test) after SonarCloud flagged the two
+        near-identical inline bodies as a real 9%-density duplication on this file."""
+        simulated = TestEndToEndOracles._simulated_rust_attention(query, keys, values, context_len, head_dim)
+
+        query_f = [f32_bits_to_fraction(_bits(v)) for v in query]
+        keys_f = [
+            [f32_bits_to_fraction(_bits(keys[j * head_dim + k])) for k in range(head_dim)] for j in range(context_len)
+        ]
+        values_f = [
+            [f32_bits_to_fraction(_bits(values[j * head_dim + k])) for k in range(head_dim)] for j in range(context_len)
+        ]
+
+        context, tolerances = attention_oracle(query_f, keys_f, values_f)
+
+        for got, want, tolerance in zip(context, simulated, tolerances, strict=True):
+            delta = abs(float(got) - want)
+            assert delta <= float(tolerance), f"{label}: delta={delta} tolerance={float(tolerance)}"
+
+    def test_attention_oracle_matches_simulated_rust_within_derived_budget(self):
+        # Small dimensions and plain rng.uniform, matching
+        # test_matmul_matches_f32_cast_of_f64_accumulation's own scale: empirically, sums of
+        # only a handful of terms over this magnitude range stay inside
+        # assert_f64_exact_accumulation's checked range without needing deliberate
+        # quantization (see attention_oracle's own docstring for why that precondition matters
+        # at all). test_attention_oracle_matches_simulated_rust_at_larger_context_len below
+        # covers context_len up to 64 with quantized inputs, at a smaller trial count chosen to
+        # stay CI-fast.
+        rng = random.Random(31)
+        for _ in range(200):
+            context_len = rng.choice([1, 2, 4])
+            head_dim = rng.choice([1, 2, 4])
+            query = [_f32(rng.uniform(-8, 8)) for _ in range(head_dim)]
+            keys = [_f32(rng.uniform(-8, 8)) for _ in range(context_len * head_dim)]
+            values = [_f32(rng.uniform(-8, 8)) for _ in range(context_len * head_dim)]
+
+            self._assert_attention_oracle_matches_simulation(
+                query, keys, values, context_len, head_dim, f"context_len={context_len} head_dim={head_dim}"
+            )
+
+    def test_attention_oracle_matches_simulated_rust_at_larger_context_len(self):
+        # Covers context_len up to 64 (the task packet's stated upper bound) at a trial count
+        # small enough to stay CI-fast. Inputs are quantized to small integers times a shared
+        # power-of-two magnitude (magnitude/8 must itself be a power of 2) so that even
+        # context_len=64 with head_dim=16 satisfies the exact-accumulation precondition
+        # attention_oracle's docstring documents as a caller responsibility -- an
+        # arbitrary-float sweep at this scale would not (and did, concretely, violate that
+        # precondition when first tried).
+        #
+        # Magnitude is capped at 2**6 (not the packet's originally stated 1e3/2**10): measured
+        # directly, magnitude=2**10 combined with head_dim=16 produces raw dot products in the
+        # millions, whose softmax-shifted logits (~-7e5) make `Decimal.exp()`'s result underflow
+        # to a value that is exactly representable only as a Fraction with a ~1,000,000-bit
+        # denominator (`decimal_to_fraction`'s exact `as_integer_ratio()` conversion, working as
+        # designed) -- and Python's arbitrary-precision Fraction arithmetic on numbers that
+        # large, while correct, is genuinely slow (a single such trial measured at 12.9s;
+        # summing several before division compounds further). This is real, understood, and
+        # exponential in magnitude (0.09s at 2**6, 0.9s at 2**7, 12.9s at 2**8 for the same
+        # context_len=64/head_dim=16 case) -- not a hang, not a bug in attention_oracle, and not
+        # representative of real attention scores (well-scaled Q/K keep dot products bounded
+        # for exactly this reason). Capping magnitude here still spans roughly three orders of
+        # magnitude (2**-6..2**6) while keeping every trial well clear of that cost cliff; see
+        # docs/quality/P0-T19-ATTENTION.md for the full investigation and measurements.
+        def quantized_f32(rng, magnitude):
+            step = magnitude / 8.0
+            return _f32(rng.randint(-8, 8) * step)
+
+        rng = random.Random(20260828)
+        trials_per_config = 15
+        for context_len in (8, 64):
+            for magnitude in (2.0**-6, 2.0**0, 2.0**6):
+                for _ in range(trials_per_config):
+                    head_dim = rng.choice([1, 2, 3, 8, 16])
+                    query = [quantized_f32(rng, magnitude) for _ in range(head_dim)]
+                    keys = [quantized_f32(rng, magnitude) for _ in range(context_len * head_dim)]
+                    values = [quantized_f32(rng, magnitude) for _ in range(context_len * head_dim)]
+
+                    self._assert_attention_oracle_matches_simulation(
+                        query,
+                        keys,
+                        values,
+                        context_len,
+                        head_dim,
+                        f"context_len={context_len} head_dim={head_dim} magnitude={magnitude}",
+                    )
+
+    def test_attention_oracle_context_len_one_returns_values_row_exactly(self):
+        # A single-position context makes softmax exactly 1.0 regardless of the score or
+        # scale -- context must equal `values[0]` exactly, independent of query/keys.
+        query = [f32_bits_to_fraction(_bits(3.0)), f32_bits_to_fraction(_bits(-1.0))]
+        keys = [[f32_bits_to_fraction(_bits(5.0)), f32_bits_to_fraction(_bits(2.0))]]
+        values = [[f32_bits_to_fraction(_bits(7.0)), f32_bits_to_fraction(_bits(-4.0))]]
+
+        context, _tolerances = attention_oracle(query, keys, values)
+
+        assert context == [Fraction(7), Fraction(-4)]
+
+    def test_attention_oracle_rejects_key_head_dim_mismatch(self):
+        query = [Fraction(1), Fraction(0)]
+        keys = [[Fraction(1), Fraction(0), Fraction(0)]]
+        values = [[Fraction(1), Fraction(0)]]
+        with pytest.raises(ValueError):
+            attention_oracle(query, keys, values)
+
+    def test_attention_oracle_rejects_key_value_context_length_mismatch(self):
+        query = [Fraction(1), Fraction(0)]
+        keys = [[Fraction(1), Fraction(0)], [Fraction(0), Fraction(1)]]
+        values = [[Fraction(1), Fraction(0)]]
+        with pytest.raises(ValueError):
+            attention_oracle(query, keys, values)

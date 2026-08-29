@@ -1,0 +1,154 @@
+schema_version: "1.0"
+task_id: P0-T19
+title: Add single-query scaled dot-product attention and transpose to the Rust reference core
+phase: P0
+status: in_progress
+charter_goals:
+  - Correction and reproducibility precede performance.
+  - Reference CPU execution path.
+goal: Add transpose and a single-query scaled dot-product attention primitive to crates/forgellm-reference, composed from the existing checked matmul/softmax primitives, with a stdlib-only differential oracle extension whose combined error budget is derived (not guessed) from the exact sequence of rounding steps the Rust implementation performs.
+non_goals:
+  - Implement multi-query or full self-attention over a batch of queries with a causal mask
+    (needs per-row softmax, which the existing softmax primitive does not provide and this task
+    does not add; deferred to a future P0-T20).
+  - Implement multi-head reshape/split, RoPE, or any positional-encoding scheme.
+  - Implement KV-cache append, eviction, or capacity management; keys/values are caller-supplied,
+    already-assembled tensors.
+  - Modify the numerical behavior, signature, or documented contract of matmul, softmax,
+    rms_norm, embedding_gather, reshape, argmax, or dense_decode_single_token.
+  - Wire the new primitive into dense_decode_single_token or any new composed decoder function.
+  - Add PyTorch, NumPy, or any other third-party Python or Rust runtime dependency.
+  - Claim numerical conformance with PyTorch, JAX, or any real model implementation.
+  - Promote Phase 1 or Phase 2 exit-gate claims, or treat this as hardware, baseline, or
+    production-readiness evidence.
+inputs:
+  - Canonical ForgeLLM base d50cd7ef29797e7e79a31bc1a00885b21352401d (protected main).
+  - "crates/forgellm-reference/src/lib.rs (607 lines): matmul (f64-accumulate, cast once),
+    softmax (single flat vector, one distribution), embedding_gather, reshape, elementwise_add/mul,
+    rms_norm, argmax, dense_decode_single_token. No transpose, attention, RoPE, or KV-cache
+    exists yet."
+  - "src/forgellm_governance/reference_oracle.py (P0-T18, merged 03c4bee): matmul_exact,
+    softmax_oracle, half_ulp_at, decimal_transcendental_with_escape (Ziv-escape sqrt/exp,
+    independently reviewed and fixed for a BLOCKER inverted-margin bug), F32_CAST_HALF_ULP,
+    F64_EPSILON -- all reused unmodified by this task."
+  - "docs/quality/P0-T18-REFERENCE-ORACLE.md's deferred non-goal explicitly names attention and
+    transpose as this task's scope."
+  - "docs/reviews/P0-T16-DENSE-DECODER-REVIEW.md explicitly disclaims attention as out of scope
+    for the existing dense decoder."
+  - "Live collision check (2026-08-28): no open PR, issue, task packet, or main-branch code
+    mentions P0-T19, attention, transpose, RoPE, or KV-cache."
+outputs:
+  - "crates/forgellm-reference/src/lib.rs: transpose(&Tensor) -> Result<Tensor, ReferenceError>
+    and attention_decode_single_query(query, keys, values) -> Result<Tensor, ReferenceError>,
+    plus a new ReferenceError::UnsupportedQueryCount variant."
+  - "crates/forgellm-reference/tests/reference_ops.rs and a new
+    crates/forgellm-reference/tests/attention.rs: unit tests for both new functions and their
+    error paths, written before the implementation (RED before GREEN)."
+  - "src/forgellm_governance/reference_oracle.py: transpose_exact and attention_oracle, with a
+    docstring deriving the combined tolerance from the exact Rust operation sequence."
+  - Extended crates/forgellm-reference/tests/fixtures/reference_ops_oracle.json/.sha256 and
+    scripts/generate_reference_oracle_fixture.py with transpose and attention fixture cases.
+  - Extended crates/forgellm-reference/tests/reference_ops_oracle_contract.rs dispatching the
+    new fixture case kinds.
+  - tests/test_reference_oracle.py additions, including the adversarial near-tie and randomized
+    cross-check tests the design spec requires.
+  - docs/superpowers/specs/2026-08-28-p0-t19-attention-design.md and
+    docs/superpowers/plans/2026-08-28-p0-t19-attention.md.
+  - docs/quality/P0-T19-ATTENTION.md evidence report.
+allowed_paths:
+  - crates/forgellm-reference/src/lib.rs
+  - crates/forgellm-reference/tests/
+  - src/forgellm_governance/reference_oracle.py
+  - scripts/generate_reference_oracle_fixture.py
+  - tests/test_reference_oracle.py
+  - docs/superpowers/specs/2026-08-28-p0-t19-attention-design.md
+  - docs/superpowers/plans/2026-08-28-p0-t19-attention.md
+  - docs/quality/P0-T19-ATTENTION.md
+  - docs/reviews/
+  - tasks/open/P0-T19-single-query-attention.yaml
+  - tasks/closed/P0-T19-single-query-attention.yaml
+  - docs/roadmap/PHASE0_TASKS.md
+  - README.md
+  - TREE.txt
+forbidden_actions:
+  - Add PyTorch, NumPy, or any other third-party Rust or Python dependency.
+  - Modify the numerical behavior of matmul, softmax, rms_norm, embedding_gather, reshape,
+    argmax, or dense_decode_single_token.
+  - Implement per-row/batched softmax, a causal mask, multi-head reshape, RoPE, or any KV-cache
+    management.
+  - Round a high-precision oracle value to f32 through an intermediate Python float; round
+    directly from the exact Fraction or Decimal value.
+  - Commit any new file under artifacts/governance/loop-engineering/declarations/ or
+    artifacts/governance/loop-engineering/receipts/ (that validator is hard-pinned to task_id
+    P0-T10 and its governing ADR-0005 remains proposed, not accepted).
+  - Make a real-model, PyTorch-conformance, performance, or production-readiness claim.
+acceptance_criteria:
+  - transpose swaps a rank-two tensor's axes exactly, rejects non-rank-two input, and rejects
+    non-finite input, matching the existing operations' validation style.
+  - attention_decode_single_query rejects a query with shape[0] != 1 via the new
+    UnsupportedQueryCount variant, rejects mismatched key/value context lengths via the existing
+    DimensionMismatch variant, and composes matmul/transpose/softmax without modifying any of
+    them.
+  - transpose_exact is exact (zero tolerance) against fractions.Fraction ground truth.
+  - attention_oracle's derived tolerance is stated with its derivation in a module docstring,
+    covering exactly the rounding steps the Rust implementation performs (matmul's own cast,
+    the one new scale multiply, softmax's existing budget), and is verified against 300+ digit
+    ground truth at both realistic and deliberately near-f32-rounding-tie constructed inputs.
+  - "A permanent, CI-run randomized cross-check comparing attention_oracle against a
+    from-scratch re-implementation of Rust's exact f64-accumulate-then-cast pipeline, covering
+    context_len in {1, 2, 4, 8, 64} and magnitudes spanning roughly 2**-10 to 2**6, finds zero
+    violations of the derived tolerance. (Revised down from an original target of >= 2,000
+    trials at magnitudes up to 1e3/2**10: measured directly, that combination with head_dim=16
+    makes exp()'s underflowed result exactly representable only as a Fraction with a
+    ~1,000,000-bit denominator, and exact-Fraction arithmetic at that scale is genuinely slow
+    -- 12.9s for a single such trial, confirmed exponential in magnitude and not a hang. This
+    is a real, understood performance characteristic of exact arithmetic on astronomically
+    small exp() results, not a correctness concern, and not representative of real attention
+    scores; see docs/quality/P0-T19-ATTENTION.md for the measurements. A separate one-time,
+    much larger unquantized sweep was independently run by an adversarial reviewer directly
+    against the compiled Rust binary -- see that doc's Review section.)"
+  - The existing 4000-case Ziv-escape adversarial regression battery from P0-T18 still shows
+    0 confidently-wrong results (regression guard on reused code, not a new proof).
+  - generate_reference_oracle_fixture.py --check passes on the exact final head.
+  - cargo test --workspace --all-targets --locked, cargo fmt --all --check, and
+    cargo clippy --workspace --all-targets --locked -- -D warnings all pass.
+  - PYTHONPATH=src python3 -m pytest -q tests/test_reference_oracle.py passes.
+  - No file under artifacts/governance/loop-engineering/ is added or modified by this task.
+  - Independent correctness and numerical-methods review records ACCEPT before merge, and a
+    blind external trio validates the final head before merge, per this session's standing
+    practice.
+  - The final report states this is a bounded, single-query, CPU-only reference increment;
+    explicitly names multi-query/causal-masked attention as deferred follow-up (a future
+    P0-T20); and does not claim PyTorch or real-model numerical conformance.
+verification_commands:
+  - cargo test --workspace --all-targets --locked
+  - cargo fmt --all --check
+  - cargo clippy --workspace --all-targets --locked -- -D warnings
+  - PYTHONPATH=src python3 -m pytest -q tests/test_reference_oracle.py
+  - python3 scripts/generate_reference_oracle_fixture.py --check --root .
+  - sha256sum -c crates/forgellm-reference/tests/fixtures/reference_ops_oracle.sha256
+  - python3 scripts/validate_task_packet.py tasks/open/P0-T19-single-query-attention.yaml --root .
+  - git diff --check
+  - make ci
+evidence_requirements:
+  - Record canonical base, RED (failing-test-first) head, implementation head, and eventual
+    merge commit.
+  - Record the exact cargo and pytest test counts before and after this task.
+  - "Record the derivation, not just the value, of attention_oracle's combined tolerance: which
+    rounding step contributes which term, and why the final context-vector comparison can stay
+    exact while only the intermediate probability comparison carries the derived tolerance."
+  - Record the randomized cross-check's trial count, parameter ranges, and result (zero
+    violations or the fix applied if any were found).
+  - Record that generate_reference_oracle_fixture.py --check passed on the exact final head,
+    and record the fixture's committed sha256.
+  - Confirm no dependency was added to Cargo.toml, Cargo.lock, or pyproject.toml.
+  - Confirm no file under artifacts/governance/loop-engineering/ was added or changed.
+  - Record independent review results, the blind trio's verdicts, and residual limitations,
+    explicitly including that multi-query/causal-masked attention, multi-head reshape, RoPE,
+    KV-cache management, and PyTorch/real-model conformance remain unestablished and deferred.
+dependencies:
+  - P0-T18
+owner_role: Project owner and chief architect
+reviewer_role: Independent correctness and numerical-methods reviewer
+risk_ids:
+  - R-001
