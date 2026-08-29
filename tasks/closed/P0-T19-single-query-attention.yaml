@@ -2,7 +2,7 @@ schema_version: "1.0"
 task_id: P0-T19
 title: Add single-query scaled dot-product attention and transpose to the Rust reference core
 phase: P0
-status: in_progress
+status: complete
 charter_goals:
   - Correction and reproducibility precede performance.
   - Reference CPU execution path.
