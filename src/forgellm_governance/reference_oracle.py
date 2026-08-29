@@ -214,6 +214,18 @@ def matmul_exact(lhs: list[list[Fraction]], rhs: list[list[Fraction]]) -> list[l
     return result
 
 
+def transpose_exact(matrix: list[list[Fraction]]) -> list[list[Fraction]]:
+    """Exact rank-two transpose. Pure rearrangement of already-exact Fractions -- no
+    arithmetic occurs, so there is zero rounding to reason about, exactly like
+    `embedding_gather_exact`."""
+    if not matrix:
+        raise ValueError("transpose_exact requires a non-empty matrix")
+    width = len(matrix[0])
+    if any(len(row) != width for row in matrix):
+        raise ValueError("transpose_exact requires a rectangular matrix")
+    return [[matrix[row][col] for row in range(len(matrix))] for col in range(width)]
+
+
 def embedding_gather_exact(table: list[list[Fraction]], token_ids: list[int]) -> list[list[Fraction]]:
     """No arithmetic occurs; row lookup preserving order and repetition is exact by construction."""
     if not table:
@@ -432,3 +444,130 @@ def rms_norm_oracle(
     relative_multiplier = Fraction(n, 2) + 5
     tolerances = [relative_multiplier * F64_EPSILON * abs(result) + half_ulp_at(result) for result in normalized]
     return normalized, tolerances
+
+
+# ---------------------------------------------------------------------------
+# Single-query scaled dot-product attention (P0-T19).
+# ---------------------------------------------------------------------------
+
+
+def attention_oracle(
+    query: list[Fraction], keys: list[list[Fraction]], values: list[list[Fraction]]
+) -> tuple[list[Fraction], list[Fraction]]:
+    """Returns (context_vector, derived_per_element_abs_tolerance) for
+    `crates/forgellm-reference::attention_decode_single_query`'s exact composition:
+    matmul/transpose for the raw scores, one f64-domain-multiply-cast-once-to-f32 scale by
+    `1/sqrt(head_dim)`, the existing softmax_oracle, then matmul again for the weighted sum.
+
+    The returned tolerance applies to the *context vector itself*, since that is the only
+    value `attention_decode_single_query` actually returns -- a Rust-side fixture-driven test
+    has no way to observe or compare the intermediate scores or probabilities directly, so a
+    tolerance derived for an intermediate quantity (an earlier draft of this function computed
+    exactly that mistake) would not describe anything the contract test can check.
+
+    Tolerance derivation (full rationale in
+    docs/superpowers/specs/2026-08-28-p0-t19-attention-design.md):
+
+    0. **Every intermediate value real Rust actually holds as an `f32` is rounded to `f32`
+       here too, explicitly, before being used for the next step** (`raw_scores` right after
+       the first `matmul`; `scaled` right after the scale multiply). An earlier draft of this
+       function skipped this and fed `softmax_oracle` the *unrounded* exact `Fraction` scores
+       instead -- which is a strictly more precise input than real Rust's `softmax` call
+       actually receives, so `softmax_oracle`'s own epsilon (which bounds *its own* internal
+       rounding relative to whatever input it is given) silently stopped bounding anything
+       about the real gap to Rust. Concretely caught by a randomized cross-check: a
+       `context_len=2, head_dim=1` case where the true product needed 48 mantissa bits (every
+       normal f32-times-f32 product does) violated the derived tolerance by ~3.4x before this
+       fix, and holds comfortably (~70x margin) after it. This is exactly why every rounding
+       step in this module is meant to be explicit, never implicit -- see the module docstring.
+    1. With that rounding applied, `raw_scores` matches the real Rust value *exactly*, under
+       the same mechanically-checked f64-exact-accumulation precondition every other
+       `matmul_exact` caller in this module already relies on (a lone product of two f32
+       values is always within this precondition, needing at most 48 of the 53 available bits;
+       longer dot products are not, in general -- see the caller precondition note below).
+    2. The scale step's own rounding gap (the real `1.0f64/(head_dim as f64).sqrt()` versus
+       this oracle's near-exact reciprocal of an already-Ziv-escape-verified sqrt) is at most a
+       couple of correctly-rounded f64 relative-error terms (~2*`F64_EPSILON`) -- many orders
+       of magnitude below the f32 cast's own half-ULP, so it is dropped as provably negligible
+       rather than silently ignored (the same dominated-term argument `rms_norm_oracle` already
+       makes for its own reciprocal-vs-divide gap); the explicit rounding in step 0 is what
+       then makes `scaled` match real Rust's own value, to that same excellent approximation.
+    3. `softmax_oracle`'s own already-derived `epsilon` is therefore the real per-element
+       absolute error on `probabilities` relative to this oracle's values -- reused completely
+       unmodified, not re-derived, and now actually describing the real gap (see step 0).
+    4. That per-probability error is propagated, worst-case-linearly (triangle inequality) with no
+       assumption of cancellation, through the final `matmul(probabilities, values)`:
+       `context[k]`'s error from this source is bounded by `epsilon * sum_j abs(values[j][k])`
+       (call this `B`), plus *two* `half_ulp_at`-scale terms for the two independent f64->f32
+       narrowing casts now in play -- the real Rust value's own cast, and the comparand's cast
+       when a caller rounds this function's exact `context[k]` to build a fixture value -- unlike
+       `matmul_exact`'s other callers, neither cast is covered by the zero-tolerance
+       exact-accumulation treatment here, because `probabilities` are no longer exact inputs by
+       the time they reach this matmul. An independent adversarial reviewer proved algebraically
+       that `B` alone already strictly exceeds one `half_ulp_at(context[k])` term (since
+       softmax's convex-combination property gives `abs(context[k]) <= sum_j abs(values[j][k])`,
+       and `epsilon > F32_CAST_HALF_ULP` strictly), and confirmed it empirically against the
+       *compiled* Rust binary with thousands of deliberately tie-adjacent adversarial
+       constructions -- zero violations, but with worst-case observed margins as tight as
+       `delta/tolerance = 0.9988` at `B + 1*half_ulp_at(context[k])`. A margin that thin on a
+       claimed-safe numerical bound is precisely the risk profile that produced this module's
+       own P0-T18 BLOCKER (a different tight-margin assumption that turned out to have a sign
+       error) -- rather than ship a bound whose correctness rests on a razor-thin proved
+       inequality, this function includes the *second* `half_ulp_at(context[k])` term the naive
+       triangle-inequality bound already calls for, giving real headroom instead of a knife's
+       edge. This is the same "derive honestly, then pad deliberately rather than tune to just
+       barely pass" choice `rms_norm_oracle` already makes for its own reciprocal-vs-divide gap.
+
+    Caller-visible precondition, inherited from step 1 (this function does *not* assert it
+    itself, matching `softmax_oracle`/`rms_norm_oracle`'s existing precondition-free style --
+    unlike them, though, this function's tolerance derivation genuinely depends on it): the
+    returned tolerance is only proven to bound the real Rust value when the dot product behind
+    every entry of `raw_scores` and the final weighted sum behind every entry of `context` each
+    individually satisfy the same `assert_f64_exact_accumulation` range every other exact op in
+    this module already requires for a zero-tolerance comparison to be valid. This always holds
+    for a single-term dot product (`head_dim == 1`, at most 48 of 53 bits needed) regardless of
+    magnitude; for longer dot products it holds for every committed fixture case (the generator
+    checks it explicitly) and for any input built from small, low-bit-count f32 values (small
+    integers, or small integers times a shared power-of-two scale), but is not proven for
+    arbitrary full-mantissa f32 inputs at large `context_len`/`head_dim`. This function does not
+    fail closed if that precondition is violated -- it will simply return a tolerance that may
+    understate the true error. Random/property-based testing against this function must
+    therefore also respect that precondition (small dimensions, or quantized inputs at larger
+    ones), not sample fully arbitrary floats at large dimensions.
+    """
+    if not keys or not values:
+        raise ValueError("attention_oracle requires non-empty keys and values")
+    head_dim = len(query)
+    context_len = len(keys)
+    if any(len(row) != head_dim for row in keys):
+        raise ValueError("attention_oracle requires every key row to match query's head_dim")
+    if len(values) != context_len:
+        raise ValueError("attention_oracle requires keys and values to share one context length")
+
+    def _round_to_f32(value: Fraction) -> Fraction:
+        return f32_bits_to_fraction(fraction_to_f32_bits(value))
+
+    # No `assert_f64_exact_accumulation` call here, deliberately: this function computes a
+    # *derived tolerance* (like `softmax_oracle`/`rms_norm_oracle`), not a zero-tolerance exact
+    # result, so unlike `matmul_exact`'s direct callers it carries no precondition of its own.
+    # The derivation above (step 1) assumes `raw_scores`/`context` are exact under the
+    # exact-accumulation precondition; the *caller* is responsible for that check when it wants
+    # to treat this function's output as a zero-tolerance-safe fixture value (the fixture
+    # generator does so explicitly, exactly like it already does for the other exact ops).
+    raw_scores = matmul_exact([query], transpose_exact(keys))[0]
+    raw_scores = [_round_to_f32(score) for score in raw_scores]  # matches matmul's own cast
+
+    sqrt_head_dim = decimal_transcendental_with_escape("sqrt", Fraction(head_dim))
+    scale = Fraction(1) / sqrt_head_dim
+    scaled = [_round_to_f32(score * scale) for score in raw_scores]  # matches the scale step's own cast
+
+    probabilities, softmax_epsilon = softmax_oracle(scaled)
+
+    context = matmul_exact([probabilities], values)[0]
+
+    tolerances = [
+        softmax_epsilon * sum(abs(values[row][column]) for row in range(context_len))
+        + 2 * half_ulp_at(context[column])  # two independent casts; see docstring step 4
+        for column in range(head_dim)
+    ]
+    return context, tolerances

@@ -80,6 +80,11 @@ pub enum ReferenceError {
         operation: &'static str,
         requested_elements: usize,
     },
+    /// An operation that requires exactly one query row received a different row count.
+    UnsupportedQueryCount {
+        operation: &'static str,
+        actual: usize,
+    },
 }
 
 impl Display for ReferenceError {
@@ -166,6 +171,10 @@ impl Display for ReferenceError {
             } => write!(
                 formatter,
                 "{operation} could not reserve {requested_elements} output elements"
+            ),
+            Self::UnsupportedQueryCount { operation, actual } => write!(
+                formatter,
+                "{operation} requires exactly one query row, received {actual}"
             ),
         }
     }
@@ -372,6 +381,102 @@ pub fn embedding_gather(table: &Tensor, token_ids: &[usize]) -> Result<Tensor, R
     output_shape.push(token_ids.len());
     output_shape.push(width);
     Tensor::new(output_shape, output)
+}
+
+/// Transposes a rank-two row-major tensor, swapping its two axes.
+///
+/// Pure data movement: no arithmetic occurs, so there is no rounding to reason about. Input
+/// finiteness is still checked for consistency with every other operation in this crate (the
+/// same fail-closed convention `embedding_gather` already applies to its own pure-copy path).
+pub fn transpose(tensor: &Tensor) -> Result<Tensor, ReferenceError> {
+    const OPERATION: &str = "transpose";
+
+    if tensor.shape.len() != 2 {
+        return Err(ReferenceError::RankMismatch {
+            operation: OPERATION,
+            expected: 2,
+            actual: tensor.shape.len(),
+        });
+    }
+    require_finite(&tensor.data, OPERATION)?;
+
+    let rows = tensor.shape[0];
+    let columns = tensor.shape[1];
+    let mut output = try_vec_with_capacity(tensor.data.len(), OPERATION)?;
+    for column in 0..columns {
+        for row in 0..rows {
+            output.push(tensor.data[row * columns + column]);
+        }
+    }
+
+    let mut output_shape = try_vec_with_capacity(2, OPERATION)?;
+    output_shape.push(columns);
+    output_shape.push(rows);
+    Tensor::new(output_shape, output)
+}
+
+/// Computes single-query scaled dot-product attention over a fixed key/value context.
+///
+/// `query` must have shape `[1, head_dim]`; `keys` and `values` must have shape
+/// `[context_len, head_dim]` with equal `context_len` (checked implicitly by the final
+/// `matmul`'s dimension check). This is the bounded decode-time attention step: the caller
+/// supplies exactly the key/value context the query may attend to. There is no internal causal
+/// mask, KV-cache management, or multi-head reshape -- those remain out of scope for this
+/// reference increment (see `docs/superpowers/specs/2026-08-28-p0-t19-attention-design.md`).
+///
+/// The implementation is intentionally a composition of the existing checked primitives, in
+/// the same spirit as [`dense_decode_single_token`]: `matmul`/`transpose` for the raw scores,
+/// one new `f64`-domain multiply cast once per element for the `1/sqrt(head_dim)` scale, the
+/// existing `softmax` for the attention weights, and `matmul` again for the weighted sum over
+/// `values`.
+pub fn attention_decode_single_query(
+    query: &Tensor,
+    keys: &Tensor,
+    values: &Tensor,
+) -> Result<Tensor, ReferenceError> {
+    const OPERATION: &str = "attention_decode_single_query";
+
+    if query.shape.len() != 2 {
+        return Err(ReferenceError::RankMismatch {
+            operation: OPERATION,
+            expected: 2,
+            actual: query.shape.len(),
+        });
+    }
+    if query.shape[0] != 1 {
+        return Err(ReferenceError::UnsupportedQueryCount {
+            operation: OPERATION,
+            actual: query.shape[0],
+        });
+    }
+    let head_dim = query.shape[1];
+
+    let keys_transposed = transpose(keys)?;
+    let raw_scores = matmul(query, &keys_transposed)?;
+
+    // Computed in `f64` and cast once per element, matching this crate's dominant pattern
+    // (`matmul`, `rms_norm`): a single correctly-rounded `f64`-domain multiply per score,
+    // narrowed to `f32` once, rather than chaining several separately-rounded native-`f32`
+    // operations (`f32::sqrt` then `f32` division then `f32` multiply), which would introduce
+    // three separate rounding steps instead of one.
+    let scale = 1.0f64 / (head_dim as f64).sqrt();
+    let mut scaled = try_vec_with_capacity(raw_scores.data.len(), OPERATION)?;
+    for (index, score) in raw_scores.data.iter().enumerate() {
+        let value = (f64::from(*score) * scale) as f32;
+        if !value.is_finite() {
+            return Err(ReferenceError::NonFiniteResult {
+                operation: OPERATION,
+                index,
+            });
+        }
+        scaled.push(value);
+    }
+
+    let probabilities = softmax(&scaled)?;
+    let context_len = probabilities.len();
+    let probabilities_tensor = Tensor::new(vec![1, context_len], probabilities)?;
+
+    matmul(&probabilities_tensor, values)
 }
 
 /// Decodes one token through the bounded dense CPU reference pipeline.
