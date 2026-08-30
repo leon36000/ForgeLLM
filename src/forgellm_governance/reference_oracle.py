@@ -17,10 +17,12 @@ for ``exp``. This module treats the resulting two regimes differently:
   on dyadic rationals stay dyadic, so the mathematically exact result is
   representable and comparable at *zero* tolerance. `matmul` accumulates its
   inner-product sum in `f64` before a single final cast to `f32` (the
-  fixture generator mechanically checks every such accumulation stays within
-  53 bits of precision -- see `assert_f64_exact_accumulation` -- rather than
-  assuming it; fixture magnitudes are kept small specifically so this
-  precondition is trivially satisfied). `elementwise_add`/`elementwise_mul`
+  fixture generator reconstructs the actual f32-input products, records every
+  sequential binary64 partial, and mechanically checks exact finite binary64
+  representability -- see `f64_matmul_partial_sums_from_f32` and
+  `assert_f64_exact_accumulation` -- rather than checking only a final result).
+  Fixture magnitudes are kept small specifically so this precondition is
+  satisfied. `elementwise_add`/`elementwise_mul`
   are actually single `f32`-native operations in the real implementation (no
   `f64` promotion at all) -- this makes no difference to the zero-tolerance
   comparison here, since exact-then-round-to-`f32` and direct `f32` arithmetic
@@ -214,6 +216,57 @@ def matmul_exact(lhs: list[list[Fraction]], rhs: list[list[Fraction]]) -> list[l
     return result
 
 
+def f64_matmul_partial_sums_from_f32(
+    lhs: list[list[Fraction]], rhs: list[list[Fraction]]
+) -> list[list[list[Fraction]]]:
+    """Return every sequential binary64 accumulator state for an f32-input matmul.
+
+    The inputs must be exact f32 values represented as ``Fraction`` instances. Each product
+    and addition is performed by Python's binary64 ``float`` arithmetic, then converted back
+    to an exact Fraction from ``as_integer_ratio``. The nested result is indexed as
+    ``[output_row][output_column][partial_index]`` and therefore preserves the actual
+    left-to-right accumulation trace that a Rust ``f64`` fold uses. This is intentionally a
+    proof helper for small deterministic fixtures, not a replacement production matmul.
+    """
+    matmul_exact(lhs, rhs)  # validates rank, rectangularity and inner dimensions once.
+    for row_index, row in enumerate(lhs):
+        for column_index, value in enumerate(row):
+            bits = fraction_to_f32_bits(value)
+            if f32_bits_to_fraction(bits) != value:
+                raise ValueError(
+                    f"f64_matmul_partial_sums_from_f32 lhs[{row_index}][{column_index}] "
+                    "is not an exact finite f32 value"
+                )
+    for row_index, row in enumerate(rhs):
+        for column_index, value in enumerate(row):
+            bits = fraction_to_f32_bits(value)
+            if f32_bits_to_fraction(bits) != value:
+                raise ValueError(
+                    f"f64_matmul_partial_sums_from_f32 rhs[{row_index}][{column_index}] "
+                    "is not an exact finite f32 value"
+                )
+
+    inner = len(lhs[0])
+    columns = len(rhs[0])
+    traces: list[list[list[Fraction]]] = []
+    for lhs_row in lhs:
+        output_row: list[list[Fraction]] = []
+        for column in range(columns):
+            accumulator = 0.0
+            partials: list[Fraction] = []
+            for index in range(inner):
+                accumulator += float(lhs_row[index]) * float(rhs[index][column])
+                if not math.isfinite(accumulator):
+                    raise ReferenceOracleAmbiguousRounding(
+                        "f64_matmul_partial_sums_from_f32 produced a non-finite "
+                        f"accumulator at output column {column}, partial {index}"
+                    )
+                partials.append(Fraction(*accumulator.as_integer_ratio()))
+            output_row.append(partials)
+        traces.append(output_row)
+    return traces
+
+
 def transpose_exact(matrix: list[list[Fraction]]) -> list[list[Fraction]]:
     """Exact rank-two transpose. Pure rearrangement of already-exact Fractions -- no
     arithmetic occurs, so there is zero rounding to reason about, exactly like
@@ -243,20 +296,49 @@ def embedding_gather_exact(table: list[list[Fraction]], token_ids: list[int]) ->
 
 
 def assert_f64_exact_accumulation(partial_sums: list[Fraction], *, context: str) -> None:
-    """Mechanically verify a fixture case's accumulation stays within 53-bit f64 precision.
+    """Mechanically verify every sequential accumulator state is exactly finite binary64.
 
-    Fails closed (raises) rather than silently emitting a fixture case whose
-    "exact" comparison would not actually match Rust's f64 accumulation.
+    ``partial_sums`` must be the left-to-right accumulator trace from the actual f32-input
+    products, not merely the final exact result. A value is binary64-exact only when its
+    reduced denominator is a power of two, its normalized significand fits the 53-bit
+    precision of a normal value, and its exponent is within the normal or subnormal range.
+    Fails closed rather than silently emitting a fixture whose exact comparison does not match
+    Rust's f64 accumulation.
     """
-    for partial in partial_sums:
+    for index, partial in enumerate(partial_sums):
         if partial == 0:
             continue
-        reduced = partial.numerator if partial.denominator == 1 else partial
-        numerator = abs(reduced.numerator if isinstance(reduced, Fraction) else reduced)
-        if numerator.bit_length() > 53:
+
+        denominator = partial.denominator
+        if denominator & (denominator - 1):
             raise ReferenceOracleAmbiguousRounding(
-                f"{context}: partial sum {partial} exceeds 53-bit f64-exact accumulation "
+                f"{context}: partial[{index}]={partial} is not a dyadic value and cannot be "
+                "represented exactly as binary64"
+            )
+
+        numerator = abs(partial.numerator)
+        denominator_exponent = denominator.bit_length() - 1
+        exponent = numerator.bit_length() - 1 - denominator_exponent
+        odd_numerator = numerator
+        while odd_numerator % 2 == 0:
+            odd_numerator //= 2
+        significant_bits = odd_numerator.bit_length()
+
+        if exponent > 1023:
+            raise ReferenceOracleAmbiguousRounding(
+                f"{context}: partial[{index}]={partial} exceeds the finite binary64 exponent "
                 "range; reduce fixture magnitude or dimension"
+            )
+        if exponent < -1022:
+            if denominator_exponent > 1074:
+                raise ReferenceOracleAmbiguousRounding(
+                    f"{context}: partial[{index}]={partial} is below the exact binary64 "
+                    "subnormal quantum; reduce fixture magnitude"
+                )
+        elif significant_bits > 53:
+            raise ReferenceOracleAmbiguousRounding(
+                f"{context}: partial[{index}]={partial} needs {significant_bits} significant "
+                "bits, exceeding binary64's 53-bit precision"
             )
 
 
@@ -483,7 +565,7 @@ def attention_oracle(
     1. With that rounding applied, `raw_scores` matches the real Rust value *exactly*, under
        the same mechanically-checked f64-exact-accumulation precondition every other
        `matmul_exact` caller in this module already relies on (a lone product of two f32
-       values is always within this precondition, needing at most 48 of the 53 available bits;
+       values is always within this precondition, needing at most 48 significant bits;
        longer dot products are not, in general -- see the caller precondition note below).
     2. The scale step's own rounding gap (the real `1.0f64/(head_dim as f64).sqrt()` versus
        this oracle's near-exact reciprocal of an already-Ziv-escape-verified sqrt) is at most a
@@ -523,17 +605,18 @@ def attention_oracle(
     unlike them, though, this function's tolerance derivation genuinely depends on it): the
     returned tolerance is only proven to bound the real Rust value when the dot product behind
     every entry of `raw_scores` and the final weighted sum behind every entry of `context` each
-    individually satisfy the same `assert_f64_exact_accumulation` range every other exact op in
-    this module already requires for a zero-tolerance comparison to be valid. This always holds
-    for a single-term dot product (`head_dim == 1`, at most 48 of 53 bits needed) regardless of
-    magnitude; for longer dot products it holds for every committed fixture case (the generator
-    checks it explicitly) and for any input built from small, low-bit-count f32 values (small
-    integers, or small integers times a shared power-of-two scale), but is not proven for
-    arbitrary full-mantissa f32 inputs at large `context_len`/`head_dim`. This function does not
-    fail closed if that precondition is violated -- it will simply return a tolerance that may
-    understate the true error. Random/property-based testing against this function must
-    therefore also respect that precondition (small dimensions, or quantized inputs at larger
-    ones), not sample fully arbitrary floats at large dimensions.
+    individually satisfy the exact finite-binary64 condition. The generator enforces this by
+    reconstructing the f64 folds from the actual rounded f32 operands, checking every partial
+    sum rather than only the final value; for the final fold it uses the f32 probabilities
+    produced by the same f64 exp/divide/cast sequence. This always holds for a single-term dot
+    product (`head_dim == 1`, at most 48 significant bits) regardless of magnitude; for longer
+    dot products it holds for every committed fixture case and for any input built from small,
+    low-bit-count f32 values, but is not proven for arbitrary full-mantissa f32 inputs at large
+    `context_len`/`head_dim`. This function does not fail closed if that precondition is violated
+    -- it will simply return a tolerance that may understate the true error. Random/property-
+    based testing against this function must therefore also respect that precondition (small
+    dimensions, or quantized inputs at larger ones), not sample fully arbitrary floats at large
+    dimensions.
     """
     if not keys or not values:
         raise ValueError("attention_oracle requires non-empty keys and values")
@@ -553,7 +636,8 @@ def attention_oracle(
     # The derivation above (step 1) assumes `raw_scores`/`context` are exact under the
     # exact-accumulation precondition; the *caller* is responsible for that check when it wants
     # to treat this function's output as a zero-tolerance-safe fixture value (the fixture
-    # generator does so explicitly, exactly like it already does for the other exact ops).
+    # generator does so explicitly from actual f32 operand traces, exactly like it already does
+    # for the other exact ops).
     raw_scores = matmul_exact([query], transpose_exact(keys))[0]
     raw_scores = [_round_to_f32(score) for score in raw_scores]  # matches matmul's own cast
 

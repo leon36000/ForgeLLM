@@ -65,10 +65,13 @@ for each query row; the value-column absolute sum and two f32 half-ULP terms
 remain per output element.
 
 The oracle's exact-Fraction accumulation precondition is documented and
-mechanically checked when fixture inputs are generated. Random tests use small
-dimensions or low-bit-count, shared-power-of-two inputs so this precondition is
-true rather than assumed. The oracle is a reference artifact, not a claim of
-cross-platform libm identity or real-model conformance.
+mechanically checked when fixture inputs are generated: the generator rebuilds
+each f64 matmul fold from exact f32 operands, checks every sequential partial
+sum for finite binary64 representability, and uses the f32 probabilities from
+the same f64 exp/divide/cast sequence for the final fold. Random tests use
+small dimensions or low-bit-count, shared-power-of-two inputs so this
+precondition is true rather than assumed. The oracle is a reference artifact,
+not a claim of cross-platform libm identity or real-model conformance.
 
 ## Verification design
 

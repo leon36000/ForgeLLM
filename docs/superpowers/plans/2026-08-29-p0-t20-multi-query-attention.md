@@ -25,6 +25,9 @@
 - Add `multi_query_attention_oracle` as a per-row composition of the reviewed
   attention oracle, with explicit shape checks and a documented tolerance matrix.
 - Add deterministic fixture cases and extend the restricted Rust dispatch.
+- Reconstruct the actual f32-input f64 matmul traces for every fixture fold;
+  reject non-dyadic, out-of-range, or over-precision partial sums rather than
+  checking only a final exact-Fraction result.
 - Regenerate only through the repository generator, then verify `--check` and
   the committed SHA-256 pin.
 - Run focused Python tests and fixture-driven Rust tests.

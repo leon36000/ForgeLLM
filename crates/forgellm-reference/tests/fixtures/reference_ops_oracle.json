@@ -4,7 +4,7 @@
       "case_id": "attention_context_len_one",
       "comparison": {
         "mode": "abs_tolerance_hex_per_element",
-        "tolerance_derivation": "softmax_epsilon * sum_j |values[j][k]| + half_ulp_at(context[k]) per output column k; raw_scores and context are each one matmul-style f64-accumulate-then-cast-once step (mechanically checked exact via assert_f64_exact_accumulation at generation time), the scale step's own f64-rounding gap is provably negligible next to softmax's own budget, and softmax_epsilon is propagated worst-case-linearly through the final matmul -- see attention_oracle's docstring for the full derivation.",
+        "tolerance_derivation": "softmax_epsilon * sum_j |values[j][k]| + half_ulp_at(context[k]) per output column k; raw_scores and context are each one matmul-style f64-accumulate-then-cast-once step (every sequential binary64 partial is mechanically checked from the actual f32 operands at generation time), the scale step's own f64-rounding gap is provably negligible next to softmax's own budget, and softmax_epsilon is propagated worst-case-linearly through the final matmul -- see attention_oracle's docstring for the full derivation.",
         "tolerance_hex": [
           "34e00000",
           "35400000"
@@ -58,7 +58,7 @@
       "case_id": "attention_context_len_three",
       "comparison": {
         "mode": "abs_tolerance_hex_per_element",
-        "tolerance_derivation": "softmax_epsilon * sum_j |values[j][k]| + half_ulp_at(context[k]) per output column k; raw_scores and context are each one matmul-style f64-accumulate-then-cast-once step (mechanically checked exact via assert_f64_exact_accumulation at generation time), the scale step's own f64-rounding gap is provably negligible next to softmax's own budget, and softmax_epsilon is propagated worst-case-linearly through the final matmul -- see attention_oracle's docstring for the full derivation.",
+        "tolerance_derivation": "softmax_epsilon * sum_j |values[j][k]| + half_ulp_at(context[k]) per output column k; raw_scores and context are each one matmul-style f64-accumulate-then-cast-once step (every sequential binary64 partial is mechanically checked from the actual f32 operands at generation time), the scale step's own f64-rounding gap is provably negligible next to softmax's own budget, and softmax_epsilon is propagated worst-case-linearly through the final matmul -- see attention_oracle's docstring for the full derivation.",
         "tolerance_hex": [
           "34a00000",
           "34a00000"

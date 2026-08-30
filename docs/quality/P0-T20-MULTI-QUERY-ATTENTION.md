@@ -41,10 +41,13 @@ for every query row and returns a matching context/tolerance matrix. Raw and
 scaled intermediate values are rounded to f32 before each row's softmax. The
 per-element bound is the existing softmax budget propagated through that row's
 value-column absolute sum plus two half-ULP terms for the independent final
-narrowing casts. Fixture generation mechanically checks the exact-Fraction
-accumulation precondition for its committed cases; randomized tests use small
-dimensions and bounded inputs rather than pretending the precondition holds for
-arbitrary large full-mantissa inputs.
+narrowing casts. Fixture generation reconstructs every f64 matmul fold from
+the actual rounded f32 operands, checks every sequential partial sum for exact
+finite binary64 representability, and uses the f32 probabilities from the same
+f64 exp/divide/cast sequence for the final fold. The guard rejects non-dyadic
+intermediates such as `1/3` even when a later partial sum is zero. Randomized
+tests use small dimensions and bounded inputs rather than pretending the
+precondition holds for arbitrary large full-mantissa inputs.
 
 ## Local evidence
 

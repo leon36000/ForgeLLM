@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import struct
 import sys
 from fractions import Fraction
@@ -22,6 +23,7 @@ from forgellm_governance.reference_oracle import (
     elementwise_mul_exact,
     embedding_gather_exact,
     f32_bits_to_fraction,
+    f64_matmul_partial_sums_from_f32,
     fraction_to_f32_bits,
     matmul_exact,
     multi_query_attention_oracle,
@@ -62,6 +64,32 @@ def _to_fraction_matrix(rows: list[list[float]]) -> list[list[Fraction]]:
     return [[f32_bits_to_fraction(struct.unpack("<I", struct.pack("<f", v))[0]) for v in row] for row in rows]
 
 
+def _f32_fraction(value: float) -> Fraction:
+    return f32_bits_to_fraction(struct.unpack("<I", struct.pack("<f", value))[0])
+
+
+def _assert_f32_matmul_partial_sums(lhs: list[list[Fraction]], rhs: list[list[Fraction]], *, context: str) -> None:
+    traces = f64_matmul_partial_sums_from_f32(lhs, rhs)
+    for row_index, row in enumerate(traces):
+        for column_index, partials in enumerate(row):
+            assert_f64_exact_accumulation(
+                partials,
+                context=f"{context}[{row_index}][{column_index}]",
+            )
+
+
+def _rust_f32_attention_probabilities(query: list[Fraction], keys: list[list[Fraction]]) -> list[Fraction]:
+    """Reconstruct the f32 probability operands used by the Rust softmax path."""
+    raw_traces = f64_matmul_partial_sums_from_f32([query], transpose_exact(keys))[0]
+    raw_scores = [_f32(float(partials[-1])) for partials in raw_traces]
+    scale = 1.0 / math.sqrt(len(query))
+    scaled = [_f32(score * scale) for score in raw_scores]
+    maximum = max(scaled)
+    exponentials = [math.exp(score - maximum) for score in scaled]
+    denominator = sum(exponentials)
+    return [_f32_fraction(exponential / denominator) for exponential in exponentials]
+
+
 def _build_cases() -> list[dict]:
     cases: list[dict] = []
 
@@ -71,7 +99,6 @@ def _build_cases() -> list[dict]:
     lhs_f = [f32_bits_to_fraction(struct.unpack("<I", struct.pack("<f", v))[0]) for v in lhs]
     rhs_f = [f32_bits_to_fraction(struct.unpack("<I", struct.pack("<f", v))[0]) for v in rhs]
     result = elementwise_add_exact(lhs_f, rhs_f)
-    assert_f64_exact_accumulation(result, context="elementwise_add_basic")
     cases.append(
         {
             "op": "elementwise_add",
@@ -88,7 +115,6 @@ def _build_cases() -> list[dict]:
     lhs_f = [f32_bits_to_fraction(struct.unpack("<I", struct.pack("<f", v))[0]) for v in lhs]
     rhs_f = [f32_bits_to_fraction(struct.unpack("<I", struct.pack("<f", v))[0]) for v in rhs]
     result = elementwise_mul_exact(lhs_f, rhs_f)
-    assert_f64_exact_accumulation(result, context="elementwise_mul_basic")
     cases.append(
         {
             "op": "elementwise_mul",
@@ -104,9 +130,8 @@ def _build_cases() -> list[dict]:
     rhs_rows = [[2.0, 1.0], [-1.0, 0.5], [4.0, -2.0]]
     lhs_frac = _to_fraction_matrix(lhs_rows)
     rhs_frac = _to_fraction_matrix(rhs_rows)
+    _assert_f32_matmul_partial_sums(lhs_frac, rhs_frac, context="matmul_2x3_3x2")
     matmul_result = matmul_exact(lhs_frac, rhs_frac)
-    for row in matmul_result:
-        assert_f64_exact_accumulation(row, context="matmul_2x3_3x2")
     cases.append(
         {
             "op": "matmul",
@@ -225,11 +250,19 @@ def _build_cases() -> list[dict]:
         keys_f = _to_fraction_matrix(keys_rows)
         values_f = _to_fraction_matrix(values_rows)
 
-        raw_scores = matmul_exact([query_f], transpose_exact(keys_f))[0]
-        assert_f64_exact_accumulation(raw_scores, context=f"{case_id}_raw_scores")
+        _assert_f32_matmul_partial_sums(
+            [query_f],
+            transpose_exact(keys_f),
+            context=f"{case_id}_raw_scores",
+        )
+        probabilities_f = [_rust_f32_attention_probabilities(query_f, keys_f)]
+        _assert_f32_matmul_partial_sums(
+            probabilities_f,
+            values_f,
+            context=f"{case_id}_context",
+        )
 
         context, tolerances = attention_oracle(query_f, keys_f, values_f)
-        assert_f64_exact_accumulation(context, context=f"{case_id}_context")
 
         return {
             "op": "attention",
@@ -246,8 +279,9 @@ def _build_cases() -> list[dict]:
                 "tolerance_derivation": (
                     "softmax_epsilon * sum_j |values[j][k]| + half_ulp_at(context[k]) per "
                     "output column k; raw_scores and context are each one matmul-style "
-                    "f64-accumulate-then-cast-once step (mechanically checked exact via "
-                    "assert_f64_exact_accumulation at generation time), the scale step's own "
+                    "f64-accumulate-then-cast-once step (every sequential binary64 partial "
+                    "is mechanically checked from the actual f32 operands at generation time), "
+                    "the scale step's own "
                     "f64-rounding gap is provably negligible next to softmax's own budget, and "
                     "softmax_epsilon is propagated worst-case-linearly through the final matmul "
                     "-- see attention_oracle's docstring for the full derivation."
@@ -287,12 +321,19 @@ def _build_cases() -> list[dict]:
         values_f = _to_fraction_matrix(values_rows)
 
         for query_index, query in enumerate(queries_f):
-            raw_scores = matmul_exact([query], transpose_exact(keys_f))[0]
-            assert_f64_exact_accumulation(raw_scores, context=f"{case_id}_query_{query_index}_raw_scores")
+            _assert_f32_matmul_partial_sums(
+                [query],
+                transpose_exact(keys_f),
+                context=f"{case_id}_query_{query_index}_raw_scores",
+            )
+            probabilities_f = [_rust_f32_attention_probabilities(query, keys_f)]
+            _assert_f32_matmul_partial_sums(
+                probabilities_f,
+                values_f,
+                context=f"{case_id}_query_{query_index}_context",
+            )
 
         contexts, tolerances = multi_query_attention_oracle(queries_f, keys_f, values_f)
-        for query_index, context in enumerate(contexts):
-            assert_f64_exact_accumulation(context, context=f"{case_id}_query_{query_index}_context")
 
         return {
             "op": "multi_query_attention",

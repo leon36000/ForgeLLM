@@ -23,6 +23,7 @@ from forgellm_governance.reference_oracle import (
     F32_CAST_HALF_ULP,
     ReferenceOracleAmbiguousRounding,
     _margin_to_nearest_rounding_boundary,
+    assert_f64_exact_accumulation,
     attention_oracle,
     decimal_to_fraction,
     decimal_transcendental_with_escape,
@@ -30,6 +31,7 @@ from forgellm_governance.reference_oracle import (
     elementwise_mul_exact,
     embedding_gather_exact,
     f32_bits_to_fraction,
+    f64_matmul_partial_sums_from_f32,
     fraction_to_decimal,
     fraction_to_f32_bits,
     matmul_exact,
@@ -272,6 +274,31 @@ class TestExactOpsAgreeWithF64Path:
         ragged = [[Fraction(1), Fraction(2)], [Fraction(3)]]
         with pytest.raises(ValueError):
             transpose_exact(ragged)
+
+
+class TestF64AccumulationProof:
+    def test_guard_rejects_non_dyadic_intermediate_even_when_final_is_zero(self):
+        with pytest.raises(ReferenceOracleAmbiguousRounding, match="dyadic"):
+            assert_f64_exact_accumulation([Fraction(1, 3), Fraction(0)], context="masked_final")
+
+    def test_guard_accepts_exact_power_of_two_at_53_bit_exponent(self):
+        assert_f64_exact_accumulation([Fraction(2**53)], context="large_power_of_two")
+
+    def test_guard_rejects_a_54_bit_normal_significand(self):
+        with pytest.raises(ReferenceOracleAmbiguousRounding, match="54 significant bits"):
+            assert_f64_exact_accumulation([Fraction(2**53 + 1)], context="wide_significand")
+
+    def test_f32_matmul_trace_preserves_each_binary64_partial(self):
+        lhs = [[f32_bits_to_fraction(_bits(1.5)), f32_bits_to_fraction(_bits(-0.5))]]
+        rhs = [[f32_bits_to_fraction(_bits(2.0))], [f32_bits_to_fraction(_bits(4.0))]]
+
+        traces = f64_matmul_partial_sums_from_f32(lhs, rhs)
+
+        assert traces == [[[Fraction(3), Fraction(1)]]]
+
+    def test_f32_matmul_trace_rejects_non_f32_fraction_inputs(self):
+        with pytest.raises(ValueError, match="exact finite f32"):
+            f64_matmul_partial_sums_from_f32([[Fraction(1, 3)]], [[Fraction(1)]])
 
 
 # ---------------------------------------------------------------------------
