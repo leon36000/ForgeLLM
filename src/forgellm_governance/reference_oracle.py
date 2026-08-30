@@ -219,14 +219,14 @@ def matmul_exact(lhs: list[list[Fraction]], rhs: list[list[Fraction]]) -> list[l
 def f64_matmul_partial_sums_from_f32(
     lhs: list[list[Fraction]], rhs: list[list[Fraction]]
 ) -> list[list[list[Fraction]]]:
-    """Return every sequential binary64 accumulator state for an f32-input matmul.
+    """Return each exact partial that a binary64 accumulator must represent.
 
     The inputs must be exact f32 values represented as ``Fraction`` instances. Each product
-    and addition is performed by Python's binary64 ``float`` arithmetic, then converted back
-    to an exact Fraction from ``as_integer_ratio``. The nested result is indexed as
-    ``[output_row][output_column][partial_index]`` and therefore preserves the actual
-    left-to-right accumulation trace that a Rust ``f64`` fold uses. This is intentionally a
-    proof helper for small deterministic fixtures, not a replacement production matmul.
+    and addition is accumulated as an exact Fraction before any binary64 rounding. The
+    nested result is indexed as ``[output_row][output_column][partial_index]`` and therefore
+    gives the mathematical left-to-right state that the Rust ``f64`` fold must represent at
+    each step. This is intentionally a proof helper for small deterministic fixtures, not a
+    replacement production matmul.
     """
     matmul_exact(lhs, rhs)  # validates rank, rectangularity and inner dimensions once.
     for row_index, row in enumerate(lhs):
@@ -252,16 +252,11 @@ def f64_matmul_partial_sums_from_f32(
     for lhs_row in lhs:
         output_row: list[list[Fraction]] = []
         for column in range(columns):
-            accumulator = 0.0
+            accumulator = Fraction(0)
             partials: list[Fraction] = []
             for index in range(inner):
-                accumulator += float(lhs_row[index]) * float(rhs[index][column])
-                if not math.isfinite(accumulator):
-                    raise ReferenceOracleAmbiguousRounding(
-                        "f64_matmul_partial_sums_from_f32 produced a non-finite "
-                        f"accumulator at output column {column}, partial {index}"
-                    )
-                partials.append(Fraction(*accumulator.as_integer_ratio()))
+                accumulator += lhs_row[index] * rhs[index][column]
+                partials.append(accumulator)
             output_row.append(partials)
         traces.append(output_row)
     return traces

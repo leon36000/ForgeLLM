@@ -296,6 +296,16 @@ class TestF64AccumulationProof:
 
         assert traces == [[[Fraction(3), Fraction(1)]]]
 
+    def test_f32_matmul_trace_rejects_unrepresentable_exact_partial(self):
+        lhs = [[Fraction(1), Fraction(1)]]
+        rhs = [[Fraction(1)], [Fraction(1, 2**53)]]
+
+        traces = f64_matmul_partial_sums_from_f32(lhs, rhs)
+
+        assert traces == [[[Fraction(1), Fraction(1) + Fraction(1, 2**53)]]]
+        with pytest.raises(ReferenceOracleAmbiguousRounding, match="54 significant bits"):
+            assert_f64_exact_accumulation(traces[0][0], context="unrepresentable_partial")
+
     def test_f32_matmul_trace_rejects_non_f32_fraction_inputs(self):
         with pytest.raises(ValueError, match="exact finite f32"):
             f64_matmul_partial_sums_from_f32([[Fraction(1, 3)]], [[Fraction(1)]])
