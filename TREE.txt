@@ -66,6 +66,7 @@ crates/forgellm-reference/tests/decoder_primitives.rs
 crates/forgellm-reference/tests/dense_decoder.rs
 crates/forgellm-reference/tests/fixtures/reference_ops_oracle.json
 crates/forgellm-reference/tests/fixtures/reference_ops_oracle.sha256
+crates/forgellm-reference/tests/multi_query_attention.rs
 crates/forgellm-reference/tests/numerical_contract.rs
 crates/forgellm-reference/tests/reference_ops.rs
 crates/forgellm-reference/tests/reference_ops_oracle_contract.rs
@@ -99,6 +100,7 @@ docs/quality/P0-T10-LOOP-ENGINEERING.md
 docs/quality/P0-T17-RUST-CI-GATE.md
 docs/quality/P0-T18-REFERENCE-ORACLE.md
 docs/quality/P0-T19-ATTENTION.md
+docs/quality/P0-T20-MULTI-QUERY-ATTENTION.md
 docs/quality/QG-01-SONAR-MAIN-ANALYSIS-DESIGN.md
 docs/research/DEEP_RESEARCH_PROGRAM.md
 docs/research/EVIDENCE_POLICY.md
@@ -124,6 +126,7 @@ docs/reviews/P0-T13-GPT-5.6-LUNA-ROUND-1-2026-08-27.md
 docs/reviews/P0-T14-LIFECYCLE-REVIEW.md
 docs/reviews/P0-T15-C-ABI-DESIGN-REVIEW.md
 docs/reviews/P0-T16-DENSE-DECODER-REVIEW.md
+docs/reviews/P0-T20-MULTI-QUERY-ATTENTION.md
 docs/roadmap/PHASE0_TASKS.md
 docs/roadmap/PHASES.md
 docs/simulations/CACHE_AWARE_SIMULATOR.md
@@ -144,12 +147,14 @@ docs/superpowers/plans/2026-08-21-p0-t10-loop-engineering.md
 docs/superpowers/plans/2026-08-21-versioned-c-abi-design.md
 docs/superpowers/plans/2026-08-27-p0-t18-reference-oracle.md
 docs/superpowers/plans/2026-08-28-p0-t19-attention.md
+docs/superpowers/plans/2026-08-29-p0-t20-multi-query-attention.md
 docs/superpowers/specs/2026-08-12-forgellm-phase-0-design.md
 docs/superpowers/specs/2026-08-13-cache-aware-heterogeneous-inference-design.md
 docs/superpowers/specs/2026-08-14-exact-speculative-decoding-semantics.md
 docs/superpowers/specs/2026-08-21-p0-t10-loop-engineering-design.md
 docs/superpowers/specs/2026-08-27-p0-t18-reference-oracle-design.md
 docs/superpowers/specs/2026-08-28-p0-t19-attention-design.md
+docs/superpowers/specs/2026-08-29-p0-t20-multi-query-attention-design.md
 docs/tooling/CHATGPT_MOBILE_CONTINUITY.md
 docs/tooling/GITHUB_GITLAB_OPERATIONS.md
 docs/tooling/HARDWARE_LAB_CHECKLIST.md
@@ -233,6 +238,7 @@ tasks/open/P0-T04-first-hardware-inventory.yaml
 tasks/open/P0-T09-sonarqube-main-analysis.yaml
 tasks/open/P0-T10-bounded-loop-engineering.yaml
 tasks/open/P0-T15-versioned-c-abi-design.yaml
+tasks/open/P0-T20-multi-query-attention.yaml
 tests/fixtures/components/duplicate-implementation.json
 tests/fixtures/components/missing-fallback.json
 tests/fixtures/components/valid-cache-draft.json

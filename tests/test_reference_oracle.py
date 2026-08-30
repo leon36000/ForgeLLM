@@ -33,6 +33,7 @@ from forgellm_governance.reference_oracle import (
     fraction_to_decimal,
     fraction_to_f32_bits,
     matmul_exact,
+    multi_query_attention_oracle,
     rms_norm_oracle,
     softmax_oracle,
     transpose_exact,
@@ -608,3 +609,169 @@ class TestEndToEndOracles:
         values = [[Fraction(1), Fraction(0)]]
         with pytest.raises(ValueError):
             attention_oracle(query, keys, values)
+
+
+class TestMultiQueryAttentionOracle:
+    @staticmethod
+    def _simulated_rust_multi_query(queries, keys, values, query_count, context_len, head_dim):
+        scale = 1.0 / math.sqrt(head_dim)
+        result = []
+        for query_row in range(query_count):
+            raw_scores = []
+            for key_row in range(context_len):
+                accumulator = sum(
+                    float(queries[query_row * head_dim + column]) * float(keys[key_row * head_dim + column])
+                    for column in range(head_dim)
+                )
+                raw_scores.append(_f32(accumulator))
+            scaled = [_f32(float(score) * scale) for score in raw_scores]
+            maximum = max(scaled)
+            exponentials = [math.exp(float(score) - float(maximum)) for score in scaled]
+            denominator = sum(exponentials)
+            probabilities = [_f32(exponential / denominator) for exponential in exponentials]
+            for column in range(head_dim):
+                accumulator = sum(
+                    float(probabilities[key_row]) * float(values[key_row * head_dim + column])
+                    for key_row in range(context_len)
+                )
+                result.append(_f32(accumulator))
+        return result
+
+    def test_oracle_returns_one_context_and_tolerance_row_per_query(self):
+        queries = [[Fraction(1), Fraction(0)], [Fraction(0), Fraction(1)]]
+        keys = [[Fraction(1), Fraction(0)], [Fraction(0), Fraction(1)], [Fraction(1), Fraction(1)]]
+        values = [[Fraction(2), Fraction(0)], [Fraction(0), Fraction(2)], [Fraction(1), Fraction(3)]]
+
+        contexts, tolerances = multi_query_attention_oracle(queries, keys, values)
+
+        assert len(contexts) == len(queries)
+        assert len(tolerances) == len(queries)
+        assert all(len(row) == 2 for row in contexts)
+        assert all(len(row) == 2 for row in tolerances)
+
+        flat_queries = [float(value) for row in queries for value in row]
+        flat_keys = [float(value) for row in keys for value in row]
+        flat_values = [float(value) for row in values for value in row]
+        simulated = self._simulated_rust_multi_query(flat_queries, flat_keys, flat_values, 2, 3, 2)
+        for row, simulated_row, tolerance_row in zip(contexts, [simulated[:2], simulated[2:]], tolerances, strict=True):
+            for got, want, tolerance in zip(row, simulated_row, tolerance_row, strict=True):
+                assert abs(float(got) - want) <= float(tolerance)
+
+    def test_oracle_keeps_query_rows_independent(self):
+        queries = [[Fraction(1), Fraction(0)], [Fraction(0), Fraction(1)]]
+        keys = [[Fraction(1), Fraction(0)], [Fraction(0), Fraction(1)]]
+        values = [[Fraction(10), Fraction(0)], [Fraction(0), Fraction(20)]]
+
+        contexts, _tolerances = multi_query_attention_oracle(queries, keys, values)
+
+        assert float(contexts[0][0]) > float(contexts[0][1])
+        assert float(contexts[1][1]) > float(contexts[1][0])
+
+    def test_oracle_context_len_one_repeats_the_value_row_exactly(self):
+        queries = [[Fraction(3), Fraction(-1)], [Fraction(0), Fraction(4)]]
+        keys = [[Fraction(5), Fraction(2)]]
+        values = [[Fraction(7), Fraction(-4)]]
+
+        contexts, _tolerances = multi_query_attention_oracle(queries, keys, values)
+
+        assert contexts == [[Fraction(7), Fraction(-4)], [Fraction(7), Fraction(-4)]]
+
+    def test_oracle_rejects_ragged_queries(self):
+        with pytest.raises(ValueError, match="rectangular"):
+            multi_query_attention_oracle(
+                [[Fraction(1), Fraction(0)], [Fraction(1)]], [[Fraction(1), Fraction(0)]], [[Fraction(1), Fraction(0)]]
+            )
+
+    def test_oracle_rejects_key_value_context_mismatch(self):
+        with pytest.raises(ValueError, match="context length"):
+            multi_query_attention_oracle(
+                [[Fraction(1), Fraction(0)]],
+                [[Fraction(1), Fraction(0)], [Fraction(0), Fraction(1)]],
+                [[Fraction(1), Fraction(0)]],
+            )
+
+    def test_oracle_rejects_value_width_mismatch(self):
+        with pytest.raises(ValueError, match="head_dim"):
+            multi_query_attention_oracle(
+                [[Fraction(1), Fraction(0)]],
+                [[Fraction(1), Fraction(0)]],
+                [[Fraction(1), Fraction(0), Fraction(2)]],
+            )
+
+    def test_oracle_matches_independent_simulation_for_bounded_random_inputs(self):
+        rng = random.Random(20260829)
+        for _ in range(80):
+            query_count = rng.choice([1, 2, 3])
+            context_len = rng.choice([1, 2, 4])
+            head_dim = rng.choice([1, 2, 4])
+            queries = [[_f32(rng.uniform(-2, 2)) for _ in range(head_dim)] for _ in range(query_count)]
+            keys = [[_f32(rng.uniform(-2, 2)) for _ in range(head_dim)] for _ in range(context_len)]
+            values = [[_f32(rng.uniform(-2, 2)) for _ in range(head_dim)] for _ in range(context_len)]
+
+            queries_f = [[f32_bits_to_fraction(_bits(value)) for value in row] for row in queries]
+            keys_f = [[f32_bits_to_fraction(_bits(value)) for value in row] for row in keys]
+            values_f = [[f32_bits_to_fraction(_bits(value)) for value in row] for row in values]
+            contexts, tolerances = multi_query_attention_oracle(queries_f, keys_f, values_f)
+
+            simulated = self._simulated_rust_multi_query(
+                [value for row in queries for value in row],
+                [value for row in keys for value in row],
+                [value for row in values for value in row],
+                query_count,
+                context_len,
+                head_dim,
+            )
+            for query_index, (context, tolerance_row) in enumerate(zip(contexts, tolerances, strict=True)):
+                simulated_row = simulated[query_index * head_dim : (query_index + 1) * head_dim]
+                for got, want, tolerance in zip(context, simulated_row, tolerance_row, strict=True):
+                    assert abs(float(got) - want) <= float(tolerance)
+
+    def test_oracle_handles_f32_rounding_adjacent_inputs_per_row(self):
+        lower = f32_bits_to_fraction(0x3F800000)
+        upper = f32_bits_to_fraction(0x3F800001)
+        queries = [[lower, upper], [upper, lower]]
+        keys = [[upper, lower], [lower, upper]]
+        values = [[Fraction(3), Fraction(-2)], [Fraction(-1), Fraction(4)]]
+
+        contexts, tolerances = multi_query_attention_oracle(queries, keys, values)
+
+        simulated = self._simulated_rust_multi_query(
+            [float(value) for row in queries for value in row],
+            [float(value) for row in keys for value in row],
+            [float(value) for row in values for value in row],
+            2,
+            2,
+            2,
+        )
+        for query_index, (context, tolerance_row) in enumerate(zip(contexts, tolerances, strict=True)):
+            simulated_row = simulated[query_index * 2 : (query_index + 1) * 2]
+            for got, want, tolerance in zip(context, simulated_row, tolerance_row, strict=True):
+                assert abs(float(got) - want) <= float(tolerance)
+
+    def test_oracle_rounds_a_raw_score_tie_before_each_row_softmax(self):
+        # All inputs are representable f32 values, but their exact product is the midpoint
+        # between two f32 values. This proves the multi-query path exercises the same explicit
+        # intermediate raw-score cast as the compiled Rust operation, including tie-to-even.
+        query = f32_bits_to_fraction(0x3FC00000)  # 1.5
+        next_after_one = f32_bits_to_fraction(0x3F800001)
+        lower = f32_bits_to_fraction(0x3FC00001)
+        upper = f32_bits_to_fraction(0x3FC00002)
+        raw_score_tie = query * next_after_one
+        assert raw_score_tie == (lower + upper) / 2
+        assert fraction_to_f32_bits(raw_score_tie) == 0x3FC00002
+
+        queries = [[query], [query]]
+        keys = [[next_after_one], [f32_bits_to_fraction(0x3F800000)]]
+        values = [[Fraction(3)], [Fraction(-2)]]
+        contexts, tolerances = multi_query_attention_oracle(queries, keys, values)
+
+        simulated = self._simulated_rust_multi_query(
+            [float(value) for row in queries for value in row],
+            [float(value) for row in keys for value in row],
+            [float(value) for row in values for value in row],
+            2,
+            2,
+            1,
+        )
+        for query_index, (context, tolerance_row) in enumerate(zip(contexts, tolerances, strict=True)):
+            assert abs(float(context[0]) - simulated[query_index]) <= float(tolerance_row[0])

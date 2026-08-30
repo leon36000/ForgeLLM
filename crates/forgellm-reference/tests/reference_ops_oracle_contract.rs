@@ -13,8 +13,8 @@
 mod support;
 
 use forgellm_reference::{
-    Tensor, attention_decode_single_query, elementwise_add, elementwise_mul, embedding_gather,
-    matmul, rms_norm, softmax, transpose,
+    Tensor, attention_decode_multi_query, attention_decode_single_query, elementwise_add,
+    elementwise_mul, embedding_gather, matmul, rms_norm, softmax, transpose,
 };
 use support::{FixtureCase, FixtureTensor, Value, parse_cases};
 
@@ -300,6 +300,20 @@ fn run_case(case: &FixtureCase) {
                 &case.case_id,
             );
         }
+        "multi_query_attention" => {
+            let queries = tensor_from(&support::parse_tensor(&case.inputs["queries"]).unwrap());
+            let keys = tensor_from(&support::parse_tensor(&case.inputs["keys"]).unwrap());
+            let values = tensor_from(&support::parse_tensor(&case.inputs["values"]).unwrap());
+            let result = attention_decode_multi_query(&queries, &keys, &values)
+                .expect("attention_decode_multi_query must succeed");
+            let tolerance = tolerance_values(case, result.data().len());
+            assert_within(
+                result.data(),
+                &case.expected.data,
+                &tolerance,
+                &case.case_id,
+            );
+        }
         other => panic!("unrecognized fixture op {other:?}; add a case handler in run_case"),
     }
 }
@@ -324,6 +338,7 @@ fn every_fixture_case_matches_the_reference_oracle() {
         "rms_norm",
         "transpose",
         "attention",
+        "multi_query_attention",
     ]
     .into_iter()
     .collect();

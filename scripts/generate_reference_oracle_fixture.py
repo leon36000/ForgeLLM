@@ -24,6 +24,7 @@ from forgellm_governance.reference_oracle import (
     f32_bits_to_fraction,
     fraction_to_f32_bits,
     matmul_exact,
+    multi_query_attention_oracle,
     rms_norm_oracle,
     softmax_oracle,
     transpose_exact,
@@ -268,6 +269,65 @@ def _build_cases() -> list[dict]:
             [1.0, 1.0],
             [[1.0, 0.0], [0.0, 1.0], [1.0, 1.0]],
             [[2.0, 0.0], [0.0, 2.0], [1.0, 1.0]],
+        )
+    )
+
+    # --- multi-query attention (one independent softmax row per query) ---
+    def multi_query_attention_case(
+        case_id: str,
+        query_rows: list[list[float]],
+        keys_rows: list[list[float]],
+        values_rows: list[list[float]],
+    ) -> dict:
+        query_count = len(query_rows)
+        head_dim = len(query_rows[0])
+        context_len = len(keys_rows)
+        queries_f = _to_fraction_matrix(query_rows)
+        keys_f = _to_fraction_matrix(keys_rows)
+        values_f = _to_fraction_matrix(values_rows)
+
+        for query_index, query in enumerate(queries_f):
+            raw_scores = matmul_exact([query], transpose_exact(keys_f))[0]
+            assert_f64_exact_accumulation(raw_scores, context=f"{case_id}_query_{query_index}_raw_scores")
+
+        contexts, tolerances = multi_query_attention_oracle(queries_f, keys_f, values_f)
+        for query_index, context in enumerate(contexts):
+            assert_f64_exact_accumulation(context, context=f"{case_id}_query_{query_index}_context")
+
+        return {
+            "op": "multi_query_attention",
+            "case_id": case_id,
+            "inputs": {
+                "queries": _tensor([query_count, head_dim], _flatten(query_rows)),
+                "keys": _tensor([context_len, head_dim], _flatten(keys_rows)),
+                "values": _tensor([context_len, head_dim], _flatten(values_rows)),
+            },
+            "expected": _tensor_fraction([query_count, head_dim], _flatten(contexts)),
+            "comparison": {
+                "mode": "abs_tolerance_hex_per_element",
+                "tolerance_hex": [_fraction_bits_hex(t) for row in tolerances for t in row],
+                "tolerance_derivation": (
+                    "one attention_oracle budget per [query][output_column]: softmax_epsilon "
+                    "times the absolute value-column sum plus two half_ulp_at(context) terms; "
+                    "each query owns a separate scaled score row and softmax denominator."
+                ),
+            },
+        }
+
+    cases.append(
+        multi_query_attention_case(
+            "multi_query_context_len_one",
+            [[3.0, -1.0], [0.0, 4.0]],
+            [[5.0, 2.0]],
+            [[7.0, -4.0]],
+        )
+    )
+    cases.append(
+        multi_query_attention_case(
+            "multi_query_context_len_three",
+            [[1.0, 0.0], [0.0, 1.0]],
+            [[1.0, 1.0], [1.0, 1.0], [1.0, 1.0]],
+            [[2.0, 0.0], [0.0, 2.0], [1.0, 3.0]],
         )
     )
 

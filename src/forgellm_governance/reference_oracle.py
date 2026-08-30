@@ -571,3 +571,40 @@ def attention_oracle(
         for column in range(head_dim)
     ]
     return context, tolerances
+
+
+# Multi-query scaled dot-product attention (P0-T20).
+# ---------------------------------------------------------------------------
+
+
+def multi_query_attention_oracle(
+    queries: list[list[Fraction]], keys: list[list[Fraction]], values: list[list[Fraction]]
+) -> tuple[list[list[Fraction]], list[list[Fraction]]]:
+    """Return per-query contexts and matching per-element tolerances.
+
+    The Rust `attention_decode_multi_query` operation has one shared key/value context but a
+    distinct score vector and softmax denominator for every query row. Calling the reviewed
+    `attention_oracle` composition once per row mirrors that boundary exactly: raw scores and
+    scaled scores are rounded to f32 before each row's softmax, and the existing derived softmax
+    budget is propagated through that row's final weighted sum. The returned matrices have shape
+    `[query_count][head_dim]`; no tolerance or intermediate probability is shared across rows.
+
+    Query rows must form a non-empty rectangular matrix with a non-zero width, matching the
+    non-zero rank-two dimensions accepted by the Rust `Tensor` constructor. Key/value validation
+    and the exact-accumulation precondition remain those documented by `attention_oracle`.
+    """
+    if not queries or not queries[0]:
+        raise ValueError("multi_query_attention_oracle requires non-empty queries")
+    head_dim = len(queries[0])
+    if any(len(row) != head_dim for row in queries):
+        raise ValueError("multi_query_attention_oracle requires rectangular queries")
+    if any(len(row) != head_dim for row in values):
+        raise ValueError("multi_query_attention_oracle requires values with query head_dim")
+
+    contexts: list[list[Fraction]] = []
+    tolerances: list[list[Fraction]] = []
+    for query in queries:
+        context, query_tolerances = attention_oracle(query, keys, values)
+        contexts.append(context)
+        tolerances.append(query_tolerances)
+    return contexts, tolerances

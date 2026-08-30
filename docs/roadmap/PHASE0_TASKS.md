@@ -17,6 +17,10 @@
 | P0-T14 | complete | task lifecycle and derived-state validation with deterministic projections | issue #73; 16 lifecycle tests; `make validate`/`make ci`; ADR-0005 and ADR-0006 remain proposed |
 | P0-T15 | in progress — design-only checkpoint merged | versioned C ABI and runtime lifecycle design, without implementation | PR #75; protected merge `9932a5a`; ADR-0006 proposed; no ABI/runtime/backend code |
 | P0-T16 | complete — bounded CPU reference slice | one in-memory dense decoder token: embedding gather, RMSNorm, projection, softmax and greedy argmax | 53 Rust tests; independent oracle; packet/review; no model/runtime/ABI/backend/GPU scope |
+| P0-T17 | complete — Rust CI gate | make ci executes the locked Rust workspace checks and records the protected closeout | implementation/closeout PRs #79/#84; protected closeout `95cf4ab`; no runtime/backend scope |
+| P0-T18 | complete — differential reference oracle | stdlib-only Fraction/Decimal oracle, deterministic fixture and restricted Rust reader for reference operations | implementation/closeout PRs #85/#86; protected closeout `d50cd7e`; no production dependency |
+| P0-T19 | complete — single-query attention | rank-two transpose and caller-supplied single-query scaled dot-product attention | implementation/closeout PRs #88/#89; protected closeout `cc5a90d`; multi-query row-wise attention deferred to P0-T20 |
+| P0-T20 | in progress — bounded multi-query attention | row-wise softmax over caller-supplied queries/keys/values with independent oracle and state projections | isolated candidate based on `cc5a90d`; local 563 Python/230 speculative/101 Rust gates green; independent review, hosted checks and merge pending |
 | P0-T10 | review — implementation merged, acceptance pending | bounded, inert Loop Engineering bridge with provenance, task binding, receipts, and fail-closed repository validation | `main@87a1dde`; make validate-loop; ADR-0005 remains proposed; final architecture/security acceptance record absent |
 
 ## P0-T10 integration checkpoint
@@ -26,6 +30,14 @@ The P0-T10 static integration is published at merge commit 87a1ddeb76d2bca45fe75
 ## P0-T14 lifecycle checkpoint
 
 P0-T14 reconciles the open/closed task directories and the derived state projections required by issue #73. The implementation enforces non-terminal open packets, terminal closed packets, unique IDs, exact filename prefixes, dependency resolution, ADR status/successor rules, canonical state metadata, a hashed non-authoritative mobile manifest, the README current-state block and an exact `git ls-files` tree. P0-T10 stays in `review` because ADR-0005 is `proposed`; this checkpoint does not accept an ADR or alter any external setting.
+
+## P0-T17 through P0-T19 protected reference line
+
+P0-T17, P0-T18 and P0-T19 are complete on protected `main` through their implementation and closeout pull requests. P0-T17 makes the Rust workspace part of the repository CI gate; P0-T18 adds the independent stdlib-only differential oracle and pinned fixture; P0-T19 adds transpose and single-query scaled dot-product attention. Their evidence reports remain bounded CPU/reference evidence and do not establish model, hardware, runtime, backend, ABI or performance behavior.
+
+## P0-T20 candidate checkpoint
+
+P0-T20 is an isolated, in-progress candidate based on protected `main@cc5a90d`. It adds multi-query attention with an explicit per-query softmax boundary, a matching stdlib-only oracle and two deterministic fixture cases. The local candidate has passed `make ci` (563 Python, 230 speculative and 101 Rust tests), plus 12 focused Rust tests and 60 focused oracle tests. The packet remains open until independent review, exact-head hosted checks and post-merge evidence are complete; causal masking, multi-head/RoPE, KV cache, runtime/backend/ABI, models, hardware and performance remain out of scope.
 
 ## P0-T09 current gate
 
