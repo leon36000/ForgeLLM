@@ -2,7 +2,7 @@ schema_version: "1.0"
 task_id: P0-T20
 title: Add bounded multi-query attention to the Rust reference core
 phase: P0
-status: in_progress
+status: complete
 charter_goals:
   - Correction and reproducibility precede performance.
   - Reference CPU execution path.
@@ -76,7 +76,7 @@ verification_commands:
   - cargo fmt --all --check
   - cargo clippy --workspace --all-targets --locked -- -D warnings
   - cargo test --workspace --all-targets --locked
-  - PYTHONPATH=src python3 scripts/validate_task_packet.py tasks/open/P0-T20-multi-query-attention.yaml --root .
+  - PYTHONPATH=src python3 scripts/validate_task_packet.py tasks/closed/P0-T20-multi-query-attention.yaml --root .
   - PYTHONPATH=src python3 scripts/validate_project_state.py --root .
   - make ci
   - git diff --check

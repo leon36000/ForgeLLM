@@ -5,8 +5,8 @@
 - **Canonical source commit:** `cc5a90d0190bf84e3124a7e81bbe52bc7d0820bc`
 - **Phase:** P0
 - **Milestone:** P0-M8 — bounded reference attention coverage
-- **Overall status:** P0-T07, P0-T08/CA-03, P0-T11/P0-T12, P0-T13, P0-T14, P0-T16, P0-T17, P0-T18 and P0-T19 are complete; P0-T10 remains in `review` because ADR-0005 is still `proposed`; P0-T15 remains `in_progress` as a design-only task with ADR-0006 `proposed`; P0-T20 is `in_progress` pending independent review and publication gates; P0-T09/QG-01 remains active and its scanner is inactive. P0-T04 remains blocked on designation of one owner-authorized host.
-- **Authorized next work:** Complete the bounded P0-T20 review, exact-head reconciliation, hosted required checks and post-merge evidence. Do not accept ADR-0005 or ADR-0006 from merged design/integration evidence alone. P0-T09 remains under its independent no-overlap/token lifecycle gates; do not read `SONAR_TOKEN`, change Sonar/GitHub settings, activate CI, submit a scan, or run hardware/model/runtime work.
+- **Overall status:** P0-T07, P0-T08/CA-03, P0-T11/P0-T12, P0-T13, P0-T14, P0-T16, P0-T17, P0-T18, P0-T19 and the bounded P0-T20 implementation are complete in this candidate; P0-T10 remains in `review` because ADR-0005 is still `proposed`; P0-T15 remains `in_progress` as a design-only task with ADR-0006 `proposed`; P0-T09/QG-01 remains active and its scanner is inactive. P0-T04 remains blocked on designation of one owner-authorized host.
+- **Authorized next work:** Reconcile the exact candidate with independent review, hosted required checks and protected merge, then capture post-merge evidence. Do not accept ADR-0005 or ADR-0006 from merged design/integration evidence alone. P0-T09 remains under its independent no-overlap/token lifecycle gates; do not read `SONAR_TOKEN`, change Sonar/GitHub settings, activate CI, submit a scan, or run hardware/model/runtime work.
 - **State anchor:** the Git commit containing this file
 
 - **Latest protected-main baseline for P0-T20:** `main@cc5a90d0190bf84e3124a7e81bbe52bc7d0820bc` (PR #89 P0-T19 closeout); P0-T17/P0-T18/P0-T19 are protected and complete, while the P0-T20 candidate remains isolated pending review.
@@ -45,9 +45,9 @@ P0-T16 is complete in the closed packet `tasks/closed/P0-T16-dense-decoder-refer
 - P0-T18 is complete at its protected implementation/closeout sequence (`03c4bee` then `d50cd7e`): the stdlib-only Fraction/Decimal oracle, deterministic fixture, restricted reader and differential contract cover the existing reference operations without a production dependency.
 - P0-T19 is complete at protected implementation/closeout `e26072f`/`cc5a90d`: rank-two transpose and single-query scaled dot-product attention are CPU-only reference operations. Multi-query row-wise attention was explicitly deferred to P0-T20.
 
-## P0-T20 bounded multi-query attention candidate
+## P0-T20 bounded multi-query attention
 
-P0-T20 adds `attention_decode_multi_query` for caller-supplied finite tensors with shapes `[query_count, head_dim]`, `[context_len, head_dim]`, and `[context_len, head_dim]`. It gives every query row an independent scaled score row and flat-softmax call, then performs the checked weighted-sum matmul. The candidate has no causal-mask policy, multi-head layout, RoPE, KV-cache management, runtime/backend/ABI integration, model, hardware or performance scope. Its local candidate evidence currently records 12 focused Rust tests, 60 focused oracle tests, 563 full Python tests, 230 speculative tests and 101 Rust tests in `make ci`; independent review, exact PR-head checks and protected merge remain pending.
+P0-T20 adds `attention_decode_multi_query` for caller-supplied finite tensors with shapes `[query_count, head_dim]`, `[context_len, head_dim]`, and `[context_len, head_dim]`. It gives every query row an independent scaled score row and flat-softmax call, then performs the checked weighted-sum matmul. The candidate has no causal-mask policy, multi-head layout, RoPE, KV-cache management, runtime/backend/ABI integration, model, hardware or performance scope. Its local candidate evidence records 12 focused Rust tests, 60 focused oracle tests, 563 full Python tests, 230 speculative tests and 101 Rust tests in `make ci`; the closed packet and state projections are synchronized, while independent review, exact PR-head checks and protected merge remain pending.
 
 ## Objective
 

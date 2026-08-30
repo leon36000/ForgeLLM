@@ -6,7 +6,7 @@
 **Canonical source commit:** `cc5a90d0190bf84e3124a7e81bbe52bc7d0820bc`
 **Derived manifest:** `chatgpt/mobile-core/DERIVED-MANIFEST.yaml`
 **Phase :** P0 — gouvernance, simulation et laboratoire de preuve  
-**Statut global :** P0-T07, P0-T08/CA-03, P0-T11/P0-T12, P0-T13, P0-T14, P0-T16, P0-T17, P0-T18 et P0-T19 sont terminés; P0-T10 reste en `review` avec ADR-0005 `proposed`; P0-T15 reste `in_progress` comme tâche de conception uniquement avec ADR-0006 `proposed`; P0-T20 est `in_progress` en attente de revue et de publication; P0-T09/QG-01 reste actif mais inactif côté scanner; P0-T04 attend la désignation d’un hôte autorisé.
+**Statut global :** P0-T07, P0-T08/CA-03, P0-T11/P0-T12, P0-T13, P0-T14, P0-T16, P0-T17, P0-T18, P0-T19 et l’implémentation bornée P0-T20 sont terminés dans le candidat; P0-T10 reste en `review` avec ADR-0005 `proposed`; P0-T15 reste `in_progress` comme tâche de conception uniquement avec ADR-0006 `proposed`; P0-T09/QG-01 reste actif mais inactif côté scanner; P0-T04 attend la désignation d’un hôte autorisé.
 
 Le dépôt Git est la source canonique. Ce fichier est une projection mobile dérivée et reconstruisible; son manifest porte les empreintes des sources canoniques et ne peut pas remplacer `docs/state/CURRENT_STATE.md`.
 
@@ -30,7 +30,7 @@ Concevoir et construire un moteur d’inférence LLM hétérogène dont correcti
 - P0-T14 est fermé et `complete` pour la validation du cycle de vie et des projections; son ancrage post-squash est `c1fd915…`;
 - P0-T16 est fermé avec `complete` pour une composition CPU dense à un token, entièrement en mémoire et sans runtime;
 - P0-T17, P0-T18 et P0-T19 sont fermés avec `complete` pour la ligne de référence Rust, l’oracle différentiel et l’attention transpose/single-query;
-- P0-T20 est ouvert avec `in_progress` pour une composition multi-query CPU à softmax par ligne; sa revue indépendante et ses gates de publication restent à faire;
+- P0-T20 est fermé avec `complete` pour une composition multi-query CPU à softmax par ligne; sa revue indépendante et ses gates de publication restent à faire;
 - P0-T15 reste dans `tasks/open` avec `in_progress`; ADR-0006 est `proposed` et aucun ABI, binding, backend ou runtime n’est livré;
 - les validateurs refusent les inversions de statut, doublons d’identifiants, dépendances non résolues et successeurs ADR incomplets.
 
@@ -60,7 +60,7 @@ Le chemin Sonar `ci_based_only` demeure préparation-only; l’analyse automatiq
 
 ## P0-T17 à P0-T20 — ligne de référence attention
 
-P0-T17, P0-T18 et P0-T19 sont protégés et complets. P0-T20 ajoute uniquement `attention_decode_multi_query` sur des tenseurs en mémoire, avec une normalisation softmax distincte par requête, un oracle stdlib-only et un fixture hashé. Le candidat local basé sur `main@cc5a90d` passe `make ci` avec 563 tests Python, 230 tests spéculatifs et 101 tests Rust, plus 12 tests Rust multi-query et 60 tests oracle ciblés. Le packet reste `tasks/open/P0-T20-multi-query-attention.yaml` jusqu’aux revues et gates exact-head. Aucun masque causal, multi-head/RoPE, KV cache, modèle, hardware, CUDA/ROCm, runtime/backend/ABI, performance, secret ou validation LiteLLM n’est couvert.
+P0-T17, P0-T18 et P0-T19 sont protégés et complets. P0-T20 ajoute uniquement `attention_decode_multi_query` sur des tenseurs en mémoire, avec une normalisation softmax distincte par requête, un oracle stdlib-only et un fixture hashé. Le candidat local figé à `c3d01dc` et basé sur `main@cc5a90d` passe `make ci` avec 563 tests Python, 230 tests spéculatifs et 101 tests Rust, plus 12 tests Rust multi-query et 60 tests oracle ciblés. Le packet est désormais `tasks/closed/P0-T20-multi-query-attention.yaml`; les revues et gates exact-head restent requis avant publication. Aucun masque causal, multi-head/RoPE, KV cache, modèle, hardware, CUDA/ROCm, runtime/backend/ABI, performance, secret ou validation LiteLLM n’est couvert.
 
 ## Garde-fous et limites de preuve
 

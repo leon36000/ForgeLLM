@@ -4,7 +4,7 @@
 
 - Task: `P0-T20`
 - Protected base: `cc5a90d0190bf84e3124a7e81bbe52bc7d0820bc`
-- Candidate exact head: pending final local closeout
+- Candidate exact head: `c3d01dc47e36005b4b229527a7a019558c91bfb4`
 - Scope: bounded Rust CPU multi-query attention, stdlib-only oracle, fixture,
   tests and synchronized projections listed in the task packet
 

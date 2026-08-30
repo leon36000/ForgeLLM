@@ -2,10 +2,11 @@
 
 ## Status and boundary
 
-This is an in-progress evidence record for task `P0-T20`. The candidate is
-based on protected `main@cc5a90d0190bf84e3124a7e81bbe52bc7d0820bc` and remains
-isolated until independent review, exact-head hosted checks and merge are
-complete. It is a CPU-only reference increment. It does not claim causal
+This is the local closeout evidence record for task `P0-T20`. The implementation
+candidate exact head is `c3d01dc47e36005b4b229527a7a019558c91bfb4`, based on
+protected `main@cc5a90d0190bf84e3124a7e81bbe52bc7d0820bc`; it remains isolated
+until independent review, exact-head hosted checks and merge are complete. It is
+a CPU-only reference increment. It does not claim causal
 masking, full self-attention policy, multi-head layout, RoPE/ALiBi, KV-cache
 management, model loading, PyTorch/JAX conformance, hardware behavior,
 CUDA/ROCm, runtime/backend/ABI integration, serving, performance or production
@@ -47,7 +48,7 @@ arbitrary large full-mantissa inputs.
 
 ## Local evidence
 
-At the current candidate checkpoint:
+At the implementation candidate checkpoint `c3d01dc47e36005b4b229527a7a019558c91bfb4`:
 
 - focused Rust multi-query integration: **12 passed**;
 - focused oracle module: **60 passed**;
