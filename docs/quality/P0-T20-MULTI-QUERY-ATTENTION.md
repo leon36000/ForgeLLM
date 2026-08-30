@@ -5,9 +5,9 @@
 This is the local closeout evidence record for task `P0-T20`. The initial
 implementation head was `c3d01dc47e36005b4b229527a7a019558c91bfb4`; the
 first remediation head was `b814770e63147b9dff650744fd5861377d9990a2`, and
-the final remediation code head is `0554747b036faba0f4185dd08ccc080fe3a1b76b`.
-The integrated candidate exact head reviewed below is
-`99aea33bb5159f9888d7641c47012c71a417a1b9`, based on protected
+the final proof head was `0554747b036faba0f4185dd08ccc080fe3a1b76b`. The
+Sonar remediation code head is
+`dc3f90f67caca4533964481e3f5611049266de72`, based on protected
 `main@cc5a90d0190bf84e3124a7e81bbe52bc7d0820bc`; it remains isolated
 until independent review, exact-head hosted checks and merge are complete. It is
 a CPU-only reference increment. It does not claim causal
@@ -84,6 +84,14 @@ executes both. The Python suite includes bounded randomized comparisons,
 context-length-one exactness, row independence, malformed-shape checks, and a
 raw-score f32 tie case built from representable inputs.
 
+The first hosted run on PR #90 at head
+`4834cbaf7b7248504a1e484722d62b18988a003e` returned a successful Quality
+Gate but published seven new annotations: one cognitive-complexity finding in
+`f64_matmul_partial_sums_from_f32` and six exception-test style warnings. The
+code refactor and test cleanup in `dc3f90f67caca4533964481e3f5611049266de72`
+address those annotations without changing behavior; that hosted run is not
+being treated as a clean final gate.
+
 ## Review and publication gates
 
 The first two read-only Luna audits found process/receipt gaps; the earlier
@@ -96,8 +104,10 @@ acceptance. The fresh final Luna review accepted exact head
 `99aea33bb5159f9888d7641c47012c71a417a1b9` with no findings, and the fresh
 GPT-5.6-Sol critical gate accepted the same exact head with no findings. Their
 conditions are limited to this receipt reconciliation, hosted exact-head
-checks, protected merge and post-merge evidence. The exact PR head, hosted
-required checks and merge SHA remain blank until observed.
+checks, protected merge and post-merge evidence. The subsequent hosted Sonar
+annotations superseded those candidate-level ACCEPTs for publication, so fresh
+Luna and GPT-5.6-Sol reviews of the Sonar-remediated code are required. The
+exact PR head, hosted required checks and merge SHA remain blank until observed.
 
 ## Residual limitations
 
