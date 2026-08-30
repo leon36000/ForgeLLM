@@ -13,9 +13,9 @@ projections:
   - docs/state/HANDOFF.md
   - docs/roadmap/PHASE0_TASKS.md
   source_sha256:
-    docs/state/CURRENT_STATE.md: 6760528e47244f3357c491fae9b63c3ec2b9ee8cf078aca7bde4fee85ea5e00f
+    docs/state/CURRENT_STATE.md: 894a0f9303f46efa41a2bfba470d32f673ceecc7d21fc0c4dd7e0354f08591a1
     docs/state/DECISIONS.md: 9380c441b87cb8d8ac15c920ddad8d55ce72098060902348a768e261d31667d1
     docs/state/RISKS.md: 5c5cfeb773669e15c99d5f5ec8acb43a902a80c48c57d63afe0de0025d1d5b1f
     docs/state/OPEN_QUESTIONS.md: 8133bbd1b054178055e6b8658b924ada23e84e10002f14f3d5733897c8b153c8
-    docs/state/HANDOFF.md: cc7d5fdbf71b1308a31b18857af11328dfd1f397d2383144652af20c716ed5e4
-    docs/roadmap/PHASE0_TASKS.md: 57cb1197a050a4673a53b4d7ca05c805ddab2f55a540fead90f2028d765f7297
+    docs/state/HANDOFF.md: ff9fa48db5f3710abb56b7d469840f8638821a497bd3bb26c9286536ee65dd92
+    docs/roadmap/PHASE0_TASKS.md: 5229347c496acc79a6c86e90852f621309b7277462e6cabd95f2c55b33309b8e

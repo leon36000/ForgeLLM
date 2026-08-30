@@ -7,7 +7,7 @@
 - Initial implementation head: `c3d01dc47e36005b4b229527a7a019558c91bfb4`
 - First remediation implementation head: `b814770e63147b9dff650744fd5861377d9990a2`
 - Final remediation implementation head: `0554747b036faba0f4185dd08ccc080fe3a1b76b`
-- Code candidate exact head for independent review: `0554747b036faba0f4185dd08ccc080fe3a1b76b`
+- Code candidate exact head for independent review: `99aea33bb5159f9888d7641c47012c71a417a1b9`
 - Scope: bounded Rust CPU multi-query attention, stdlib-only oracle, fixture,
   tests and synchronized projections listed in the task packet
 
@@ -21,8 +21,9 @@ one GPT-5.6-Sol agent after the independent review and before publication.
 
 | Gate | Exact reviewed head | Verdict | Findings |
 |---|---|---|---|
-| Independent Luna correctness/state review | pending | pending | pending |
-| GPT-5.6-Sol critical gate | pending | pending | pending |
+| Independent Luna correctness/state review | `99aea33bb5159f9888d7641c47012c71a417a1b9` | **ACCEPT** | none; fresh agent `01a050fe-8438-7cf0-aa6e-1e8d7541c6b2` |
+| GPT-5.6-Sol critical gate | `99aea33bb5159f9888d7641c47012c71a417a1b9` | **ACCEPT** | none; fresh agent `01a05102-94ad-77c1-9daf-d077e1aa73fc` |
 
-No `ACCEPT` is claimed by this file until the exact head and both verdicts are
-recorded from fresh evidence.
+Both verdicts are fresh and apply to the exact integrated candidate above.
+Hosted exact-PR-head checks, protected merge and post-merge evidence remain
+required and are not claimed by this receipt.

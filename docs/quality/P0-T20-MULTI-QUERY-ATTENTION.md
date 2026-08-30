@@ -5,8 +5,9 @@
 This is the local closeout evidence record for task `P0-T20`. The initial
 implementation head was `c3d01dc47e36005b4b229527a7a019558c91bfb4`; the
 first remediation head was `b814770e63147b9dff650744fd5861377d9990a2`, and
-the final remediation candidate exact head is
-`0554747b036faba0f4185dd08ccc080fe3a1b76b`, based on protected
+the final remediation code head is `0554747b036faba0f4185dd08ccc080fe3a1b76b`.
+The integrated candidate exact head reviewed below is
+`99aea33bb5159f9888d7641c47012c71a417a1b9`, based on protected
 `main@cc5a90d0190bf84e3124a7e81bbe52bc7d0820bc`; it remains isolated
 until independent review, exact-head hosted checks and merge are complete. It is
 a CPU-only reference increment. It does not claim causal
@@ -62,7 +63,9 @@ precondition holds for arbitrary large full-mantissa inputs.
 
 ## Local evidence
 
-At the final remediation implementation checkpoint `0554747b036faba0f4185dd08ccc080fe3a1b76b`:
+At the final remediation implementation checkpoint
+`0554747b036faba0f4185dd08ccc080fe3a1b76b`, integrated at candidate
+`99aea33bb5159f9888d7641c47012c71a417a1b9`:
 
 - focused Rust multi-query integration: **12 passed**;
 - focused oracle module: **66 passed**;
@@ -89,9 +92,12 @@ fresh Luna audit then found that the first remediation still recorded rounded
 partial states. That finding is addressed in the final candidate above: the
 trace now preserves exact mathematical partials before the binary64
 representability check. None of the prior `NO-GO` verdicts is relabeled as
-acceptance. A fresh Luna review and one GPT-5.6-Sol critical gate on the final
-exact candidate are required before push. The exact PR head, hosted required
-checks and merge SHA remain blank until observed.
+acceptance. The fresh final Luna review accepted exact head
+`99aea33bb5159f9888d7641c47012c71a417a1b9` with no findings, and the fresh
+GPT-5.6-Sol critical gate accepted the same exact head with no findings. Their
+conditions are limited to this receipt reconciliation, hosted exact-head
+checks, protected merge and post-merge evidence. The exact PR head, hosted
+required checks and merge SHA remain blank until observed.
 
 ## Residual limitations
 
