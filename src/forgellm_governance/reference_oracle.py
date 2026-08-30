@@ -216,6 +216,17 @@ def matmul_exact(lhs: list[list[Fraction]], rhs: list[list[Fraction]]) -> list[l
     return result
 
 
+def _assert_exact_f32_matrix(matrix: list[list[Fraction]], *, operand: str) -> None:
+    for row_index, row in enumerate(matrix):
+        for column_index, value in enumerate(row):
+            bits = fraction_to_f32_bits(value)
+            if f32_bits_to_fraction(bits) != value:
+                raise ValueError(
+                    f"f64_matmul_partial_sums_from_f32 {operand}[{row_index}][{column_index}] "
+                    "is not an exact finite f32 value"
+                )
+
+
 def f64_matmul_partial_sums_from_f32(
     lhs: list[list[Fraction]], rhs: list[list[Fraction]]
 ) -> list[list[list[Fraction]]]:
@@ -229,22 +240,8 @@ def f64_matmul_partial_sums_from_f32(
     replacement production matmul.
     """
     matmul_exact(lhs, rhs)  # validates rank, rectangularity and inner dimensions once.
-    for row_index, row in enumerate(lhs):
-        for column_index, value in enumerate(row):
-            bits = fraction_to_f32_bits(value)
-            if f32_bits_to_fraction(bits) != value:
-                raise ValueError(
-                    f"f64_matmul_partial_sums_from_f32 lhs[{row_index}][{column_index}] "
-                    "is not an exact finite f32 value"
-                )
-    for row_index, row in enumerate(rhs):
-        for column_index, value in enumerate(row):
-            bits = fraction_to_f32_bits(value)
-            if f32_bits_to_fraction(bits) != value:
-                raise ValueError(
-                    f"f64_matmul_partial_sums_from_f32 rhs[{row_index}][{column_index}] "
-                    "is not an exact finite f32 value"
-                )
+    _assert_exact_f32_matrix(lhs, operand="lhs")
+    _assert_exact_f32_matrix(rhs, operand="rhs")
 
     inner = len(lhs[0])
     columns = len(rhs[0])

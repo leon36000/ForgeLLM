@@ -278,15 +278,17 @@ class TestExactOpsAgreeWithF64Path:
 
 class TestF64AccumulationProof:
     def test_guard_rejects_non_dyadic_intermediate_even_when_final_is_zero(self):
+        partial_sums = [Fraction(1, 3), Fraction(0)]
         with pytest.raises(ReferenceOracleAmbiguousRounding, match="dyadic"):
-            assert_f64_exact_accumulation([Fraction(1, 3), Fraction(0)], context="masked_final")
+            assert_f64_exact_accumulation(partial_sums, context="masked_final")
 
     def test_guard_accepts_exact_power_of_two_at_53_bit_exponent(self):
         assert_f64_exact_accumulation([Fraction(2**53)], context="large_power_of_two")
 
     def test_guard_rejects_a_54_bit_normal_significand(self):
+        partial_sums = [Fraction(2**53 + 1)]
         with pytest.raises(ReferenceOracleAmbiguousRounding, match="54 significant bits"):
-            assert_f64_exact_accumulation([Fraction(2**53 + 1)], context="wide_significand")
+            assert_f64_exact_accumulation(partial_sums, context="wide_significand")
 
     def test_f32_matmul_trace_preserves_each_binary64_partial(self):
         lhs = [[f32_bits_to_fraction(_bits(1.5)), f32_bits_to_fraction(_bits(-0.5))]]
@@ -303,12 +305,15 @@ class TestF64AccumulationProof:
         traces = f64_matmul_partial_sums_from_f32(lhs, rhs)
 
         assert traces == [[[Fraction(1), Fraction(1) + Fraction(1, 2**53)]]]
+        partial_sums = traces[0][0]
         with pytest.raises(ReferenceOracleAmbiguousRounding, match="54 significant bits"):
-            assert_f64_exact_accumulation(traces[0][0], context="unrepresentable_partial")
+            assert_f64_exact_accumulation(partial_sums, context="unrepresentable_partial")
 
     def test_f32_matmul_trace_rejects_non_f32_fraction_inputs(self):
+        lhs = [[Fraction(1, 3)]]
+        rhs = [[Fraction(1)]]
         with pytest.raises(ValueError, match="exact finite f32"):
-            f64_matmul_partial_sums_from_f32([[Fraction(1, 3)]], [[Fraction(1)]])
+            f64_matmul_partial_sums_from_f32(lhs, rhs)
 
 
 # ---------------------------------------------------------------------------
@@ -714,26 +719,25 @@ class TestMultiQueryAttentionOracle:
         assert contexts == [[Fraction(7), Fraction(-4)], [Fraction(7), Fraction(-4)]]
 
     def test_oracle_rejects_ragged_queries(self):
+        queries = [[Fraction(1), Fraction(0)], [Fraction(1)]]
+        keys = [[Fraction(1), Fraction(0)]]
+        values = [[Fraction(1), Fraction(0)]]
         with pytest.raises(ValueError, match="rectangular"):
-            multi_query_attention_oracle(
-                [[Fraction(1), Fraction(0)], [Fraction(1)]], [[Fraction(1), Fraction(0)]], [[Fraction(1), Fraction(0)]]
-            )
+            multi_query_attention_oracle(queries, keys, values)
 
     def test_oracle_rejects_key_value_context_mismatch(self):
+        queries = [[Fraction(1), Fraction(0)]]
+        keys = [[Fraction(1), Fraction(0)], [Fraction(0), Fraction(1)]]
+        values = [[Fraction(1), Fraction(0)]]
         with pytest.raises(ValueError, match="context length"):
-            multi_query_attention_oracle(
-                [[Fraction(1), Fraction(0)]],
-                [[Fraction(1), Fraction(0)], [Fraction(0), Fraction(1)]],
-                [[Fraction(1), Fraction(0)]],
-            )
+            multi_query_attention_oracle(queries, keys, values)
 
     def test_oracle_rejects_value_width_mismatch(self):
+        queries = [[Fraction(1), Fraction(0)]]
+        keys = [[Fraction(1), Fraction(0)]]
+        values = [[Fraction(1), Fraction(0), Fraction(2)]]
         with pytest.raises(ValueError, match="head_dim"):
-            multi_query_attention_oracle(
-                [[Fraction(1), Fraction(0)]],
-                [[Fraction(1), Fraction(0)]],
-                [[Fraction(1), Fraction(0), Fraction(2)]],
-            )
+            multi_query_attention_oracle(queries, keys, values)
 
     def test_oracle_matches_independent_simulation_for_bounded_random_inputs(self):
         rng = random.Random(20260829)
