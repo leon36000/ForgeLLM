@@ -8,7 +8,7 @@
 - First remediation implementation head: `b814770e63147b9dff650744fd5861377d9990a2`
 - Final remediation implementation head: `0554747b036faba0f4185dd08ccc080fe3a1b76b`
 - Sonar remediation implementation head: `dc3f90f67caca4533964481e3f5611049266de72`
-- Code candidate exact head for independent review: `dc3f90f67caca4533964481e3f5611049266de72`
+- Code candidate exact head for independent review: `0092ed75f2e4be2fae7d417f56d0f0069d46bbd6`
 - Scope: bounded Rust CPU multi-query attention, stdlib-only oracle, fixture,
   tests and synchronized projections listed in the task packet
 
@@ -31,8 +31,9 @@ before publication.
 
 | Gate | Exact reviewed head | Verdict | Findings |
 |---|---|---|---|
-| Independent Luna correctness/state review | pending | pending | fresh review required after Sonar remediation |
-| GPT-5.6-Sol critical gate | pending | pending | fresh gate required after Sonar remediation |
+| Independent Luna correctness/state review | `0092ed75f2e4be2fae7d417f56d0f0069d46bbd6` | **ACCEPT** | none; fresh agent `01a0510c-afce-7622-8cd8-17094e54ba70` |
+| GPT-5.6-Sol critical gate | `0092ed75f2e4be2fae7d417f56d0f0069d46bbd6` | **ACCEPT** | none; fresh agent `01a05111-fa31-7f20-8ad7-eb5592373296` |
 
-Hosted exact-PR-head checks, protected merge and post-merge evidence remain
-required and are not claimed by this receipt.
+Both fresh verdicts apply to the exact reviewed candidate above. Hosted
+exact-PR-head checks, protected merge and post-merge evidence remain required
+and are not claimed by this receipt.

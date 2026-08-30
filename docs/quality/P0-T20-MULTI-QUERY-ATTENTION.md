@@ -100,14 +100,15 @@ fresh Luna audit then found that the first remediation still recorded rounded
 partial states. That finding is addressed in the final candidate above: the
 trace now preserves exact mathematical partials before the binary64
 representability check. None of the prior `NO-GO` verdicts is relabeled as
-acceptance. The fresh final Luna review accepted exact head
-`99aea33bb5159f9888d7641c47012c71a417a1b9` with no findings, and the fresh
-GPT-5.6-Sol critical gate accepted the same exact head with no findings. Their
-conditions are limited to this receipt reconciliation, hosted exact-head
-checks, protected merge and post-merge evidence. The subsequent hosted Sonar
-annotations superseded those candidate-level ACCEPTs for publication, so fresh
-Luna and GPT-5.6-Sol reviews of the Sonar-remediated code are required. The
-exact PR head, hosted required checks and merge SHA remain blank until observed.
+acceptance. The earlier fresh Luna and GPT-5.6-Sol reviews accepted superseded
+candidate `99aea33bb5159f9888d7641c47012c71a417a1b9` with no findings. After
+the hosted Sonar annotations and the
+`dc3f90f67caca4533964481e3f5611049266de72` remediation, a fresh Luna review
+accepted exact candidate `0092ed75f2e4be2fae7d417f56d0f0069d46bbd6` with no
+findings, and a fresh GPT-5.6-Sol critical gate accepted the same exact
+candidate with no findings. Their conditions are limited to hosted exact-head
+checks, protected merge and post-merge evidence. The exact PR head, hosted
+required checks and merge SHA remain blank until observed.
 
 ## Residual limitations
 
