@@ -5,7 +5,7 @@
 - Task: `P0-T20`
 - Protected base: `cc5a90d0190bf84e3124a7e81bbe52bc7d0820bc`
 - Implementation head: `c3d01dc47e36005b4b229527a7a019558c91bfb4`
-- Candidate exact head for independent review: `2d926f8a4c643e29c15ccf0bba5bccb02dc94dc1`
+- Code candidate exact head for independent review: `50d9bd9cebf428b90a993edb17ca1b8876114bab`
 - Scope: bounded Rust CPU multi-query attention, stdlib-only oracle, fixture,
   tests and synchronized projections listed in the task packet
 
