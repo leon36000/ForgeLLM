@@ -20,7 +20,7 @@
 | P0-T17 | complete — Rust CI gate | make ci executes the locked Rust workspace checks and records the protected closeout | implementation/closeout PRs #79/#84; protected closeout `95cf4ab`; no runtime/backend scope |
 | P0-T18 | complete — differential reference oracle | stdlib-only Fraction/Decimal oracle, deterministic fixture and restricted Rust reader for reference operations | implementation/closeout PRs #85/#86; protected closeout `d50cd7e`; no production dependency |
 | P0-T19 | complete — single-query attention | rank-two transpose and caller-supplied single-query scaled dot-product attention | implementation/closeout PRs #88/#89; protected closeout `cc5a90d`; multi-query row-wise attention deferred to P0-T20 |
-| P0-T20 | complete locally — bounded multi-query attention | row-wise softmax over caller-supplied queries/keys/values with independent oracle and state projections | remediation candidate `b814770`; local 568 Python/230 speculative/101 Rust gates green; independent review, hosted checks and merge pending |
+| P0-T20 | complete locally — bounded multi-query attention | row-wise softmax over caller-supplied queries/keys/values with independent oracle and state projections | final remediation candidate `0554747`; local 569 Python/230 speculative/101 Rust gates green; independent review, hosted checks and merge pending |
 | P0-T10 | review — implementation merged, acceptance pending | bounded, inert Loop Engineering bridge with provenance, task binding, receipts, and fail-closed repository validation | `main@87a1dde`; make validate-loop; ADR-0005 remains proposed; final architecture/security acceptance record absent |
 
 ## P0-T10 integration checkpoint
@@ -37,7 +37,7 @@ P0-T17, P0-T18 and P0-T19 are complete on protected `main` through their impleme
 
 ## P0-T20 publication checkpoint
 
-P0-T20 is a locally complete candidate at `b814770` based on protected `main@cc5a90d`. It adds multi-query attention with an explicit per-query softmax boundary, a matching stdlib-only oracle and two deterministic fixture cases. The remediation candidate has passed `make ci` (568 Python, 230 speculative and 101 Rust tests), plus 12 focused Rust tests and 65 focused oracle tests. The closed packet is ready for independent review, exact-head hosted checks and post-merge evidence; causal masking, multi-head/RoPE, KV cache, runtime/backend/ABI, models, hardware and performance remain out of scope.
+P0-T20 is a locally complete candidate at `0554747` based on protected `main@cc5a90d`. It adds multi-query attention with an explicit per-query softmax boundary, a matching stdlib-only oracle and two deterministic fixture cases. The final remediation candidate has passed `make ci` (569 Python, 230 speculative and 101 Rust tests), plus 12 focused Rust tests and 66 focused oracle tests. The closed packet is ready for independent review, exact-head hosted checks and post-merge evidence; causal masking, multi-head/RoPE, KV cache, runtime/backend/ABI, models, hardware and performance remain out of scope.
 
 ## P0-T09 current gate
 

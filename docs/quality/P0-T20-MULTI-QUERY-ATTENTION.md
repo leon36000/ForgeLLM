@@ -4,8 +4,9 @@
 
 This is the local closeout evidence record for task `P0-T20`. The initial
 implementation head was `c3d01dc47e36005b4b229527a7a019558c91bfb4`; the
-remediation candidate exact head is
-`b814770e63147b9dff650744fd5861377d9990a2`, based on protected
+first remediation head was `b814770e63147b9dff650744fd5861377d9990a2`, and
+the final remediation candidate exact head is
+`0554747b036faba0f4185dd08ccc080fe3a1b76b`, based on protected
 `main@cc5a90d0190bf84e3124a7e81bbe52bc7d0820bc`; it remains isolated
 until independent review, exact-head hosted checks and merge are complete. It is
 a CPU-only reference increment. It does not claim causal
@@ -26,6 +27,14 @@ The failing tests were added before the implementation:
 
 The packet was then validated, the smallest Rust implementation and independent
 oracle were added, and the focused tests were rerun.
+
+The first remediation was rejected by the independent Luna audit at
+`ecf8ee98936d79838153f47d444c9f63f6f5bed1`: the trace helper had rounded each
+partial before the proof guard inspected it. A new regression was added first;
+the focused run was **1 failed, 65 deselected**, because the unrepresentable
+exact partial `1 + 2^-53` had been returned as `1`. The helper was then changed
+to retain exact Fraction partials before any binary64 rounding, and the final
+candidate below passed the regression.
 
 ## Implemented contract
 
@@ -53,11 +62,11 @@ precondition holds for arbitrary large full-mantissa inputs.
 
 ## Local evidence
 
-At the remediation implementation checkpoint `b814770e63147b9dff650744fd5861377d9990a2`:
+At the final remediation implementation checkpoint `0554747b036faba0f4185dd08ccc080fe3a1b76b`:
 
 - focused Rust multi-query integration: **12 passed**;
-- focused oracle module: **65 passed**;
-- full `make ci` run on the remediation candidate: **568 Python tests
+- focused oracle module: **66 passed**;
+- full `make ci` run on the remediation candidate: **569 Python tests
   passed**, **230 speculative tests passed**, and **101 Rust tests passed**;
 - fixture generator `--check`: passed;
 - fixture SHA-256: `7fd3b5824945b868025ddb7272c87e5daa8ffd843536cedc313569bfb999e1bc`;
@@ -74,15 +83,15 @@ raw-score f32 tie case built from representable inputs.
 
 ## Review and publication gates
 
-The first two read-only Luna audits found process/receipt gaps; the critical Sol
-gate additionally found and blocked an unsound exact-accumulation proof. Those
-findings were resolved in the remediation candidate above: the verifier now
-rejects non-dyadic intermediates, checks every sequential partial from actual
-f32 operands, and covers the final fold's rounded f32 probabilities. The prior
-NO-GO verdicts are not being relabeled as acceptance. A fresh independent Luna
-review and one GPT-5.6-Sol critical gate on the exact remediation candidate are
-required before push. The exact PR head, hosted required checks and merge SHA
-remain blank until observed.
+The first two read-only Luna audits found process/receipt gaps; the earlier
+critical Sol gate additionally found an unsound exact-accumulation proof. A
+fresh Luna audit then found that the first remediation still recorded rounded
+partial states. That finding is addressed in the final candidate above: the
+trace now preserves exact mathematical partials before the binary64
+representability check. None of the prior `NO-GO` verdicts is relabeled as
+acceptance. A fresh Luna review and one GPT-5.6-Sol critical gate on the final
+exact candidate are required before push. The exact PR head, hosted required
+checks and merge SHA remain blank until observed.
 
 ## Residual limitations
 
