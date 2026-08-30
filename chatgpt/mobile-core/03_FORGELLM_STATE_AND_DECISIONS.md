@@ -60,7 +60,7 @@ Le chemin Sonar `ci_based_only` demeure préparation-only; l’analyse automatiq
 
 ## P0-T17 à P0-T20 — ligne de référence attention
 
-P0-T17, P0-T18 et P0-T19 sont protégés et complets. P0-T20 ajoute uniquement `attention_decode_multi_query` sur des tenseurs en mémoire, avec une normalisation softmax distincte par requête, un oracle stdlib-only et un fixture hashé. Le candidat local figé à `c3d01dc` et basé sur `main@cc5a90d` passe `make ci` avec 563 tests Python, 230 tests spéculatifs et 101 tests Rust, plus 12 tests Rust multi-query et 60 tests oracle ciblés. Le packet est désormais `tasks/closed/P0-T20-multi-query-attention.yaml`; les revues et gates exact-head restent requis avant publication. Aucun masque causal, multi-head/RoPE, KV cache, modèle, hardware, CUDA/ROCm, runtime/backend/ABI, performance, secret ou validation LiteLLM n’est couvert.
+P0-T17, P0-T18 et P0-T19 sont protégés et complets. P0-T20 ajoute uniquement `attention_decode_multi_query` sur des tenseurs en mémoire, avec une normalisation softmax distincte par requête, un oracle stdlib-only et un fixture hashé. Le candidat de remédiation figé à `b814770` et basé sur `main@cc5a90d` passe `make ci` avec 568 tests Python, 230 tests spéculatifs et 101 tests Rust, plus 12 tests Rust multi-query et 65 tests oracle ciblés. Le packet est désormais `tasks/closed/P0-T20-multi-query-attention.yaml`; les revues et gates exact-head restent requis avant publication. Aucun masque causal, multi-head/RoPE, KV cache, modèle, hardware, CUDA/ROCm, runtime/backend/ABI, performance, secret ou validation LiteLLM n’est couvert.
 
 ## Garde-fous et limites de preuve
 

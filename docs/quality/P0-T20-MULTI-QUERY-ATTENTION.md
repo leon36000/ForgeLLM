@@ -2,9 +2,11 @@
 
 ## Status and boundary
 
-This is the local closeout evidence record for task `P0-T20`. The implementation
-candidate exact head is `c3d01dc47e36005b4b229527a7a019558c91bfb4`, based on
-protected `main@cc5a90d0190bf84e3124a7e81bbe52bc7d0820bc`; it remains isolated
+This is the local closeout evidence record for task `P0-T20`. The initial
+implementation head was `c3d01dc47e36005b4b229527a7a019558c91bfb4`; the
+remediation candidate exact head is
+`b814770e63147b9dff650744fd5861377d9990a2`, based on protected
+`main@cc5a90d0190bf84e3124a7e81bbe52bc7d0820bc`; it remains isolated
 until independent review, exact-head hosted checks and merge are complete. It is
 a CPU-only reference increment. It does not claim causal
 masking, full self-attention policy, multi-head layout, RoPE/ALiBi, KV-cache
@@ -51,14 +53,14 @@ precondition holds for arbitrary large full-mantissa inputs.
 
 ## Local evidence
 
-At the implementation candidate checkpoint `c3d01dc47e36005b4b229527a7a019558c91bfb4`:
+At the remediation implementation checkpoint `b814770e63147b9dff650744fd5861377d9990a2`:
 
 - focused Rust multi-query integration: **12 passed**;
-- focused oracle module: **60 passed**;
-- full `make ci` run before the final state/review closeout: **563 Python tests
+- focused oracle module: **65 passed**;
+- full `make ci` run on the remediation candidate: **568 Python tests
   passed**, **230 speculative tests passed**, and **101 Rust tests passed**;
 - fixture generator `--check`: passed;
-- fixture SHA-256: `238bc4a1b8650cc995d952155c2b2c4df6e87864da54724ac2df0ecc13775dfb`;
+- fixture SHA-256: `7fd3b5824945b868025ddb7272c87e5daa8ffd843536cedc313569bfb999e1bc`;
 - `cargo fmt --all --check`, Clippy, packet validation and project validation:
   passed at the corresponding checkpoints;
 - no changes to `Cargo.toml`, `Cargo.lock`, `pyproject.toml`, or
@@ -72,13 +74,15 @@ raw-score f32 tie case built from representable inputs.
 
 ## Review and publication gates
 
-The first read-only Luna audit occurred before fixture/state finalization and
-returned `NO-GO` for the then-missing fixture/state/review artifacts and the
-then-unrounded independent scale result. Those concrete findings were resolved
-before this record was written; that early verdict is not being counted as
-final acceptance. A fresh independent Luna review and one GPT-5.6-Sol critical
-gate on the exact final candidate are required before push. The exact PR head,
-hosted required checks and merge SHA are intentionally blank until observed.
+The first two read-only Luna audits found process/receipt gaps; the critical Sol
+gate additionally found and blocked an unsound exact-accumulation proof. Those
+findings were resolved in the remediation candidate above: the verifier now
+rejects non-dyadic intermediates, checks every sequential partial from actual
+f32 operands, and covers the final fold's rounded f32 probabilities. The prior
+NO-GO verdicts are not being relabeled as acceptance. A fresh independent Luna
+review and one GPT-5.6-Sol critical gate on the exact remediation candidate are
+required before push. The exact PR head, hosted required checks and merge SHA
+remain blank until observed.
 
 ## Residual limitations
 
