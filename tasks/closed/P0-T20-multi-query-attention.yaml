@@ -1,0 +1,95 @@
+schema_version: "1.0"
+task_id: P0-T20
+title: Add bounded multi-query attention to the Rust reference core
+phase: P0
+status: complete
+charter_goals:
+  - Correction and reproducibility precede performance.
+  - Reference CPU execution path.
+goal: Add a bounded CPU multi-query scaled dot-product attention primitive with independent row-wise softmax, a stdlib-only differential oracle, and synchronized state projections, while preserving the existing single-query and primitive contracts.
+non_goals:
+  - Implement a causal mask, full self-attention policy, multi-head reshape or split, RoPE, ALiBi, or any positional encoding.
+  - Implement KV-cache append, eviction, capacity management, paging, scheduling, batching policy, or runtime integration.
+  - Modify the numerical behavior or public contract of matmul, softmax, transpose, RMSNorm, embedding_gather, reshape, argmax, dense_decode_single_token, or attention_decode_single_query.
+  - Add PyTorch, NumPy, serde_json, or any other third-party dependency to the Rust or Python runtime surfaces.
+  - Claim PyTorch, JAX, real-model, hardware, accelerator, benchmark, production-readiness, Phase 1, or Phase 2 conformance.
+  - Modify SonarQube, GitHub settings, credentials, workflows, hardware state, model artifacts, or the Loop Engineering declaration/receipt catalog.
+inputs:
+  - "Protected main base cc5a90d0190bf84e3124a7e81bbe52bc7d0820bc, which contains the completed P0-T19 single-query attention increment."
+  - "P0-T19's closed packet and specification, whose non-goal explicitly defers multi-query attention to P0-T20."
+  - "The existing checked Tensor, matmul, transpose, softmax, and allocation helpers in crates/forgellm-reference."
+  - "The P0-T18/P0-T19 stdlib-only Fraction/Decimal oracle and fixture harness."
+  - "The project charter, architecture principles, lifecycle validator, and generated mobile-state manifest contract."
+outputs:
+  - "crates/forgellm-reference/src/lib.rs: attention_decode_multi_query(queries, keys, values) returning [query_count, head_dim]."
+  - "crates/forgellm-reference/tests/multi_query_attention.rs: independent row-wise Rust oracle tests and typed failure-path tests."
+  - "src/forgellm_governance/reference_oracle.py and tests/test_reference_oracle.py: multi_query_attention_oracle with per-query context tolerances and adversarial/property coverage."
+  - "scripts/generate_reference_oracle_fixture.py, the pinned JSON fixture, and the dependency-free Rust fixture dispatch extended for multi-query cases."
+  - "A P0-T20 specification, execution plan, quality report, independent review receipt, closed task packet, and synchronized state/roadmap/mobile projections."
+allowed_paths:
+  - crates/forgellm-reference/src/lib.rs
+  - crates/forgellm-reference/tests/
+  - src/forgellm_governance/reference_oracle.py
+  - scripts/generate_reference_oracle_fixture.py
+  - crates/forgellm-reference/tests/fixtures/reference_ops_oracle.json
+  - crates/forgellm-reference/tests/fixtures/reference_ops_oracle.sha256
+  - tests/test_reference_oracle.py
+  - docs/superpowers/specs/2026-08-29-p0-t20-multi-query-attention-design.md
+  - docs/superpowers/plans/2026-08-29-p0-t20-multi-query-attention.md
+  - docs/quality/P0-T20-MULTI-QUERY-ATTENTION.md
+  - docs/reviews/P0-T20-MULTI-QUERY-ATTENTION.md
+  - tasks/open/P0-T20-multi-query-attention.yaml
+  - tasks/closed/P0-T20-multi-query-attention.yaml
+  - docs/state/CURRENT_STATE.md
+  - docs/state/HANDOFF.md
+  - docs/roadmap/PHASE0_TASKS.md
+  - chatgpt/mobile-core/03_FORGELLM_STATE_AND_DECISIONS.md
+  - chatgpt/mobile-core/DERIVED-MANIFEST.yaml
+  - README.md
+  - TREE.txt
+forbidden_actions:
+  - Add a dependency, model, runtime, backend, ABI, GPU kernel, CUDA/ROCm path, serving path, or hardware probe.
+  - Add or modify any file under artifacts/governance/loop-engineering/.
+  - Change existing primitive semantics, silently flatten query rows, normalize across rows, or apply an implicit causal mask.
+  - Read, print, copy, validate, provision, rotate, or transmit any secret value; SONAR_TOKEN remains name-only/readiness evidence.
+  - Modify external SonarQube, GitHub, repository settings, protected-branch rules, secrets, or workflow activation.
+  - Use a model inference service, LiteLLM, an external validation trio, or external model output as repository evidence.
+  - Use an intermediate Python float to round high-precision oracle values to f32; preserve the existing direct Fraction-to-f32 path.
+  - Claim real-model, PyTorch, JAX, hardware, accelerator, performance, production, or phase-exit evidence.
+acceptance_criteria:
+  - attention_decode_multi_query accepts finite rank-two queries, keys, and values with shapes [query_count, head_dim], [context_len, head_dim], and [context_len, head_dim], and returns [query_count, head_dim].
+  - Every query row receives its own scaled score row and its own softmax normalization; no probability or denominator is shared between query rows.
+  - The implementation composes the existing checked matmul, transpose, and softmax primitives without changing their numerical behavior or signatures, and preserves fixed row-major order and recoverable allocation errors.
+  - Rank, dimension, context-length, non-finite-input, non-finite-result, and allocation failures remain typed and fail closed through the existing ReferenceError contract.
+  - The stdlib-only oracle re-derives the same f64-accumulate, f32-cast, f64 scale, per-row softmax, and final f64-accumulate sequence; returned tolerances are per output element and per query row, with the derivation documented rather than guessed. Fixture generation reconstructs actual f32 operands, records every sequential binary64 partial sum for both matmul folds, and fails closed for non-dyadic or otherwise non-exact finite-binary64 intermediates.
+  - Permanent Rust and Python tests include an independent row-wise oracle, unequal-row attention behavior, context_len=1 exactness, malformed/rank/dimension/non-finite paths, randomized bounded inputs, and a near-rounding-boundary regression.
+  - The deterministic fixture generator, committed fixture hash, restricted Rust reader, and fixture dispatch cover at least two multi-query cases and pass their exact checks without a new dependency.
+  - "`cargo fmt --all --check`, `cargo clippy --workspace --all-targets --locked -- -D warnings`, `cargo test --workspace --all-targets --locked`, `PYTHONPATH=src python3 -m pytest -q tests/test_reference_oracle.py`, fixture/hash checks, packet validation, lifecycle/state validation, `make ci`, and `git diff --check` pass on the exact candidate head."
+  - State ID, canonical protected-main source anchor, README task map, roadmap, handoff, mobile projection, derived manifest, and exact TREE are synchronized in the same bounded change; no governance receipt/declaration file changes.
+  - Independent Luna correctness review and the single critical Sol gate record ACCEPT with no unresolved blocker before publication/merge; hosted required checks pass for the exact PR head before merge.
+  - The final report calls this a bounded CPU-only reference increment and explicitly leaves causal masking, full self-attention policy, multi-head/RoPE, KV cache, runtime/backend integration, model conformance, hardware, and performance unestablished.
+verification_commands:
+  - cargo test --test multi_query_attention --locked
+  - PYTHONPATH=src python3 -m pytest -q tests/test_reference_oracle.py
+  - python3 scripts/generate_reference_oracle_fixture.py --check --root .
+  - sha256sum -c crates/forgellm-reference/tests/fixtures/reference_ops_oracle.sha256
+  - cargo fmt --all --check
+  - cargo clippy --workspace --all-targets --locked -- -D warnings
+  - cargo test --workspace --all-targets --locked
+  - PYTHONPATH=src python3 scripts/validate_task_packet.py tasks/closed/P0-T20-multi-query-attention.yaml --root .
+  - PYTHONPATH=src python3 scripts/validate_project_state.py --root .
+  - make ci
+  - git diff --check
+evidence_requirements:
+  - Record the exact protected base, RED test head/output, implementation head, independent review heads/verdicts, exact PR head, hosted checks, merge commit, and fresh post-merge head.
+  - Record Python and Rust test counts before and after the increment, including the focused multi-query counts and full `make ci` result.
+  - Record the per-row numerical derivation, input restrictions for exact Fraction accumulation, fixture/hash identity, and zero observed tolerance violations.
+  - Confirm Cargo.lock, Cargo.toml, pyproject.toml, and artifacts/governance/loop-engineering/ were not changed.
+  - State that no model inference, LiteLLM/trio validation, hardware probe, CUDA/ROCm, runtime/backend, Sonar setting, secret value, or external administrative mutation was used.
+  - State the remaining follow-up boundaries and the exact next authorized task or blocker after this packet closes.
+dependencies:
+  - P0-T19
+owner_role: Project owner and chief architect
+reviewer_role: Independent Rust numerical-correctness and state-projection reviewer
+risk_ids:
+  - R-001

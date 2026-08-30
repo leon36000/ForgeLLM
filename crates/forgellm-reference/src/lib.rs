@@ -479,6 +479,70 @@ pub fn attention_decode_single_query(
     matmul(&probabilities_tensor, values)
 }
 
+/// Computes multi-query scaled dot-product attention over a fixed key/value context.
+///
+/// `queries` must have shape `[query_count, head_dim]`; `keys` and `values` must have shape
+/// `[context_len, head_dim]` with equal `context_len`. The caller supplies the context, and this
+/// function applies no causal mask or other attention policy. Each query row is normalized by a
+/// separate call to [`softmax`], then all probability rows are multiplied by `values` in one
+/// final checked `matmul`. This is a bounded CPU reference primitive, not a runtime or batching
+/// policy.
+pub fn attention_decode_multi_query(
+    queries: &Tensor,
+    keys: &Tensor,
+    values: &Tensor,
+) -> Result<Tensor, ReferenceError> {
+    const OPERATION: &str = "attention_decode_multi_query";
+
+    if queries.shape.len() != 2 {
+        return Err(ReferenceError::RankMismatch {
+            operation: OPERATION,
+            expected: 2,
+            actual: queries.shape.len(),
+        });
+    }
+    let query_count = queries.shape[0];
+    let head_dim = queries.shape[1];
+
+    let keys_transposed = transpose(keys)?;
+    let context_len = keys_transposed.shape[1];
+    let raw_scores = matmul(queries, &keys_transposed)?;
+
+    if values.shape.len() == 2 && values.shape[1] != head_dim {
+        return Err(ReferenceError::DimensionMismatch {
+            operation: OPERATION,
+            left: head_dim,
+            right: values.shape[1],
+        });
+    }
+
+    // Match attention_decode_single_query: the scale is computed in f64, each raw score is
+    // multiplied once in f64, and the result is narrowed to f32 once before softmax sees it.
+    let scale = 1.0f64 / (head_dim as f64).sqrt();
+    let mut scaled = try_vec_with_capacity(raw_scores.data.len(), OPERATION)?;
+    for (index, score) in raw_scores.data.iter().enumerate() {
+        let value = (f64::from(*score) * scale) as f32;
+        if !value.is_finite() {
+            return Err(ReferenceError::NonFiniteResult {
+                operation: OPERATION,
+                index,
+            });
+        }
+        scaled.push(value);
+    }
+
+    // Tensor dimensions are non-zero by construction, so every chunk is one complete query
+    // row. Keeping this boundary explicit prevents a flat softmax from sharing a denominator
+    // across queries.
+    let mut probabilities = try_vec_with_capacity(raw_scores.data.len(), OPERATION)?;
+    for row in scaled.chunks_exact(context_len) {
+        probabilities.extend(softmax(row)?);
+    }
+    let probabilities_tensor = Tensor::new(vec![query_count, context_len], probabilities)?;
+
+    matmul(&probabilities_tensor, values)
+}
+
 /// Decodes one token through the bounded dense CPU reference pipeline.
 ///
 /// The operation is intentionally a composition of the existing checked primitives:

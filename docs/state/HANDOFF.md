@@ -1,8 +1,8 @@
 # ForgeLLM Handoff
 
-**From state:** S-0016
-**To work:** run the final fresh validation/evidence checkpoint from the approved plan; P0-T09 remains inactive and human-gated, P0-T04 still awaits host designation
-**Generated:** 2026-08-27
+**From state:** S-0017
+**To work:** complete P0-T20's independent review, exact-head hosted gates and post-merge evidence after the local candidate closeout; P0-T09 remains inactive and human-gated, P0-T04 still awaits host designation
+**Generated:** 2026-08-29
 
 ## P0-T10 integration handoff
 
@@ -19,6 +19,10 @@ P0-T10's bounded implementation is present at public merge commit 87a1ddeb76d2bc
 - P0-T13: complete and publicly merged at `main@ad079c0`;
 - P0-T14: complete after protected merge `c1fd915`, with lifecycle validation and projections reconciled; its canonical source anchor is the protected merge snapshot;
 - P0-T16: `complete`, bounded in-memory CPU dense decoder reference slice; no model, runtime, backend, ABI or GPU work;
+- P0-T17: `complete`, protected Rust CI gate and closeout;
+- P0-T18: `complete`, protected stdlib-only differential reference oracle and fixture;
+- P0-T19: `complete`, protected transpose and single-query attention reference increment;
+- P0-T20: `complete` in the isolated candidate, bounded multi-query attention with row-wise softmax; independent review and publication gates are pending;
 - P0-T15: `in_progress`, design-only, publicly merged at `main@9932a5a`, ADR-0006 proposed;
 - P0-T11/P0-T12: bounded Rust CPU reference line complete and merged on `main`;
 - P0-T04: blocked only on owner host designation;
@@ -32,6 +36,14 @@ P0-T14 reconciles the task directories and state projections under issue #73. P0
 ## P0-T16 dense decoder reference slice
 
 P0-T16 delivers `dense_decode_single_token`, a single-token in-memory composition of embedding gather, RMSNorm, rank-two projection, softmax and deterministic greedy argmax. Its seven integration tests include an independent golden oracle plus typed error propagation for index, shape, non-finite input/weight and epsilon failures; they establish a CPU correctness reference only. Model loading, tokenization, attention, KV cache, runtime, ABI, backend, GPU and performance remain out of scope. The bounded implementation is complete; the protected merge and post-merge validation are still integration gates.
+
+## P0-T17 through P0-T19 protected reference line
+
+P0-T17, P0-T18 and P0-T19 are complete on protected `main` through their implementation and closeout sequences. P0-T18 adds the independent stdlib-only oracle and pinned fixture; P0-T19 adds rank-two transpose and single-query scaled dot-product attention. P0-T19 explicitly defers multi-query row-wise attention to P0-T20. None of these increments authorizes model execution, hardware probes, CUDA/ROCm, runtime/backend integration, ABI implementation or performance claims.
+
+## P0-T20 publication handoff
+
+The isolated P0-T20 candidate is based on protected `main@cc5a90d0190bf84e3124a7e81bbe52bc7d0820bc`; its final proof code is `0554747b036faba0f4185dd08ccc080fe3a1b76b`, followed by Sonar remediation code `dc3f90f67caca4533964481e3f5611049266de72` and integrated reviewed candidate `0092ed75f2e4be2fae7d417f56d0f0069d46bbd6`. Its Rust API accepts finite rank-two `queries`, `keys` and `values`, applies one independent existing `softmax` call per query row, and returns `[query_count, head_dim]`; its oracle and fixture preserve the same row boundary. Local `make ci` is green with 569 Python tests, 230 speculative tests and 101 Rust tests, plus 12 focused multi-query Rust tests and 66 focused oracle tests. Fresh Luna and GPT-5.6-Sol reviews accepted the exact integrated candidate with no findings; exact PR checks and post-merge evidence remain publication gates. No model/LiteLLM trio, secret value, external Sonar/GitHub mutation, hardware or runtime work is permitted.
 
 ## P0-T09 authorization and source
 
