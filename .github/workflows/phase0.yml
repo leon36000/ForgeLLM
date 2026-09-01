@@ -25,7 +25,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Set up Python
-        uses: actions/setup-python@8549b9f8f590ad24eab7482f36f6e1e24d34597b # security-fixed 2026-08 snapshot
+        uses: actions/setup-python@751276eafca55f10f252026015f43c488f2322ba # security-fixed 2026-08 snapshot
         with:
           python-version: "3.11"
           cache: pip
